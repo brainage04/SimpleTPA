@@ -1,0 +1,31 @@
+{
+	"schemaVersion": 1,
+	"id": "simpletpa",
+	"version": "${version}",
+	"name": "SimpleTPA",
+	"description": "A server-side Fabric mod that adds \"teleport ask\" commands to Minecraft.",
+	"authors": [
+		"brainage04"
+	],
+	"contact": {
+		"homepage": "https://github.com/brainage04/SimpleTPA",
+		"sources": "https://github.com/brainage04/SimpleTPA"
+	},
+	"license": "MIT",
+	"icon": "assets/simpletpa/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"io.github.brainage04.simpletpa.SimpleTPA"
+		],
+		"fabric-gametest": [
+			"io.github.brainage04.simpletpa.SimpleTPATest"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
