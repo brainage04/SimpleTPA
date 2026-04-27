@@ -23,6 +23,8 @@ import java.util.UUID;
 import java.util.function.Function;
 
 public class SimpleTPATest implements CustomTestMethodInvoker {
+	private static int playerPairCounter;
+
 	private static final Function<ServerPlayer, String> TP_REQUEST_FUNCTION_NAME = receiver -> "tprequest %s".formatted(receiver.getScoreboardName());
 
 	private static final Function<ServerPlayer, String> TP_ACCEPT_FUNCTION = sender -> "tpaccept";
@@ -164,6 +166,23 @@ public class SimpleTPATest implements CustomTestMethodInvoker {
 		}
 	}
 
+	@GameTest
+	public void testInstantAutoAcceptFlow(GameTestHelper helper, ServerPlayer sender, ServerPlayer receiver) {
+		executeRunnables(
+				helper,
+				() -> executeCommand(receiver, "tpautoaccept add %s".formatted(sender.getScoreboardName())),
+				() -> setPositions(sender, receiver),
+				() -> executeCommand(sender, TP_REQUEST_FUNCTION_NAME.apply(receiver)),
+				() -> {
+					if (sender.blockPosition().equals(receiver.blockPosition())) {
+						helper.succeed();
+					} else {
+						helper.fail("Sender did not instantly teleport to receiver despite being whitelisted");
+					}
+				}
+		);
+	}
+
 	// todo: figure out why this doesn't work even though it works in game
 	/*
 	@GameTest
@@ -191,8 +210,9 @@ public class SimpleTPATest implements CustomTestMethodInvoker {
 
 	@Override
 	public void invokeTestMethod(GameTestHelper helper, Method method) throws ReflectiveOperationException {
-		ServerPlayer sender = makeMockServerPlayerInLevel(helper, GameType.SPECTATOR, "sender");
-		ServerPlayer receiver = makeMockServerPlayerInLevel(helper, GameType.SPECTATOR, "receiver");
+		int playerPairId = ++playerPairCounter;
+		ServerPlayer sender = makeMockServerPlayerInLevel(helper, GameType.SPECTATOR, "sender%s".formatted(playerPairId));
+		ServerPlayer receiver = makeMockServerPlayerInLevel(helper, GameType.SPECTATOR, "receiver%s".formatted(playerPairId));
 
 		method.invoke(this, helper, sender, receiver);
 	}
