@@ -1,71 +1,88 @@
 package io.github.brainage04.simpletpa.command;
 
+import io.github.brainage04.simpletpa.util.TPAFeedback;
 import java.util.ArrayList;
 import java.util.List;
+
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 public class TPDenyCommand {
-    public static int execute(CommandSourceStack source) {
-        ServerPlayer to = source.getPlayer();
-        if (to == null) {
-            source.sendFailure(Component.literal("This command can only be used by players!"));
-            return -1;
-        }
+	public static int execute(CommandSourceStack source) {
+		ServerPlayer to = source.getPlayer();
 
-        List<TPRequestCommand.TPRequest> tpRequests = new ArrayList<>();
+		if (to == null) {
+			TPAFeedback.fail(source, "This command can only be used by players!");
+			return -1;
+		}
 
-        for (TPRequestCommand.TPRequest tpRequest : TPRequestCommand.TP_REQUESTS) {
-            if (tpRequest.to.equals(to.getScoreboardName())) {
-                tpRequests.add(tpRequest);
-            }
-        }
+		TPAFeedback.click(to);
 
-        if (tpRequests.isEmpty()) {
-            source.sendFailure(Component.literal("You have no incoming TP requests!"));
-            return -1;
-        }
+		List<TPRequestCommand.TPRequest> tpRequests = new ArrayList<>();
 
-        if (tpRequests.size() > 1) {
-            source.sendFailure(Component.literal("You have more than 1 incoming TP request, specifically from the following players:"));
-            for (TPRequestCommand.TPRequest tpRequest : tpRequests) {
-                source.sendFailure(Component.literal("- %s".formatted(tpRequest.from)));
-            }
-            source.sendFailure(Component.literal("Please specify which one you wish to deny using /tpdeny <name>!"));
-            return -1;
-        }
+		for (TPRequestCommand.TPRequest tpRequest : TPRequestCommand.TP_REQUESTS) {
+			if (tpRequest.toId().equals(to.getUUID())) {
+				tpRequests.add(tpRequest);
+			}
+		}
 
-        ServerPlayer from = source.getServer().getPlayerList().getPlayerByName(tpRequests.getFirst().from);
-        if (from == null) {
-            source.sendFailure(Component.literal("%s is not online!".formatted(tpRequests.getFirst().from)));
-            return -1;
-        }
+		if (tpRequests.isEmpty()) {
+			TPAFeedback.fail(source, "You have no incoming TP requests!");
+			return -1;
+		}
 
-        return execute(source, from);
-    }
+		if (tpRequests.size() > 1) {
+			TPAFeedback.fail(source, "You have more than 1 incoming TP request, specifically from:");
 
-    public static int execute(CommandSourceStack source, ServerPlayer from) {
-        ServerPlayer to = source.getPlayer();
-        if (to == null) {
-            source.sendFailure(Component.literal("This command can only be used by players!"));
-            return -1;
-        }
+			for (TPRequestCommand.TPRequest tpRequest : tpRequests) {
+				TPAFeedback.error(to, "- %s", tpRequest.fromName());
+			}
 
-        for (int i = 0; i < TPRequestCommand.TP_REQUESTS.size(); i++) {
-            TPRequestCommand.TPRequest tpRequest = TPRequestCommand.TP_REQUESTS.get(i);
+			TPAFeedback.fail(source, "Please specify which one you wish to deny using /tpdeny <name>.");
+			return -1;
+		}
 
-            if (tpRequest.to.equals(to.getScoreboardName()) && tpRequest.from.equals(from.getScoreboardName())) {
-                to.sendSystemMessage(Component.literal("You denied %s's TP request.".formatted(from.getScoreboardName())));
-                from.sendSystemMessage(Component.literal("%s denied your TP request.".formatted(to.getScoreboardName())));
+		ServerPlayer from = source.getServer().getPlayerList().getPlayer(tpRequests.getFirst().fromId());
 
-                TPRequestCommand.TP_REQUESTS.remove(i);
+		if (from == null) {
+			TPAFeedback.fail(source, "%s is not online!", tpRequests.getFirst().fromName());
+			return -1;
+		}
 
-                return 0;
-            }
-        }
+		return execute(source, from, false);
+	}
 
-        source.sendFailure(Component.literal("You do not have a TP request from %s!".formatted(from.getScoreboardName())));
-        return -1;
-    }
+	public static int execute(CommandSourceStack source, ServerPlayer from) {
+		return execute(source, from, true);
+	}
+
+	private static int execute(CommandSourceStack source, ServerPlayer from, boolean playCommandSound) {
+		ServerPlayer to = source.getPlayer();
+
+		if (to == null) {
+			TPAFeedback.fail(source, "This command can only be used by players!");
+			return -1;
+		}
+
+		if (playCommandSound) {
+			TPAFeedback.click(to);
+		}
+
+		for (int i = 0; i < TPRequestCommand.TP_REQUESTS.size(); i++) {
+			TPRequestCommand.TPRequest tpRequest = TPRequestCommand.TP_REQUESTS.get(i);
+
+			if (tpRequest.matches(to.getUUID(), from.getUUID())) {
+				TPAFeedback.error(to, "You denied %s's TP request.", from.getScoreboardName());
+				TPAFeedback.error(from, "%s denied your TP request.", to.getScoreboardName());
+				TPAFeedback.click(from);
+
+				TPRequestCommand.TP_REQUESTS.remove(i);
+
+				return 1;
+			}
+		}
+
+		TPAFeedback.fail(source, "You do not have a TP request from %s!", from.getScoreboardName());
+		return -1;
+	}
 }

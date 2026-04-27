@@ -7,50 +7,62 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 public class ModCommands {
-    public static void initialize() {
-        CommandRegistrationCallback.EVENT.register(((dispatcher, registryAccess, environment) -> {
-            dispatcher.register(literal("tpaccept")
-                    .executes(context ->
-                            TPAcceptCommand.execute(
-                                    context.getSource()
-                            )
-                    )
-                    .then(argument("name", EntityArgument.player())
-                            .executes(context ->
-                                    TPAcceptCommand.execute(
-                                            context.getSource(),
-                                            EntityArgument.getPlayer(context, "name")
-                                    )
-                            )
-                    )
-            );
+	public static void initialize() {
+		CommandRegistrationCallback.EVENT.register(((dispatcher, registryAccess, environment) -> {
+			dispatcher.register(literal("tpaccept")
+					.executes(context -> TPAcceptCommand.execute(context.getSource()))
+					.then(argument("name", EntityArgument.player())
+							.executes(context -> TPAcceptCommand.execute(
+									context.getSource(),
+									EntityArgument.getPlayer(context, "name")
+							))
+					)
+			);
 
-            dispatcher.register(literal("tpdeny")
-                    .executes(context ->
-                            TPDenyCommand.execute(
-                                    context.getSource()
-                            )
-                    )
-                    .then(argument("name", EntityArgument.player())
-                            .executes(context ->
-                                    TPDenyCommand.execute(
-                                            context.getSource(),
-                                            EntityArgument.getPlayer(context, "name")
-                                    )
-                            )
-                    )
-            );
+			dispatcher.register(literal("tpdeny")
+					.executes(context -> TPDenyCommand.execute(context.getSource()))
+					.then(argument("name", EntityArgument.player())
+							.executes(context -> TPDenyCommand.execute(
+									context.getSource(),
+									EntityArgument.getPlayer(context, "name")
+							))
+					)
+			);
 
-            dispatcher.register(literal("tprequest")
-                    .then(argument("name", EntityArgument.player())
-                            .executes(context ->
-                                    TPRequestCommand.execute(
-                                            context.getSource(),
-                                            EntityArgument.getPlayer(context, "name")
-                                    )
-                            )
-                    )
-            );
-        }));
-    }
+			dispatcher.register(literal("tprequest")
+					.then(argument("name", EntityArgument.player())
+							.executes(context -> TPRequestCommand.execute(
+									context.getSource(),
+									EntityArgument.getPlayer(context, "name")
+							))
+					)
+			);
+
+			dispatcher.register(literal("tpautoaccept")
+					.executes(context -> TPAutoAcceptCommand.list(context.getSource()))
+					.then(literal("list")
+							.executes(context -> TPAutoAcceptCommand.list(context.getSource()))
+					)
+					.then(literal("add")
+							.then(argument("name", EntityArgument.player())
+									.executes(context -> TPAutoAcceptCommand.add(
+											context.getSource(),
+											EntityArgument.getPlayer(context, "name")
+									))
+							)
+					)
+					.then(literal("remove")
+							.then(argument("name", EntityArgument.player())
+									.executes(context -> TPAutoAcceptCommand.remove(
+											context.getSource(),
+											EntityArgument.getPlayer(context, "name")
+									))
+							)
+					)
+					.then(literal("clear")
+							.executes(context -> TPAutoAcceptCommand.clear(context.getSource()))
+					)
+			);
+		}));
+	}
 }
