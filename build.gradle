@@ -1,5 +1,5 @@
 plugins {
-	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 	id 'maven-publish'
 }
 
@@ -20,28 +20,61 @@ repositories {
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings loom.officialMojangMappings()
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
 }
 
 processResources {
-	inputs.property "version", project.version
+	inputs.property "mod_id", project.properties.mod_id
+	inputs.property "mod_version", project.version
+	inputs.property "mod_name", project.properties.mod_name
+	inputs.property "loader_version", project.properties.loader_version
+	inputs.property "minecraft_version", project.properties.minecraft_version
 
 	filesMatching("fabric.mod.json") {
-		expand "version": inputs.properties.version
+		expand([
+				"mod_id": inputs.properties.mod_id,
+				"mod_version": inputs.properties.mod_version,
+				"mod_name": inputs.properties.mod_name,
+				"loader_version": inputs.properties.loader_version,
+				"minecraft_version": inputs.properties.minecraft_version,
+		])
+	}
+}
+
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "${project.mod_id}-gametest"
+		enableGameTests = true
+		eula = true
+	}
+}
+
+tasks.named("processGametestResources") {
+	inputs.property "mod_id", project.properties.mod_id
+	inputs.property "mod_version", project.version
+	inputs.property "mod_name", project.properties.mod_name
+
+	filesMatching("fabric.mod.json") {
+		expand([
+				"mod_id": inputs.properties.mod_id,
+				"mod_version": inputs.properties.mod_version,
+				"mod_name": inputs.properties.mod_name,
+		])
 	}
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+	it.options.release = 25
 }
 
 java {
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {
@@ -52,10 +85,16 @@ jar {
 	}
 }
 
-fabricApi {
-	configureTests {
-		modId = "${archives_base_name}-test-${project.name}"
-		enableGameTests = true
-		eula = true
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			artifactId = project.archives_base_name
+			from components.java
+		}
 	}
+}
+
+test {
+	useJUnitPlatform()
+	systemProperty "fabric.side", "server"
 }

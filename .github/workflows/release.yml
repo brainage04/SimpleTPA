@@ -1,0 +1,170 @@
+name: release
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    outputs:
+      release_body: ${{ steps.notes.outputs.body }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: validate gradle wrapper
+        uses: gradle/actions/wrapper-validation@v5
+
+      - name: setup jdk
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+
+      - name: setup gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: make gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: verify tag matches mod version
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          VERSION="$(grep '^mod_version=' gradle.properties | cut -d= -f2)"
+          if [ "v${VERSION}" != "${TAG_NAME}" ]; then
+            echo "Expected tag v${VERSION}, got ${TAG_NAME}"
+            exit 1
+          fi
+
+      - name: build
+        run: ./gradlew clean build
+
+      - name: collect release artifacts
+        run: |
+          mkdir -p release-artifacts
+          cp build/libs/*.jar release-artifacts/
+          rm -f release-artifacts/*-dev.jar
+
+      - name: upload release artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-artifacts
+          path: release-artifacts/*.jar
+          if-no-files-found: error
+
+      - name: read release notes from tag annotation
+        id: notes
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          NOTES="$(git tag -l --format='%(contents)' "${TAG_NAME}")"
+
+          {
+            echo 'body<<EOF'
+            printf '%s\n' "$NOTES"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: create GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: release-artifacts/*.jar
+          body: ${{ steps.notes.outputs.body }}
+          generate_release_notes: ${{ steps.notes.outputs.body == '' }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
+
+  modrinth:
+    needs: release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: check Modrinth token
+        id: config
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -z "${MODRINTH_TOKEN}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping Modrinth publish because MODRINTH_TOKEN is not configured."
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: checkout repository
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      - name: install Modrinth publishing tools
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl jq
+
+      - name: validate gradle wrapper
+        if: steps.config.outputs.enabled == 'true'
+        uses: gradle/actions/wrapper-validation@v5
+
+      - name: setup jdk
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+
+      - name: setup gradle
+        if: steps.config.outputs.enabled == 'true'
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: make scripts executable
+        if: steps.config.outputs.enabled == 'true'
+        run: chmod +x ./gradlew .github/scripts/*.sh
+
+      - name: verify tag matches mod version
+        if: steps.config.outputs.enabled == 'true'
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          VERSION="$(grep '^mod_version=' gradle.properties | cut -d= -f2)"
+          if [ "v${VERSION}" != "${TAG_NAME}" ]; then
+            echo "Expected tag v${VERSION}, got ${TAG_NAME}"
+            exit 1
+          fi
+
+      - name: process resources
+        if: steps.config.outputs.enabled == 'true'
+        run: ./gradlew processResources
+
+      - name: download release artifacts
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/download-artifact@v7
+        with:
+          name: release-artifacts
+          path: build/libs
+
+      - name: ensure Modrinth project exists
+        if: steps.config.outputs.enabled == 'true'
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: ./.github/scripts/modrinth_ensure_project.sh
+
+      - name: publish Modrinth version
+        if: steps.config.outputs.enabled == 'true'
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_BODY: ${{ needs.release.outputs.release_body }}
+          RELEASE_PRERELEASE: ${{ contains(github.ref_name, '-') }}
+        run: ./.github/scripts/modrinth_publish_version.sh
