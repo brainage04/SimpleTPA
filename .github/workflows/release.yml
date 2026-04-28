@@ -110,7 +110,7 @@ jobs:
         if: steps.config.outputs.enabled == 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y curl jq
+          sudo apt-get install -y curl jq pngquant
 
       - name: validate gradle wrapper
         if: steps.config.outputs.enabled == 'true'
@@ -159,6 +159,13 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
         run: ./.github/scripts/modrinth_ensure_project.sh
+
+      - name: sync Modrinth project icon
+        if: steps.config.outputs.enabled == 'true'
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: ./.github/scripts/modrinth_sync_project_icon.sh
 
       - name: publish Modrinth version
         if: steps.config.outputs.enabled == 'true'
