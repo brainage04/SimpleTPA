@@ -58,8 +58,7 @@ case "$icon_ext" in
   svgz)
     content_type="image/svgz"
     ;;
-  png | jpeg | bmp | gif | webp | svg | rgb)
-    ;;
+  png | jpeg | bmp | gif | webp | svg | rgb) ;;
   *)
     echo "Unsupported Modrinth icon extension: $icon_ext" >&2
     exit 1
