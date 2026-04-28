@@ -41,7 +41,8 @@ Defaults:
 - The GitHub issues URL is used when `fabric.mod.json.contact.issues` is absent
 - The GitHub wiki URL is used when `fabric.mod.json.contact.wiki` is absent
 - The licence link points at `LICENSE` by default
-- `fabric` is used as the default loader/category when no override is supplied
+- `fabric` is used as the default loader for versions when no override is supplied
+- `utility` is used as the default project category when no override is supplied
 - `discord_url` is always set to `https://discord.gg/N4zfhBx8Fm`
 - The workflow syncs `issues_url`, `source_url`, `wiki_url`, and `license_url` on every release so existing Modrinth projects stay aligned with the repository
 
@@ -79,6 +80,8 @@ Valid values for `categories` and `additional_categories` are as follows:
 `additional_categories` uses the same values as `categories`; the difference is that they are searchable but not shown as primary display categories.
 
 If you do not need any overrides, you can remove `.modrinth/project.json` entirely and the workflow will fall back to defaults.
+
+Modrinth categories are separate from loaders. Do not use `fabric` in `categories` or `additional_categories`; keep Fabric in `version.loaders` if you need to override loaders.
 
 ## Version dependencies
 
@@ -136,8 +139,11 @@ You can still override the inferred values in `.modrinth/project.json` if needed
 
 The Modrinth changelog is taken from the same annotated tag notes that are used for the GitHub release body. See [RELEASE.md](RELEASE.md) for more info.
 
+The release workflow fetches the remote tag object before reading notes so annotated tag messages are preserved in GitHub Actions checkouts.
+
 ## Notes
 
 - The workflow uploads the main release jar from `build/libs` and ignores `*-dev.jar` and `*-sources.jar`.
 - If the Modrinth project already exists, it is reused instead of recreated.
 - If the Modrinth version already exists for the current `mod_version`, publishing is skipped.
+- The Modrinth scripts can also be run locally for validation. When they run outside GitHub Actions, `GITHUB_ENV` is optional and no step output file is written.

@@ -108,7 +108,7 @@ else
           title: ($config.title // $mod.name),
           description: ($config.description // $mod.description),
           body: $body,
-          categories: (if ($config.categories // [] | length) > 0 then $config.categories else ["fabric"] end),
+          categories: (if ($config.categories // [] | length) > 0 then $config.categories else ["utility"] end),
           client_side: ($config.client_side // $support.client_side),
           server_side: ($config.server_side // $support.server_side),
           status: ($config.status // "draft"),
@@ -161,4 +161,6 @@ if [ "$status" != "204" ]; then
   exit 1
 fi
 
-echo "MODRINTH_PROJECT_ID=${project_id}" >>"$GITHUB_ENV"
+if [ -n "${GITHUB_ENV:-}" ]; then
+  echo "MODRINTH_PROJECT_ID=${project_id}" >>"$GITHUB_ENV"
+fi

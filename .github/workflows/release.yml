@@ -64,7 +64,8 @@ jobs:
         env:
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          NOTES="$(git tag -l --format='%(contents)' "${TAG_NAME}")"
+          git fetch --force origin "refs/tags/${TAG_NAME}:refs/tags/${TAG_NAME}"
+          NOTES="$(git for-each-ref "refs/tags/${TAG_NAME}" --format='%(contents)')"
 
           {
             echo 'body<<EOF'

@@ -1,7 +1,7 @@
 {
   "slug": "simpletpa",
   "categories": [
-    "fabric"
+    "utility"
   ],
   "client_side": "unsupported",
   "server_side": "required"
