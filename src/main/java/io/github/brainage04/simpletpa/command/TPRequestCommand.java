@@ -2,7 +2,7 @@ package io.github.brainage04.simpletpa.command;
 
 import io.github.brainage04.simpletpa.SimpleTPA;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
-import io.github.brainage04.simpletpa.util.TPAFeedback;
+import io.github.brainage04.simpletpa.SimpleTPA;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -18,14 +18,14 @@ public class TPRequestCommand {
 		ServerPlayer from = source.getPlayer();
 
 		if (from == null) {
-			TPAFeedback.fail(source, "This command can only be used by players!");
+			SimpleTPA.FEEDBACK.failure(source, "This command can only be used by players!");
 			return -1;
 		}
 
-		TPAFeedback.click(from);
+		SimpleTPA.FEEDBACK.click(from);
 
 		if (from.equals(to)) {
-			TPAFeedback.fail(source, "You cannot send a TP request to yourself!");
+			SimpleTPA.FEEDBACK.failure(source, "You cannot send a TP request to yourself!");
 			return -1;
 		}
 
@@ -33,7 +33,7 @@ public class TPRequestCommand {
 
 		for (TPRequest prevRequest : TP_REQUESTS) {
 			if (prevRequest.matches(request.toId(), request.fromId())) {
-				TPAFeedback.fail(source, "You have already sent a TP request to %s!", to.getScoreboardName());
+				SimpleTPA.FEEDBACK.failure(source, "You have already sent a TP request to %s!", to.getScoreboardName());
 				return -1;
 			}
 		}
@@ -41,17 +41,17 @@ public class TPRequestCommand {
 		if (source.getServer().getGameRules().get(SimpleTPA.ALLOW_INSTANT_TPA_ACCEPTING)
 				&& InstantTpaWhitelist.allows(to, from)) {
 			teleport(from, to);
-			TPAFeedback.success(from, "%s has auto-accepted your TP request.", to.getScoreboardName());
-			TPAFeedback.success(to, "%s instantly teleported to you from your auto-accept whitelist.", from.getScoreboardName());
-			TPAFeedback.click(to);
+			SimpleTPA.FEEDBACK.success(from, "%s has auto-accepted your TP request.", to.getScoreboardName());
+			SimpleTPA.FEEDBACK.success(to, "%s instantly teleported to you from your auto-accept whitelist.", from.getScoreboardName());
+			SimpleTPA.FEEDBACK.click(to);
 			return 1;
 		}
 
 		TP_REQUESTS.add(request);
 
-		TPAFeedback.neutral(to, "%s has sent you a TP request. Use /tpaccept to accept, or /tpdeny to deny.", from.getScoreboardName());
-		TPAFeedback.neutral(from, "You have sent %s a TP request.", to.getScoreboardName());
-		TPAFeedback.click(to);
+		SimpleTPA.FEEDBACK.neutral(to, "%s has sent you a TP request. Use /tpaccept to accept, or /tpdeny to deny.", from.getScoreboardName());
+		SimpleTPA.FEEDBACK.neutral(from, "You have sent %s a TP request.", to.getScoreboardName());
+		SimpleTPA.FEEDBACK.click(to);
 		return 1;
 	}
 

@@ -1,108 +1,42 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
-	id 'maven-publish'
-}
-
-version = project.mod_version
-group = project.maven_group
-
-base {
-	archivesName = project.archives_base_name
+	id 'io.github.brainage04.production-gametests' version "${fabricmoddingconventions_version}"
+	id 'io.github.brainage04.workspace-dependencies' version "${fabricmoddingconventions_version}"
+	id 'io.github.brainage04.mod-publishing' version "${fabricmoddingconventions_version}"
 }
 
 repositories {
-	// Loom / Minecraft / Fabric
-	mavenCentral()
 	mavenLocal()
-	maven { url "https://libraries.minecraft.net" }
-	maven { url "https://maven.fabricmc.net/" }
-
-	// DevAuth
-	maven { url = "https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1" }
-}
-
-dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
-
-	// DevAuth
-	runtimeOnly "me.djtheredstoner:DevAuth-fabric:${project.devauth_version}"
-}
-
-processResources {
-	inputs.property "mod_id", project.properties.mod_id
-	inputs.property "mod_version", project.version
-	inputs.property "mod_name", project.properties.mod_name
-	inputs.property "loader_version", project.properties.loader_version
-	inputs.property "minecraft_version", project.properties.minecraft_version
-	inputs.property "java_version", project.properties.java_version
-
-	filesMatching("fabric.mod.json") {
-		expand([
-				"mod_id": inputs.properties.mod_id,
-				"mod_version": inputs.properties.mod_version,
-				"mod_name": inputs.properties.mod_name,
-				"loader_version": inputs.properties.loader_version,
-				"minecraft_version": inputs.properties.minecraft_version,
-				"java_version": inputs.properties.java_version,
-		])
-	}
-}
-
-fabricApi {
-	configureTests {
-		createSourceSet = true
-		modId = "${project.mod_id}-gametest"
-		enableGameTests = true
-		eula = true
-	}
-}
-
-tasks.named("processGametestResources") {
-	inputs.property "mod_id", project.properties.mod_id
-	inputs.property "mod_version", project.version
-	inputs.property "mod_name", project.properties.mod_name
-
-	filesMatching("fabric.mod.json") {
-		expand([
-				"mod_id": inputs.properties.mod_id,
-				"mod_version": inputs.properties.mod_version,
-				"mod_name": inputs.properties.mod_name,
-		])
-	}
-}
-
-tasks.withType(JavaCompile).configureEach {
-	it.options.release = project.java_version.toInteger()
-}
-
-java {
-	withSourcesJar()
-
-	sourceCompatibility = JavaVersion.toVersion(project.java_version)
-	targetCompatibility = JavaVersion.toVersion(project.java_version)
-}
-
-jar {
-	inputs.property "archivesName", project.base.archivesName
-
-	from("LICENSE") {
-		rename { "${it}_${inputs.properties.archivesName}"}
-	}
-}
-
-publishing {
-	publications {
-		create("mavenJava", MavenPublication) {
-			artifactId = project.archives_base_name
-			from components.java
+	mavenCentral()
+	ivy {
+		name = "BrainageLibGitHubReleases"
+		url = uri("https://github.com/brainage04/BrainageLib/releases/download")
+		patternLayout {
+			artifact "v[revision]/[artifact]-[revision].[ext]"
+		}
+		metadataSources {
+			artifact()
+		}
+		content {
+			includeModule "io.github.brainage04", "brainagelib"
 		}
 	}
 }
 
-test {
-	useJUnitPlatform()
-	systemProperty "fabric.side", "server"
+workspaceDependencies {
+	siblingMaven("FabricModdingConventions") {
+		coordinate.set("io.github.brainage04:fabricmoddingconventions:${project.fabricmoddingconventions_version}")
+	}
+	siblingMaven("BrainageLib") {
+		coordinate.set("io.github.brainage04:brainagelib:${project.brainagelib_version}")
+		siblingDirectory.set(rootProject.layout.projectDirectory.dir("../BrainageLib"))
+	}
+}
+
+fabricModConventions {
+	additionalFabricModJsonProperties.add("brainagelib_version")
+}
+
+dependencies {
+	implementation "io.github.brainage04:brainagelib:${project.brainagelib_version}"
+	productionRuntimeMods "io.github.brainage04:brainagelib:${project.brainagelib_version}"
 }

@@ -1,7 +1,7 @@
 package io.github.brainage04.simpletpa.event;
 
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
-import io.github.brainage04.simpletpa.util.TPAFeedback;
+import io.github.brainage04.simpletpa.SimpleTPA;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -18,15 +18,15 @@ public class ModTickEvents {
 				ServerPlayer to = server.getPlayerList().getPlayer(tpRequest.toId());
 
 				if (to != null) {
-					TPAFeedback.error(to, "The TP request that %s sent you has expired.", tpRequest.fromName());
-					TPAFeedback.click(to);
+					SimpleTPA.FEEDBACK.error(to, "The TP request that %s sent you has expired.", tpRequest.fromName());
+					SimpleTPA.FEEDBACK.click(to);
 				}
 
 				ServerPlayer from = server.getPlayerList().getPlayer(tpRequest.fromId());
 
 				if (from != null) {
-					TPAFeedback.error(from, "The TP request that you sent to %s has expired.", tpRequest.toName());
-					TPAFeedback.click(from);
+					SimpleTPA.FEEDBACK.error(from, "The TP request that you sent to %s has expired.", tpRequest.toName());
+					SimpleTPA.FEEDBACK.click(from);
 				}
 
 				return true;

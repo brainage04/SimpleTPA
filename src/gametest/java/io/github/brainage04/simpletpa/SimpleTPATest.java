@@ -2,6 +2,7 @@ package io.github.brainage04.simpletpa;
 
 import com.mojang.authlib.GameProfile;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.github.brainage04.brainagelib.help.ServerModHelpRegistry;
 import net.fabricmc.fabric.api.gametest.v1.CustomTestMethodInvoker;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
@@ -46,8 +47,6 @@ public class SimpleTPATest implements CustomTestMethodInvoker {
 			TP_DENY_FUNCTION,
 			TP_DENY_FUNCTION_NAME
 	));
-
-	// todo: add testing for invalid request/accept and request/deny combinations
 
 	public static final BlockPos START = new BlockPos(0, 0, 0);
 	public static final BlockPos END = new BlockPos(10, 10, 10);
@@ -183,30 +182,20 @@ public class SimpleTPATest implements CustomTestMethodInvoker {
 		);
 	}
 
-	// todo: figure out why this doesn't work even though it works in game
-	/*
 	@GameTest
-	public void testDuplicateAllowFlows(GameTestHelper helper, ServerPlayer sender, ServerPlayer receiver) {
-		for (Function<ServerPlayer, String> request : TP_REQUEST_FUNCTIONS) {
-			for (Function<ServerPlayer, String> accept : TP_ACCEPT_FUNCTIONS) {
-				executeRunnables(
-						helper,
-						() -> setPositions(sender, receiver),
-						() -> executeCommand(sender, request.apply(receiver)),
-						() -> executeCommand(sender, request.apply(receiver)),
-						() -> executeCommand(receiver, accept.apply(sender)),
-						() -> {
-							if (sender.blockPosition().equals(receiver.blockPosition())) {
-								helper.succeed();
-							} else {
-								helper.fail("Sender did not teleport to receiver despite being accepted");
-							}
-						}
-				);
-			}
+	public void testCombinedServerHelpIncludesSimpleTPA(
+			GameTestHelper helper,
+			ServerPlayer sender,
+			ServerPlayer receiver
+	) {
+		boolean registered = ServerModHelpRegistry.entries().stream()
+				.anyMatch(entry -> entry.modId().equals(SimpleTPA.MOD_ID)
+						&& entry.helpCommand().equals("/simpletpa help"));
+		if (!registered) {
+			throw new AssertionError("Expected SimpleTPA in the shared server help registry.");
 		}
+		helper.succeed();
 	}
-	 */
 
 	@Override
 	public void invokeTestMethod(GameTestHelper helper, Method method) throws ReflectiveOperationException {

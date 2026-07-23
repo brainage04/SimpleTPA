@@ -1,10 +1,46 @@
 pluginManagement {
 	repositories {
 		maven {
+			url = uri("../FabricModdingConventions/build/local-repo")
+		}
+		ivy {
+			name = "FabricModdingConventionsGitHubReleases"
+			url = uri("https://github.com/brainage04/FabricModdingConventions/releases/download")
+			patternLayout {
+				artifact "v[revision]/[artifact]-[revision].[ext]"
+			}
+			metadataSources {
+				gradleMetadata()
+				artifact()
+			}
+			content {
+				includeGroup "io.github.brainage04"
+			}
+		}
+		maven {
 			name = 'Fabric'
 			url = 'https://maven.fabricmc.net/'
 		}
 		mavenCentral()
 		gradlePluginPortal()
 	}
+	resolutionStrategy {
+		eachPlugin {
+			def moduleName = [
+					"io.github.brainage04.fabric-mod-conventions"    : "fabric-mod-conventions-gradle",
+					"io.github.brainage04.client-gametest-recorder" : "client-gametest-recorder-gradle",
+					"io.github.brainage04.production-gametests"     : "production-gametests-gradle",
+					"io.github.brainage04.workspace-dependencies"   : "workspace-dependencies-gradle",
+					"io.github.brainage04.maven-central-publishing" : "maven-central-publishing-gradle",
+					"io.github.brainage04.mod-publishing"           : "mod-publishing-gradle",
+			][requested.id.id]
+			if (moduleName != null) {
+				useModule("io.github.brainage04:${moduleName}:${requested.version}")
+			}
+		}
+	}
+}
+
+if (file("../FabricModdingConventions/settings.gradle").exists()) {
+	includeBuild("../FabricModdingConventions")
 }
