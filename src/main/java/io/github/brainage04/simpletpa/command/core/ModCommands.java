@@ -1,12 +1,22 @@
-package io.github.brainage04.simpletpa.command;
+package io.github.brainage04.simpletpa.command.core;
+
+import io.github.brainage04.simpletpa.SimpleTPA;
+import io.github.brainage04.simpletpa.command.TPAcceptCommand;
+import io.github.brainage04.simpletpa.command.TPAutoAcceptCommand;
+import io.github.brainage04.simpletpa.command.TPDenyCommand;
+import io.github.brainage04.simpletpa.command.TPRequestCommand;
 
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
-public class ModCommands {
+public final class ModCommands {
+	private ModCommands() {
+	}
+
 	public static void initialize() {
 		CommandRegistrationCallback.EVENT.register(((dispatcher, registryAccess, environment) -> {
 			dispatcher.register(literal("tpaccept")
@@ -63,6 +73,22 @@ public class ModCommands {
 							.executes(context -> TPAutoAcceptCommand.clear(context.getSource()))
 					)
 			);
+
+			dispatcher.register(literal("simpletpa")
+					.executes(context -> showHelp(context.getSource()))
+					.then(literal("help")
+							.executes(context -> showHelp(context.getSource()))
+					)
+			);
 		}));
+	}
+
+	private static int showHelp(CommandSourceStack source) {
+		SimpleTPA.FEEDBACK.neutral(source, "Player commands:");
+		SimpleTPA.FEEDBACK.neutral(source, "/tprequest <player> — request to teleport to another player");
+		SimpleTPA.FEEDBACK.neutral(source, "/tpaccept [player] — accept one incoming request");
+		SimpleTPA.FEEDBACK.neutral(source, "/tpdeny [player] — deny one incoming request");
+		SimpleTPA.FEEDBACK.neutral(source, "/tpautoaccept <list|add|remove|clear> — manage automatic approvals");
+		return 1;
 	}
 }

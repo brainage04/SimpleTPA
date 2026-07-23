@@ -1,67 +1,17 @@
-# Automatically build the project and run any configured tests for every push
-# and submitted pull request. This can help catch issues that only occur on
-# certain platforms or Java versions, and provides a first line of defence
-# against bad commits.
-
+# Build and production GameTest checks for every change.
 name: build
-on: [pull_request, push, workflow_dispatch]
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: checkout repository
-        uses: actions/checkout@v5
+    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-mod-build.yml@v2.3.4
 
-      - name: install workflow tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y curl jq perl ripgrep shellcheck shfmt tar
-
-      - name: install actionlint
-        env:
-          ACTIONLINT_VERSION: "1.7.7"
-        run: |
-          curl -sSLo /tmp/actionlint.tar.gz "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          tar -xzf /tmp/actionlint.tar.gz -C /tmp actionlint
-          sudo install -m 0755 /tmp/actionlint /usr/local/bin/actionlint
-
-      - name: shellcheck scripts
-        run: shellcheck .github/scripts/*.sh
-
-      - name: format check scripts
-        run: shfmt -d -i 2 -ci .github/scripts/*.sh
-
-      - name: lint workflows
-        run: actionlint
-
-      - name: validate gradle wrapper
-        uses: gradle/actions/wrapper-validation@v5
-
-      - name: setup jdk
-        uses: actions/setup-java@v5
-        with:
-          java-version: '25'
-          distribution: 'microsoft'
-
-      - name: make gradle wrapper executable
-        run: chmod +x ./gradlew
-
-      - name: build
-        run: ./gradlew build
-
-      - name: store reports
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: reports
-          path: |
-            **/build/reports/
-            **/build/test-results/
-
-      - name: capture build artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: Artifacts
-          path: build/libs/
-
+  production-gametests:
+    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-production-gametests.yml@v2.3.4

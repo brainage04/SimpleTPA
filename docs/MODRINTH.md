@@ -1,6 +1,6 @@
 # Modrinth publishing
 
-This template includes optional Modrinth publishing as part of `.github/workflows/release.yml`.
+This repository includes optional Modrinth publishing as part of `.github/workflows/release.yml`.
 
 After the GitHub release is created, a second job in the same workflow does two things:
 
@@ -146,4 +146,3 @@ The release workflow fetches the remote tag object before reading notes so annot
 - The workflow uploads the main release jar from `build/libs` and ignores `*-dev.jar` and `*-sources.jar`.
 - If the Modrinth project already exists, it is reused instead of recreated.
 - If the Modrinth version already exists for the current `mod_version`, publishing is skipped.
-- The Modrinth scripts can also be run locally for validation. When they run outside GitHub Actions, `GITHUB_ENV` is optional and no step output file is written.

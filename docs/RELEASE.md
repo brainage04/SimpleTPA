@@ -12,5 +12,5 @@ The release workflow reads the annotated tag message and uses it as the GitHub r
 If the tag has no annotation text, GitHub auto-generated release notes are used as a fallback.
 GitHub Actions checks out tag pushes in a way that can obscure annotated tag contents, so the workflow fetches the remote tag object before reading the notes.
 
-If `MODRINTH_TOKEN` is configured, the same `release.yml` workflow runs a second job after the GitHub release is created and publishes the same build to Modrinth.
-That job reuses the same tag notes as the Modrinth version changelog.
+If `MODRINTH_TOKEN` is configured, the same workflow creates or updates the Modrinth project and publishes the release JAR. If both `CURSEFORGE_TOKEN` and `CURSEFORGE_PROJECT_ID` are configured, it publishes the same JAR to CurseForge.
+All destinations use the same tag notes. Missing third-party credentials skip only that destination; the GitHub Release still proceeds.
