@@ -12,7 +12,7 @@ jobs:
   prepare:
     permissions:
       contents: write
-    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-release-prepare.yml@v2.3.5
+    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-release-prepare.yml@v2.3.9
     secrets:
       release_token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -20,7 +20,7 @@ jobs:
     needs: prepare
     permissions:
       contents: write
-    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-publish-github.yml@v2.3.5
+    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-publish-github.yml@v2.3.9
     with:
       artifact_file: ${{ needs.prepare.outputs.artifact_file }}
       release_body: ${{ needs.prepare.outputs.release_body }}
@@ -31,7 +31,7 @@ jobs:
     needs: prepare
     permissions:
       contents: read
-    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-publish-modrinth.yml@v2.3.5
+    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-publish-modrinth.yml@v2.3.9
     with:
       artifact_file: ${{ needs.prepare.outputs.artifact_file }}
       release_body: ${{ needs.prepare.outputs.release_body }}
@@ -43,7 +43,7 @@ jobs:
     needs: prepare
     permissions:
       contents: read
-    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-publish-curseforge.yml@v2.3.5
+    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-publish-curseforge.yml@v2.3.9
     with:
       artifact_file: ${{ needs.prepare.outputs.artifact_file }}
       release_body: ${{ needs.prepare.outputs.release_body }}
