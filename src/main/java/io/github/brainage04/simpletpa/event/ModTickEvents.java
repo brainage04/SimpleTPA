@@ -2,12 +2,11 @@ package io.github.brainage04.simpletpa.event;
 
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.SimpleTPA;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 public class ModTickEvents {
-	public static void initialize() {
-		ServerTickEvents.END_SERVER_TICK.register(server -> {
+	public static void onEndServerTick(MinecraftServer server) {
 			long time = server.overworld().getGameTime();
 
 			TPRequestCommand.TP_REQUESTS.removeIf(tpRequest -> {
@@ -31,6 +30,5 @@ public class ModTickEvents {
 
 				return true;
 			});
-		});
 	}
 }

@@ -2,8 +2,7 @@ name: release
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
 
 permissions:
   contents: read
@@ -13,6 +12,9 @@ jobs:
     permissions:
       contents: write
     uses: brainage04/FabricModdingConventions/.github/workflows/reusable-release-prepare.yml@v2.3.9
+    with:
+      additional_artifact_pattern: simpletpa-neoforge-*.jar
+      resolve_release_notes_with_gradle: false
     secrets:
       release_token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -23,31 +25,66 @@ jobs:
     uses: brainage04/FabricModdingConventions/.github/workflows/reusable-publish-github.yml@v2.3.9
     with:
       artifact_file: ${{ needs.prepare.outputs.artifact_file }}
+      additional_artifact_file: ${{ needs.prepare.outputs.additional_artifact_file }}
+      publish_with_gradle: false
       release_body: ${{ needs.prepare.outputs.release_body }}
+      release_name: ${{ format('SimpleTPA {0}', github.ref_name) }}
     secrets:
       release_token: ${{ secrets.GITHUB_TOKEN }}
 
-  modrinth:
+  modrinth-fabric:
     needs: prepare
     permissions:
       contents: read
     uses: brainage04/FabricModdingConventions/.github/workflows/reusable-publish-modrinth.yml@v2.3.9
     with:
       artifact_file: ${{ needs.prepare.outputs.artifact_file }}
+      gradle_task: :fabric:publishModrinth
+      sync_gradle_task: :fabric:syncModrinthIcon
+      sync_state_file: fabric/build/mod-publishing/modrinth-project-state.json
       release_body: ${{ needs.prepare.outputs.release_body }}
       project_id: ${{ vars.MODRINTH_PROJECT_ID }}
     secrets:
       modrinth_token: ${{ secrets.MODRINTH_TOKEN }}
 
-  curseforge:
+  modrinth-neoforge:
+    needs:
+      - prepare
+      - modrinth-fabric
+    permissions:
+      contents: read
+    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-publish-modrinth.yml@v2.3.9
+    with:
+      artifact_file: ${{ needs.prepare.outputs.additional_artifact_file }}
+      gradle_task: :neoforge:publishModrinth
+      sync_project: false
+      release_body: ${{ needs.prepare.outputs.release_body }}
+      project_id: ${{ needs.modrinth-fabric.outputs.project_id }}
+    secrets:
+      modrinth_token: ${{ secrets.MODRINTH_TOKEN }}
+
+  curseforge-fabric:
     needs: prepare
     permissions:
       contents: read
     uses: brainage04/FabricModdingConventions/.github/workflows/reusable-publish-curseforge.yml@v2.3.9
     with:
       artifact_file: ${{ needs.prepare.outputs.artifact_file }}
+      gradle_task: :fabric:publishCurseforge
       release_body: ${{ needs.prepare.outputs.release_body }}
       project_id: ${{ vars.CURSEFORGE_PROJECT_ID }}
-      project_slug: simpletpa
+    secrets:
+      curseforge_token: ${{ secrets.CURSEFORGE_TOKEN }}
+
+  curseforge-neoforge:
+    needs: prepare
+    permissions:
+      contents: read
+    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-publish-curseforge.yml@v2.3.9
+    with:
+      artifact_file: ${{ needs.prepare.outputs.additional_artifact_file }}
+      gradle_task: :neoforge:publishCurseforge
+      release_body: ${{ needs.prepare.outputs.release_body }}
+      project_id: ${{ vars.CURSEFORGE_PROJECT_ID }}
     secrets:
       curseforge_token: ${{ secrets.CURSEFORGE_TOKEN }}

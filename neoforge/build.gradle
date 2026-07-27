@@ -1,0 +1,42 @@
+plugins {
+	id 'dev.architectury.loom-no-remap'
+	id 'dev.architectury.loom'
+	id 'io.github.brainage04.workspace-dependencies' version "${fabricmoddingconventions_version}"
+	id 'io.github.brainage04.mod-publishing' version "${fabricmoddingconventions_version}"
+}
+sourceSets {
+	main { }
+	gametest { java.srcDirs = [project.file('src/gametest/java')]; resources.srcDirs = [project.file('src/gametest/resources')]; compileClasspath += sourceSets.main.output + configurations.compileClasspath; runtimeClasspath += output + compileClasspath + configurations.runtimeClasspath }
+}
+loom {
+	neoForge { }
+	mods { main { sourceSet sourceSets.main; sourceSet project(':common').sourceSets.main; sourceSet sourceSets.gametest } }
+}
+configurations { common { canBeResolved = true; canBeConsumed = false }; compileClasspath.extendsFrom common }
+workspaceDependencies { siblingMaven('BrainageLib') { coordinate.set("io.github.brainage04:brainagelib-neoforge:${rootProject.brainagelib_version}"); siblingDirectory.set(rootProject.layout.projectDirectory.dir('../BrainageLib')) } }
+modPublishing {
+	version.set("${rootProject.mod_version}-neoforge")
+	releaseTag.set("v${rootProject.mod_version}")
+	displayName.set("${rootProject.mod_name} ${rootProject.mod_version} (NeoForge)")
+	modLoaders.set(['neoforge'])
+	github.repository.set('brainage04/SimpleTPA')
+	fabricModJson.set(rootProject.layout.projectDirectory.file('fabric/build/resources/main/fabric.mod.json'))
+	licenseFile.set(rootProject.layout.projectDirectory.file('LICENSE'))
+	modrinth.projectConfig.set(rootProject.layout.projectDirectory.file('.modrinth/project.json'))
+	modrinth.projectBody.set(rootProject.layout.projectDirectory.file('README.md'))
+	modrinth.iconFile.set(rootProject.layout.projectDirectory.file('src/main/resources/assets/simpletpa/icon.png'))
+}
+
+tasks.named('validateModPublication') {
+	dependsOn ':fabric:processResources'
+}
+dependencies { minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"; neoForge "net.neoforged:neoforge:${rootProject.neoforge_version}"; common(project(':common')) { transitive = false }; implementation "io.github.brainage04:brainagelib-neoforge:${rootProject.brainagelib_version}" }
+repositories {
+	flatDir { dirs rootProject.layout.projectDirectory.dir('../BrainageLib/neoforge/build/libs') }
+}
+loom {
+	runs { gameTestServer { server(); forgeTemplate 'gameTestServer'; name 'NeoForge Game Tests'; source sourceSets.gametest; runDir 'run/gametest' } }
+}
+tasks.named('jar') { from project(':common').sourceSets.main.output; duplicatesStrategy = DuplicatesStrategy.EXCLUDE; from(rootProject.file('LICENSE')) { rename { "${it}_${rootProject.archives_base_name}-neoforge" } } }
+tasks.named('sourcesJar') { from project(':common').sourceSets.main.allSource }
+tasks.matching { it.name.startsWith('run') }.configureEach { dependsOn project(':common').tasks.named('jar') }
