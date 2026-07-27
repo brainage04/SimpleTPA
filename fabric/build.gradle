@@ -1,0 +1,28 @@
+plugins {
+	id 'io.github.brainage04.fabric-mod-conventions' version "${fabricmoddingconventions_version}"
+	id 'io.github.brainage04.production-gametests' version "${fabricmoddingconventions_version}"
+	id 'io.github.brainage04.workspace-dependencies' version "${fabricmoddingconventions_version}"
+	id 'io.github.brainage04.mod-publishing' version "${fabricmoddingconventions_version}"
+}
+base { archivesName = rootProject.archives_base_name }
+sourceSets {
+	main { resources.srcDir rootProject.file('src/main/resources') }
+	test { java.srcDir rootProject.file('src/test/java') }
+	gametest { java.srcDirs = [rootProject.file('src/gametest/java')]; resources.srcDirs = [rootProject.file('src/gametest/resources')] }
+}
+loom { mods { main { sourceSet sourceSets.main; sourceSet project(':common').sourceSets.main } } }
+configurations { common { canBeResolved = true; canBeConsumed = false }; compileClasspath.extendsFrom common; runtimeClasspath.extendsFrom common; developmentFabric.extendsFrom common }
+workspaceDependencies {
+	siblingMaven('FabricModdingConventions') { coordinate.set("io.github.brainage04:fabricmoddingconventions:${project.fabricmoddingconventions_version}"); siblingDirectory.set(rootProject.layout.projectDirectory.dir('../FabricModdingConventions')) }
+	siblingMaven('BrainageLib') { coordinate.set("io.github.brainage04:brainagelib:${project.brainagelib_version}"); siblingDirectory.set(rootProject.layout.projectDirectory.dir('../BrainageLib')) }
+}
+fabricModConventions { additionalFabricModJsonProperties.add('brainagelib_version') }
+modPublishing { github.repository.set('brainage04/SimpleTPA'); licenseFile.set(rootProject.layout.projectDirectory.file('LICENSE')); modrinth.projectConfig.set(rootProject.layout.projectDirectory.file('.modrinth/project.json')); modrinth.projectBody.set(rootProject.layout.projectDirectory.file('README.md')); modrinth.iconFile.set(rootProject.layout.projectDirectory.file('src/main/resources/assets/simpletpa/icon.png')) }
+repositories {
+	maven { url = uri('../BrainageLib/fabric/build/local-repo') }
+}
+productionGameTests { includeServer = true }
+dependencies { common(project(':common')) { transitive = false }; testImplementation project(':common'); implementation "io.github.brainage04:fabricmoddingconventions:${project.fabricmoddingconventions_version}"; implementation "io.github.brainage04:brainagelib:${project.brainagelib_version}"; productionRuntimeMods "io.github.brainage04:brainagelib:${project.brainagelib_version}" }
+tasks.named('jar') { from project(':common').sourceSets.main.output; duplicatesStrategy = DuplicatesStrategy.EXCLUDE }
+tasks.named('sourcesJar') { from project(':common').sourceSets.main.allSource }
+tasks.matching { it.name.startsWith('run') }.configureEach { dependsOn project(':common').tasks.named('jar') }

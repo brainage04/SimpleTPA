@@ -6,7 +6,7 @@ import io.github.brainage04.simpletpa.command.TPAutoAcceptCommand;
 import io.github.brainage04.simpletpa.command.TPDenyCommand;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
 
@@ -17,8 +17,7 @@ public final class ModCommands {
 	private ModCommands() {
 	}
 
-	public static void initialize() {
-		CommandRegistrationCallback.EVENT.register(((dispatcher, registryAccess, environment) -> {
+	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
 			dispatcher.register(literal("tpaccept")
 					.executes(context -> TPAcceptCommand.execute(context.getSource()))
 					.then(argument("name", EntityArgument.player())
@@ -80,7 +79,6 @@ public final class ModCommands {
 							.executes(context -> showHelp(context.getSource()))
 					)
 			);
-		}));
 	}
 
 	private static int showHelp(CommandSourceStack source) {

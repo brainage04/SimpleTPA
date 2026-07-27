@@ -16,7 +16,7 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"io.github.brainage04.simpletpa.SimpleTPA"
+			"io.github.brainage04.simpletpa.fabric.SimpleTPAFabric"
 		]
 	},
 	"depends": {

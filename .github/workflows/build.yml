@@ -1,4 +1,3 @@
-# Build and production GameTest checks for every change.
 name: build
 
 on:
