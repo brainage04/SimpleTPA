@@ -12,7 +12,7 @@ jobs:
   distribution:
     permissions:
       contents: write
-    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-multiloader-release.yml@v2.4.0
+    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-multiloader-release.yml@v2.4.1
     with:
       additional_artifact_pattern: simpletpa-neoforge-*.jar
       release_name: ${{ format('SimpleTPA {0}', github.ref_name) }}
