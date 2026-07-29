@@ -3,9 +3,6 @@ plugins {
 	id 'dev.architectury.loom'
 	id 'io.github.brainage04.workspace-dependencies' version "${fabricmoddingconventions_version}"
 }
-sourceSets {
-	main { java.srcDir rootProject.file('src/main/java') }
-}
 workspaceDependencies {
 	siblingMaven('BrainageLib') { coordinate.set("io.github.brainage04:brainagelib:${rootProject.brainagelib_version}"); siblingDirectory.set(rootProject.layout.projectDirectory.dir('../BrainageLib')) }
 }
