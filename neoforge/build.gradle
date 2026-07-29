@@ -24,7 +24,7 @@ modPublishing {
 	licenseFile.set(rootProject.layout.projectDirectory.file('LICENSE'))
 	modrinth.projectConfig.set(rootProject.layout.projectDirectory.file('.modrinth/project.json'))
 	modrinth.projectBody.set(rootProject.layout.projectDirectory.file('README.md'))
-	modrinth.iconFile.set(rootProject.layout.projectDirectory.file('src/main/resources/assets/simpletpa/icon.png'))
+	modrinth.iconFile.set(rootProject.layout.projectDirectory.file('common/src/main/resources/assets/simpletpa/icon.png'))
 }
 
 tasks.named('validateModPublication') {
