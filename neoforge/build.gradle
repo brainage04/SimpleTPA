@@ -6,7 +6,7 @@ plugins {
 }
 sourceSets {
 	main { }
-	gametest { java.srcDirs = [project.file('src/gametest/java')]; resources.srcDirs = [project.file('src/gametest/resources')]; compileClasspath += sourceSets.main.output + configurations.compileClasspath; runtimeClasspath += output + compileClasspath + configurations.runtimeClasspath }
+	gametest { compileClasspath += sourceSets.main.output + configurations.compileClasspath; runtimeClasspath += output + compileClasspath + configurations.runtimeClasspath }
 }
 loom {
 	neoForge { }
