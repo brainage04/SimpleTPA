@@ -3,12 +3,9 @@ package io.github.brainage04.simpletpa;
 import io.github.brainage04.brainagelib.help.ServerModHelpRegistry;
 import net.fabricmc.fabric.api.gametest.v1.CustomTestMethodInvoker;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.network.protocol.game.ServerboundChatCommandPacket;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.world.phys.Vec3;
 
 import java.lang.reflect.InvocationTargetException;
@@ -20,14 +17,16 @@ public class SimpleTPATest implements CustomTestMethodInvoker {
 	private static final BlockPos END = new BlockPos(8, 1, 8);
 
 	public void executeCommand(ServerPlayer player, String command) {
-		player.connection.handleChatCommand(new ServerboundChatCommandPacket(command));
+		SimpleTPAFakePlayerScenario.executeCommand(player, command);
 	}
 
 	private static void setPositions(GameTestHelper helper, ServerPlayer sender, ServerPlayer receiver) {
-		Vec3 senderPosition = helper.absoluteVec(Vec3.atBottomCenterOf(START));
-		Vec3 receiverPosition = helper.absoluteVec(Vec3.atBottomCenterOf(END));
-		sender.teleportTo(senderPosition.x, senderPosition.y, senderPosition.z);
-		receiver.teleportTo(receiverPosition.x, receiverPosition.y, receiverPosition.z);
+		SimpleTPAFakePlayerScenario.setPositions(
+				sender,
+				helper.absoluteVec(Vec3.atBottomCenterOf(START)),
+				receiver,
+				helper.absoluteVec(Vec3.atBottomCenterOf(END))
+		);
 	}
 
 	public void executeRunnables(GameTestHelper helper, Runnable... runnables) {
@@ -167,34 +166,21 @@ public class SimpleTPATest implements CustomTestMethodInvoker {
 	}
 
 	private static void spawnFakePlayer(GameTestHelper helper, String name, Vec3 position) {
-		executeCarpetCommand(helper, position, "player %s spawn in survival".formatted(name));
+		SimpleTPAFakePlayerScenario.spawn(helper.getLevel(), name, position);
 	}
 
 	private static void killFakePlayer(GameTestHelper helper, String name) {
-		if (fakePlayer(helper, name) != null) {
-			executeCarpetCommand(helper, Vec3.ZERO, "player %s kill".formatted(name));
-		}
+		SimpleTPAFakePlayerScenario.kill(helper.getLevel(), name);
 	}
 
 	private static void assertCarpetFakePlayer(GameTestHelper helper, String name) {
-		ServerPlayer player = fakePlayer(helper, name);
-		helper.assertTrue(player != null, "Waiting for Carpet fake player " + name);
-		helper.assertValueEqual(
-				player.getClass().getName(),
-				"carpet.patches.EntityPlayerMPFake",
-				"Expected /player spawn to create Carpet's fake-player implementation"
+		helper.assertTrue(
+				SimpleTPAFakePlayerScenario.isReady(helper.getLevel(), name),
+				"Waiting for Carpet fake player " + name
 		);
 	}
 
 	private static ServerPlayer fakePlayer(GameTestHelper helper, String name) {
-		return helper.getLevel().getServer().getPlayerList().getPlayerByName(name);
-	}
-
-	private static void executeCarpetCommand(GameTestHelper helper, Vec3 position, String command) {
-		CommandSourceStack source = helper.getLevel().getServer().createCommandSourceStack()
-				.withLevel(helper.getLevel())
-				.withPosition(position)
-				.withPermission(PermissionSet.ALL_PERMISSIONS);
-		helper.getLevel().getServer().getCommands().performPrefixedCommand(source, command);
+		return SimpleTPAFakePlayerScenario.requirePlayer(helper.getLevel(), name);
 	}
 }

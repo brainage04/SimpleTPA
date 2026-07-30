@@ -8,6 +8,9 @@
 	"entrypoints": {
 		"fabric-gametest": [
 			"io.github.brainage04.simpletpa.SimpleTPATest"
+		],
+		"fabric-client-gametest": [
+			"io.github.brainage04.simpletpa.SimpleTPAClientGameTest"
 		]
 	}
 }

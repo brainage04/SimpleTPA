@@ -1,5 +1,6 @@
 plugins {
 	id 'io.github.brainage04.fabric-mod-conventions' version "${fabricmoddingconventions_version}"
+	id 'io.github.brainage04.client-gametest-recorder' version "${fabricmoddingconventions_version}"
 	id 'io.github.brainage04.production-gametests' version "${fabricmoddingconventions_version}"
 	id 'io.github.brainage04.workspace-dependencies' version "${fabricmoddingconventions_version}"
 	id 'io.github.brainage04.mod-publishing' version "${fabricmoddingconventions_version}"
@@ -17,7 +18,11 @@ repositories {
 	maven { url = uri('../BrainageLib/fabric/build/local-repo') }
 	maven { url = uri('https://api.modrinth.com/maven'); content { includeGroup 'maven.modrinth' } }
 }
-productionGameTests { includeServer = true; runtimeModDependencies.add("maven.modrinth:carpet:${project.carpet_version}") }
+productionGameTests { includeServer = true; includeClient.set(true); clientUseXvfb.set(providers.environmentVariable('GTR_RECORDING_MANAGED_XVFB').map { !it.toBoolean() }.orElse(true)); runtimeModDependencies.add("maven.modrinth:carpet:${project.carpet_version}") }
+clientGameTestRecorder { runDir.set(layout.buildDirectory.dir('run/productionClientGameTest')); guiScale.set('2') }
+tasks.named('recordClientGameTest') { runTaskName.set('runProductionClientGameTest') }
+tasks.named('prepareClientGameTestRun') { mustRunAfter('prepareProductionGameTestRuns') }
+tasks.matching { it.name == 'runProductionClientGameTest' }.configureEach { dependsOn('prepareClientGameTestRun') }
 dependencies { common(project(':common')) { transitive = false }; testImplementation project(':common'); implementation "io.github.brainage04:fabricmoddingconventions:${project.fabricmoddingconventions_version}"; implementation "io.github.brainage04:brainagelib:${project.brainagelib_version}"; productionRuntimeMods "io.github.brainage04:brainagelib:${project.brainagelib_version}"; runtimeOnly "maven.modrinth:carpet:${project.carpet_version}" }
 tasks.named('jar') { from project(':common').sourceSets.main.output; duplicatesStrategy = DuplicatesStrategy.EXCLUDE }
 tasks.named('sourcesJar') { from project(':common').sourceSets.main.allSource }
