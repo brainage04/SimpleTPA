@@ -40,6 +40,9 @@ subprojects {
 	}
 }
 
+tasks.register('runClientGameTest') { group = 'verification'; dependsOn ':fabric:runProductionClientGameTest' }
+tasks.register('recordClientGameTest') { group = 'verification'; dependsOn ':fabric:recordClientGameTest' }
+
 tasks.register('runNeoForgeGameTests') { group = 'verification'; dependsOn ':neoforge:runGameTestServer' }
 tasks.register('runAllProductionGameTests') { group = 'verification'; dependsOn ':fabric:runAllProductionGameTests'; dependsOn tasks.named('runNeoForgeGameTests') }
 def fabricReleaseJar = project(':fabric').tasks.named('jar', org.gradle.api.tasks.bundling.AbstractArchiveTask)
