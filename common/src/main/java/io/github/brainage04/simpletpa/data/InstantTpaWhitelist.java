@@ -56,6 +56,9 @@ public final class InstantTpaWhitelist {
 				Map<UUID, String> allowedPlayers = new HashMap<>();
 
 				for (Entry allowedEntry : ownerEntry.getValue()) {
+					if (allowedEntry == null) {
+						continue;
+					}
 					UUID allowedId = parseUuid(allowedEntry.uuid);
 
 					if (allowedId != null) {
