@@ -21,14 +21,14 @@ permissions:
 
 jobs:
   build:
-    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-mod-build.yml@v2.4.1
+    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-mod-build.yml@v2.4.4
 
   production-gametests:
-    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-production-gametests.yml@v2.4.1
+    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-production-gametests.yml@v2.4.4
 
   client-gametests:
     if: ${{ vars.RUN_CLIENT_GAMETESTS != 'false' && (github.event_name != 'workflow_dispatch' || inputs.run_client_gametests || inputs.record_client_gametests) }}
-    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-client-gametests.yml@v2.4.1
+    uses: brainage04/FabricModdingConventions/.github/workflows/reusable-client-gametests.yml@v2.4.4
     with:
       run_client_gametests: ${{ github.event_name != 'workflow_dispatch' || inputs.run_client_gametests }}
       client_gametest_profile: smoke
