@@ -1,0 +1,312 @@
+{
+  "tool": "captures-crops/crop.py",
+  "frames": "captures-ui/renders/frames",
+  "images": {
+    "simpletpa": {
+      "project": "SimpleTPA",
+      "path": "simpletpa-autocomplete-square.png",
+      "sourceFrame": "captures-ui/renders/frames/simpletpa-tp-full.png",
+      "sourceSize": [
+        3840,
+        2160
+      ],
+      "oldSquare": {
+        "box": [
+          0,
+          1768,
+          392,
+          2160
+        ],
+        "side": 392,
+        "skyLeftOfEntries": 36,
+        "skyRightOfEntries": 88,
+        "blockMargins": {
+          "top": 140,
+          "left": 36,
+          "right": 88,
+          "bottom": 60
+        }
+      },
+      "glyphBlockAlternative": {
+        "x0": 40,
+        "x1": 303,
+        "side": 344
+      },
+      "margins": {
+        "top": 88,
+        "left": 36,
+        "right": 36,
+        "bottom": 60
+      },
+      "method": "ink detection on the original 3840x2160 frame: entry block = non-sky pixels above the chat input bar; square side = 2*sky_left + block width, anchored on the frame's left/bottom edge",
+      "entryBlock": {
+        "x0": 36,
+        "x1": 303,
+        "y0": 1908,
+        "y1": 2099,
+        "width": 268,
+        "height": 192
+      },
+      "entryLines": [
+        {
+          "y0": 1916,
+          "y1": 1951,
+          "x0": 40,
+          "x1": 215
+        },
+        {
+          "y0": 1964,
+          "y1": 1999,
+          "x0": 40,
+          "x1": 303
+        },
+        {
+          "y0": 2012,
+          "y1": 2047,
+          "x0": 40,
+          "x1": 175
+        },
+        {
+          "y0": 2060,
+          "y1": 2095,
+          "x0": 40,
+          "x1": 239
+        }
+      ],
+      "chatInputText": {
+        "x0": 16,
+        "x1": 215,
+        "y0": 2112,
+        "y1": 2147
+      },
+      "chatBarTop": 2104,
+      "newSquare": {
+        "box": [
+          0,
+          1820,
+          340,
+          2160
+        ],
+        "side": 340,
+        "skyLeftOfEntries": 36,
+        "skyRightOfEntries": 36
+      },
+      "trim": {
+        "top": 52,
+        "right": 52,
+        "left": 0,
+        "bottom": 0
+      },
+      "verifiedInFile": {
+        "size": [
+          340,
+          340
+        ],
+        "skyLeft": 36,
+        "skyRight": 36,
+        "pureSkyColumnsLeft": 36,
+        "pureSkyColumnsRight": 36
+      }
+    },
+    "simplehomes": {
+      "project": "SimpleHomes",
+      "path": "simplehomes-autocomplete-square.png",
+      "sourceFrame": "captures-ui/renders/frames/simplehomes-home-full.png",
+      "sourceSize": [
+        3840,
+        2160
+      ],
+      "oldSquare": {
+        "box": [
+          0,
+          1704,
+          456,
+          2160
+        ],
+        "side": 456,
+        "skyLeftOfEntries": 148,
+        "skyRightOfEntries": 176,
+        "blockMargins": {
+          "top": 252,
+          "left": 148,
+          "right": 176,
+          "bottom": 60
+        }
+      },
+      "glyphBlockAlternative": {
+        "x0": 152,
+        "x1": 279,
+        "side": 432
+      },
+      "margins": {
+        "top": 224,
+        "left": 148,
+        "right": 148,
+        "bottom": 60
+      },
+      "method": "ink detection on the original 3840x2160 frame: entry block = non-sky pixels above the chat input bar; square side = 2*sky_left + block width, anchored on the frame's left/bottom edge",
+      "entryBlock": {
+        "x0": 148,
+        "x1": 279,
+        "y0": 1956,
+        "y1": 2099,
+        "width": 132,
+        "height": 144
+      },
+      "entryLines": [
+        {
+          "y0": 1964,
+          "y1": 1995,
+          "x0": 152,
+          "x1": 247
+        },
+        {
+          "y0": 2012,
+          "y1": 2043,
+          "x0": 152,
+          "x1": 231
+        },
+        {
+          "y0": 2060,
+          "y1": 2095,
+          "x0": 152,
+          "x1": 279
+        }
+      ],
+      "chatInputText": {
+        "x0": 16,
+        "x1": 247,
+        "y0": 2112,
+        "y1": 2143
+      },
+      "chatBarTop": 2104,
+      "newSquare": {
+        "box": [
+          0,
+          1732,
+          428,
+          2160
+        ],
+        "side": 428,
+        "skyLeftOfEntries": 148,
+        "skyRightOfEntries": 148
+      },
+      "trim": {
+        "top": 28,
+        "right": 28,
+        "left": 0,
+        "bottom": 0
+      },
+      "verifiedInFile": {
+        "size": [
+          428,
+          428
+        ],
+        "skyLeft": 148,
+        "skyRight": 148,
+        "pureSkyColumnsLeft": 148,
+        "pureSkyColumnsRight": 148
+      }
+    },
+    "spawncommands": {
+      "project": "SpawnCommands",
+      "path": "spawncommands-autocomplete-square.png",
+      "sourceFrame": "captures-ui/renders/frames/spawncommands-spawn-full.png",
+      "sourceSize": [
+        3840,
+        2160
+      ],
+      "oldSquare": {
+        "box": [
+          0,
+          1792,
+          368,
+          2160
+        ],
+        "side": 368,
+        "skyLeftOfEntries": 36,
+        "skyRightOfEntries": 88,
+        "blockMargins": {
+          "top": 164,
+          "left": 36,
+          "right": 88,
+          "bottom": 60
+        }
+      },
+      "glyphBlockAlternative": {
+        "x0": 40,
+        "x1": 279,
+        "side": 320
+      },
+      "margins": {
+        "top": 112,
+        "left": 36,
+        "right": 36,
+        "bottom": 60
+      },
+      "method": "ink detection on the original 3840x2160 frame: entry block = non-sky pixels above the chat input bar; square side = 2*sky_left + block width, anchored on the frame's left/bottom edge",
+      "entryBlock": {
+        "x0": 36,
+        "x1": 279,
+        "y0": 1956,
+        "y1": 2099,
+        "width": 244,
+        "height": 144
+      },
+      "entryLines": [
+        {
+          "y0": 1964,
+          "y1": 1999,
+          "x0": 40,
+          "x1": 203
+        },
+        {
+          "y0": 2012,
+          "y1": 2047,
+          "x0": 40,
+          "x1": 255
+        },
+        {
+          "y0": 2060,
+          "y1": 2095,
+          "x0": 40,
+          "x1": 279
+        }
+      ],
+      "chatInputText": {
+        "x0": 16,
+        "x1": 203,
+        "y0": 2112,
+        "y1": 2147
+      },
+      "chatBarTop": 2104,
+      "newSquare": {
+        "box": [
+          0,
+          1844,
+          316,
+          2160
+        ],
+        "side": 316,
+        "skyLeftOfEntries": 36,
+        "skyRightOfEntries": 36
+      },
+      "trim": {
+        "top": 52,
+        "right": 52,
+        "left": 0,
+        "bottom": 0
+      },
+      "verifiedInFile": {
+        "size": [
+          316,
+          316
+        ],
+        "skyLeft": 36,
+        "skyRight": 36,
+        "pureSkyColumnsLeft": 36,
+        "pureSkyColumnsRight": 36
+      }
+    }
+  }
+}

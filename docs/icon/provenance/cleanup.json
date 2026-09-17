@@ -1,0 +1,45 @@
+{
+  "scope": "Only captures-crops2/ was written under round3; no portfolio tracked-file edits, commits, or pushes.",
+  "resources": [
+    {"name": "crops2-client", "type": "Minecraft 26.2 Java 25 runtime", "status": "stopped", "evidence": "hub stop followed by hub describe: exited exit=1, uptime 11m41s"},
+    {"name": "crops2-xvfb", "type": "own Xvfb display :197", "status": "stopped", "evidence": "hub stop followed by hub describe: exited exit=0; /tmp/.X197-lock and /tmp/.X11-unix/X197 both absent"},
+    {"name": "round3_crops2", "type": "own PulseAudio null sink", "moduleId": 536870918, "sinkId": 2879, "status": "unloaded", "evidence": "pactl unload-module 536870918 exited 0; subsequent pactl list short sinks and pactl list short sink-inputs contained neither this sink nor its stream"}
+  ],
+  "isolation": {
+    "display": ":197, 5120x2160x24; xdotool getdisplaygeometry returned 5120 2160 before client launch",
+    "audio": "pactl list short sink-inputs verified stream 2898 on own sink 2879 before any interaction; capture_scene.py verifies the own route again before each invocation; game's soundDevice=Round3Crops2 and log says OpenAL initialized on device Round3Crops2",
+    "renderer": "runtime/logs/latest.log:111 reports llvmpipe (LLVM 21.1.8, 256 bits) (Mesa), not GPU",
+    "threads": "-XX:ActiveProcessorCount=8 and LP_NUM_THREADS=8; no thread-count increases beyond the shared requested cap",
+    "primaryDesktopOrAudioChanged": false
+  },
+  "removedOwnedDiagnostics": ["frames/state.png", "__pycache__/"],
+  "retained": "Three primary PNGs, exact-symmetry fallback, two new full source frames, native F2 screenshot backups, copied runtime/world, launch/preparation/capture/crop/verification scripts, measured reports, and logs.",
+  "verification": {
+    "cwd": "/home/thomas/01_TM/Coding/Websites/brainage04.github.io/.local-icon-variants/round3/captures-crops2",
+    "environment": {"PYTHONPATH": "/nix/store/4v9j9wbzyhrlx9980ygbr812313mazy0-python3.13-pillow-12.3.0/lib/python3.13/site-packages"},
+    "command": "python3 measure.py && python3 crop.py && python3 verify.py",
+    "result": "Exit 0. All three primary PNGs are 340x340, byte-exact decoded source crops; approved SimpleTPA file is byte-identical. Sky margins 36/36, 104/104, 36/60. SpawnCommands' 24px minimum margin difference independently verified by enumerating every feasible integer 340-wide crop. Separate 316x316 fallback verified pixel-identical and 36/36.",
+    "visual": "Viewed all three final PNGs at native size. All autocomplete entries are complete and readable. Homes intentionally excludes the entire input bar, avoiding clipped command text."
+  },
+  "captureCommands": [
+    "python3 /home/thomas/01_TM/Coding/Websites/brainage04.github.io/.local-icon-variants/round3/captures-crops2/prepare.py",
+    "Xvfb :197 -screen 0 5120x2160x24 -nolisten tcp (hub start, own process)",
+    "pactl load-module module-null-sink sink_name=round3_crops2 sink_properties=device.description=Round3Crops2",
+    "/bin/sh /home/thomas/01_TM/Coding/Websites/brainage04.github.io/.local-icon-variants/round3/captures-crops2/launch-crops2.sh (hub start, own process)",
+    "python3 /home/thomas/01_TM/Coding/Websites/brainage04.github.io/.local-icon-variants/round3/captures-crops2/capture_scene.py setup",
+    "python3 /home/thomas/01_TM/Coding/Websites/brainage04.github.io/.local-icon-variants/round3/captures-crops2/capture_scene.py capture",
+    "python3 /home/thomas/01_TM/Coding/Websites/brainage04.github.io/.local-icon-variants/round3/captures-crops2/capture_scene.py capture simplehomes-home '/home '"
+  ],
+  "voidWorldGeneration": {
+    "source": "captures-ui/runtime/saves/UI Void/data/minecraft/world_gen_settings.dat",
+    "copy": "captures-crops2/runtime/saves/UI Void/data/minecraft/world_gen_settings.dat",
+    "sourceAndCopySHA256": "5e25d32cf48c80c69be5eafdf80f8f1dc7c6b5d40c8526aeada5c5416733fce8",
+    "evidence": "sha256sum on both paths returned identical hashes; original captures-ui/evidence/scene.json describes layers=[] and biome minecraft:the_void. New source-frame HUD shows yaw 0/pitch -90; scene commands are recorded in evidence/scene-commands.json."
+  },
+  "nonBlockingRuntimeNotes": [
+    "Initial readiness regex expected the old advancement count 1543; current client loaded 1688. Readiness was subsequently explicitly observed via 'IconCapture joined the game'.",
+    "Setting an already-active spectator mode produces no feedback; capture setup now transitions through creative before spectator. Minecraft 26.2 reports time changes as 'Set minecraft:overworld to time marker minecraft:noon'; setup verifies that actual wording.",
+    "Initial Homes attempt retained the previous chat draft; final capture clears input with Ctrl+A and BackSpace before typing. Only the verified correct /home completion frame is used.",
+    "Client rejected requested simulationDistance=2 as outside [5:33] and retained effective distance 12; this is visible in runtime/logs/latest.log. The isolated void capture still completed; CPU/thread limits were not raised."
+  ]
+}

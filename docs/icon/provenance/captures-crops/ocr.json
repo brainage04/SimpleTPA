@@ -1,0 +1,230 @@
+{
+  "source": "captures-crops/ocr.py",
+  "font": "client ascii.png at GUI scale 4",
+  "images": {
+    "simpletpa": {
+      "size": [
+        340,
+        340
+      ],
+      "entries": [
+        {
+          "line": [
+            40,
+            96,
+            215,
+            131
+          ],
+          "colour": [
+            255,
+            255,
+            0
+          ],
+          "pixels": 1552,
+          "solutions": [
+            "tpaccept"
+          ],
+          "exact": [
+            "tpaccept"
+          ]
+        },
+        {
+          "line": [
+            40,
+            144,
+            303,
+            179
+          ],
+          "colour": [
+            170,
+            170,
+            170
+          ],
+          "pixels": 2304,
+          "solutions": [
+            "tpautoaccept"
+          ],
+          "exact": [
+            "tpautoaccept"
+          ]
+        },
+        {
+          "line": [
+            40,
+            192,
+            175,
+            227
+          ],
+          "colour": [
+            170,
+            170,
+            170
+          ],
+          "pixels": 1296,
+          "solutions": [
+            "tpdeny"
+          ],
+          "exact": [
+            "tpdeny"
+          ]
+        },
+        {
+          "line": [
+            40,
+            240,
+            239,
+            275
+          ],
+          "colour": [
+            170,
+            170,
+            170
+          ],
+          "pixels": 1760,
+          "solutions": [
+            "tprequest"
+          ],
+          "exact": [
+            "tprequest"
+          ]
+        }
+      ]
+    },
+    "simplehomes": {
+      "size": [
+        428,
+        428
+      ],
+      "entries": [
+        {
+          "line": [
+            152,
+            232,
+            247,
+            263
+          ],
+          "colour": [
+            255,
+            255,
+            0
+          ],
+          "pixels": 928,
+          "solutions": [
+            "base"
+          ],
+          "exact": [
+            "base"
+          ]
+        },
+        {
+          "line": [
+            152,
+            280,
+            231,
+            311
+          ],
+          "colour": [
+            170,
+            170,
+            170
+          ],
+          "pixels": 736,
+          "solutions": [
+            "mine"
+          ],
+          "exact": [
+            "mine"
+          ]
+        },
+        {
+          "line": [
+            152,
+            328,
+            279,
+            363
+          ],
+          "colour": [
+            170,
+            170,
+            170
+          ],
+          "pixels": 1200,
+          "solutions": [
+            "village"
+          ],
+          "exact": [
+            "village"
+          ]
+        }
+      ]
+    },
+    "spawncommands": {
+      "size": [
+        316,
+        316
+      ],
+      "entries": [
+        {
+          "line": [
+            40,
+            120,
+            203,
+            155
+          ],
+          "colour": [
+            255,
+            255,
+            0
+          ],
+          "pixels": 1440,
+          "solutions": [
+            "spawnof"
+          ],
+          "exact": [
+            "spawnof"
+          ]
+        },
+        {
+          "line": [
+            40,
+            168,
+            255,
+            203
+          ],
+          "colour": [
+            170,
+            170,
+            170
+          ],
+          "pixels": 1920,
+          "solutions": [
+            "spawnpoint"
+          ],
+          "exact": [
+            "spawnpoint"
+          ]
+        },
+        {
+          "line": [
+            40,
+            216,
+            279,
+            251
+          ],
+          "colour": [
+            170,
+            170,
+            170
+          ],
+          "pixels": 2112,
+          "solutions": [
+            "spawnshare"
+          ],
+          "exact": [
+            "spawnshare"
+          ]
+        }
+      ]
+    }
+  }
+}

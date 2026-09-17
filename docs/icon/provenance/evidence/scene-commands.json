@@ -1,0 +1,26 @@
+[
+  {
+    "command": "/gamemode creative",
+    "feedback": "[19:45:11] [Server thread/INFO]: [IconCapture: Set own game mode to Creative Mode]\n[19:45:11] [Render thread/INFO]: [System] [CHAT] Set own game mode to Creative Mode\n"
+  },
+  {
+    "command": "/gamemode spectator",
+    "feedback": "[19:45:17] [Server thread/INFO]: [IconCapture: Set own game mode to Spectator Mode]\n[19:45:17] [Render thread/INFO]: [System] [CHAT] Set own game mode to Spectator Mode\n"
+  },
+  {
+    "command": "/time set noon",
+    "feedback": "[19:45:22] [Server thread/INFO]: [IconCapture: Set minecraft:overworld to time marker minecraft:noon]\n[19:45:22] [Render thread/INFO]: [System] [CHAT] Set minecraft:overworld to time marker minecraft:noon\n"
+  },
+  {
+    "command": "/weather clear",
+    "feedback": "[19:45:28] [Server thread/INFO]: [IconCapture: Set the weather to clear]\n[19:45:28] [Render thread/INFO]: [System] [CHAT] Set the weather to clear\n"
+  },
+  {
+    "command": "/tick freeze",
+    "feedback": "[19:45:33] [Server thread/INFO]: [IconCapture: The game is frozen]\n[19:45:33] [Render thread/INFO]: [System] [CHAT] The game is frozen\n"
+  },
+  {
+    "command": "/tp @s 0.5 -60 0.5 0 -90",
+    "feedback": "[19:45:39] [Server thread/INFO]: [IconCapture: Teleported IconCapture to 0.500000, -60.000000, 0.500000]\n"
+  }
+]

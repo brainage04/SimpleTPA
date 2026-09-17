@@ -1,0 +1,54 @@
+{
+  "blockers": [
+    {
+      "project": "SpawnCommands",
+      "constraint": "340x340 and perfectly equal sky cannot both be met at native GUI scale 4 with the left-anchored command panel",
+      "evidence": {
+        "originalSurvivingCropInkBBox": [
+          36,
+          112,
+          280,
+          256
+        ],
+        "wider5120FrameInkBBox": [
+          36,
+          1956,
+          280,
+          2100
+        ],
+        "requiredCenteredCrop": [
+          -12,
+          1820,
+          328,
+          2160
+        ],
+        "missingNativeSkyLeft": 12,
+        "bestFeasible340Crop": [
+          0,
+          1820,
+          340,
+          2160
+        ],
+        "measuredSky": [
+          36,
+          60
+        ],
+        "minimumAsymmetryPx": 24
+      },
+      "resolution": "Primary delivered at 340x340 with minimum possible 24px margin difference, per parent direction. Also supplied the closest perfectly symmetric integer crop at 316x316, 36/36. No pixels invented."
+    },
+    {
+      "project": "SimpleTPA / SimpleHomes / SpawnCommands",
+      "constraint": "Original full-frame files referenced by captures-crops/crop-report.json were deleted before this work",
+      "evidence": "captures-ui/renders/frames/ and captures-ui/runtime/screenshots/ were empty; opening captures-ui/renders/frames/simpletpa-tp-full.png raised FileNotFoundError. Surviving approved PNGs remain.",
+      "resolution": "Preserved approved SimpleTPA PNG byte-for-byte; re-captured Homes and Spawn in copied UI Void world at 5120x2160, GUI scale4, camera pitch -90, clouds off, chat cleared."
+    }
+  ],
+  "notes": [
+    {
+      "project": "SimpleHomes",
+      "constraint": "Centered x44 crop would cut the native input command starting x16",
+      "resolution": "Vertical crop stops at y2104, immediately before the input bar; all autocomplete entries remain fully visible, and no partial input command is shown."
+    }
+  ]
+}

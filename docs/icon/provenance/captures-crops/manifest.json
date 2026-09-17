@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "project": "SimpleTPA",
+      "label": "Chat autocomplete for \"/tp\" - 4 completion entries above the chat input line, square crop with equal sky margins",
+      "path": "captures-crops/simpletpa-autocomplete-square.png",
+      "method": "Crop of the existing verified frame captures-ui/renders/frames/simpletpa-tp-full.png (no re-capture needed): the entry block was measured by ink detection (all non-sky pixels of the autocomplete band above the chat input bar, x < 1000, which is the entry panel incl. its translucent background) and the square was computed from it - left/bottom edge of the frame kept, top and right trimmed, side = 2 * sky-left + block width. Reproducible: captures-crops/crop.py",
+      "source": "captures-ui/renders/frames/simpletpa-tp-full.png; captures-ui/evidence/simpletpa-tp.json; captures-crops/crop-report.json; captures-crops/ocr.json; captures-crops/verification.json",
+      "notes": "340x340 (was 392x392, i.e. 52 px trimmed from the top and 52 px from the right; left and bottom untouched). Entry block (ink bbox) x36..303, y1908..2099 = 268x192 px inside the 3840x2160 frame. Sky left of the entries 36 px, sky right 36 px (equal, and 36 pure-sky columns verified on each side in the written file, measured over the block's own rows). Crop box (0,1820,340,2160); margins around the block: top 88, left 36, right 36, bottom 60 px. In the old 392 px square the same block sat at 36 px left / 88 px right. The 4 entries above the input line decode (exact client-font template match, pixel-identical re-render) to 'tpaccept' (yellow, the selected one), 'tpautoaccept', 'tpdeny', 'tprequest'; the input line below shows '/tpaccept' and stays fully inside the crop (text ink x16..215)."
+    },
+    {
+      "project": "SimpleHomes",
+      "label": "Chat autocomplete for \"/home \" - 3 home-name entries above the chat input line, square crop with equal sky margins",
+      "path": "captures-crops/simplehomes-autocomplete-square.png",
+      "method": "Crop of the existing verified frame captures-ui/renders/frames/simplehomes-home-full.png (no re-capture needed): entry block measured by ink detection (non-sky pixels above the chat input bar = the entry panel), square computed from it with the frame's left/bottom edge kept. Reproducible: captures-crops/crop.py",
+      "source": "captures-ui/renders/frames/simplehomes-home-full.png; captures-ui/evidence/simplehomes-home.json; captures-crops/crop-report.json; captures-crops/ocr.json; captures-crops/verification.json",
+      "notes": "428x428 (was 456x456, i.e. 28 px trimmed from the top and 28 px from the right; left and bottom untouched). Entry block (ink bbox) x148..279, y1956..2099 = 132x144 px: this frame's list is drawn at the caret after the typed '/home ', so it starts further right than in the other two shots, which is why only 28 px had to be trimmed. Sky left of the entries 148 px, sky right 148 px (equal, 148 pure-sky columns verified on each side). Crop box (0,1732,428,2160); margins around the block: top 224, left 148, right 148, bottom 60 px; in the old 456 px square it was 148 px left / 176 px right. The 3 entries decode (exact client-font template match) to 'base' (yellow, selected), 'mine', 'village'; the input line below shows '/home base' and stays fully inside the crop (text ink x16..247)."
+    },
+    {
+      "project": "SpawnCommands",
+      "label": "Chat autocomplete for \"/spawn\" - 3 completion entries above the chat input line, square crop with equal sky margins",
+      "path": "captures-crops/spawncommands-autocomplete-square.png",
+      "method": "Crop of the existing verified frame captures-ui/renders/frames/spawncommands-spawn-full.png (no re-capture needed): entry block measured by ink detection (non-sky pixels above the chat input bar = the entry panel), square computed from it with the frame's left/bottom edge kept. Reproducible: captures-crops/crop.py",
+      "source": "captures-ui/renders/frames/spawncommands-spawn-full.png; captures-ui/evidence/spawncommands-spawn.json; captures-crops/crop-report.json; captures-crops/ocr.json; captures-crops/verification.json",
+      "notes": "316x316 (was 368x368, i.e. 52 px trimmed from the top and 52 px from the right; left and bottom untouched). Entry block (ink bbox) x36..279, y1956..2099 = 244x144 px inside the 3840x2160 frame. Sky left of the entries 36 px, sky right 36 px (equal, 36 pure-sky columns verified on each side). Crop box (0,1844,316,2160); margins around the block: top 112, left 36, right 36, bottom 60 px; in the old 368 px square it was 36 px left / 88 px right. The 3 entries decode (exact client-font template match) to 'spawnof' (yellow, selected), 'spawnpoint', 'spawnshare'; the input line below shows '/spawnof' and stays fully inside the crop (text ink x16..203)."
+    }
+  ]
+}

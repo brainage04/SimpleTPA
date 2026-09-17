@@ -1,0 +1,84 @@
+{
+  "source": "captures-crops/verify.py",
+  "results": {
+    "simpletpa": {
+      "file": "simpletpa-autocomplete-square.png",
+      "size": [
+        340,
+        340
+      ],
+      "blockInCrop": {
+        "x0": 36,
+        "x1": 303,
+        "y0": 88,
+        "y1": 279
+      },
+      "skyLeft": 36,
+      "skyRight": 36,
+      "skyAboveBlock": 88,
+      "skyBelowBlock": 60,
+      "square": true,
+      "exactPixelsFromFrame": true,
+      "newBoxInsideOldSquare": true,
+      "entriesFullyInside": true,
+      "skyLeftEqualsSkyRight": true,
+      "pureSkyColumnsLeft": 36,
+      "pureSkyColumnsRight": 36,
+      "inputLineInside": true,
+      "glyphMarginMin": 36
+    },
+    "simplehomes": {
+      "file": "simplehomes-autocomplete-square.png",
+      "size": [
+        428,
+        428
+      ],
+      "blockInCrop": {
+        "x0": 148,
+        "x1": 279,
+        "y0": 224,
+        "y1": 367
+      },
+      "skyLeft": 148,
+      "skyRight": 148,
+      "skyAboveBlock": 224,
+      "skyBelowBlock": 60,
+      "square": true,
+      "exactPixelsFromFrame": true,
+      "newBoxInsideOldSquare": true,
+      "entriesFullyInside": true,
+      "skyLeftEqualsSkyRight": true,
+      "pureSkyColumnsLeft": 148,
+      "pureSkyColumnsRight": 148,
+      "inputLineInside": true,
+      "glyphMarginMin": 148
+    },
+    "spawncommands": {
+      "file": "spawncommands-autocomplete-square.png",
+      "size": [
+        316,
+        316
+      ],
+      "blockInCrop": {
+        "x0": 36,
+        "x1": 279,
+        "y0": 112,
+        "y1": 255
+      },
+      "skyLeft": 36,
+      "skyRight": 36,
+      "skyAboveBlock": 112,
+      "skyBelowBlock": 60,
+      "square": true,
+      "exactPixelsFromFrame": true,
+      "newBoxInsideOldSquare": true,
+      "entriesFullyInside": true,
+      "skyLeftEqualsSkyRight": true,
+      "pureSkyColumnsLeft": 36,
+      "pureSkyColumnsRight": 36,
+      "inputLineInside": true,
+      "glyphMarginMin": 36
+    }
+  },
+  "failures": []
+}

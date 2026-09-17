@@ -1,0 +1,213 @@
+[
+  {
+    "sourceFrame": "captures-crops/simpletpa-autocomplete-square.png",
+    "sourceSize": [
+      340,
+      340
+    ],
+    "inkBBox": [
+      36,
+      88,
+      304,
+      280
+    ],
+    "inkWidth": 268,
+    "inkHeight": 192,
+    "glyphLineBBoxes": [
+      [
+        40,
+        96,
+        216,
+        132
+      ],
+      [
+        40,
+        144,
+        304,
+        180
+      ],
+      [
+        40,
+        192,
+        176,
+        228
+      ],
+      [
+        40,
+        240,
+        240,
+        276
+      ]
+    ],
+    "panelColor": [
+      25,
+      32,
+      47
+    ],
+    "barTop": 284
+  },
+  {
+    "sourceFrame": "captures-crops/simplehomes-autocomplete-square.png",
+    "sourceSize": [
+      428,
+      428
+    ],
+    "inkBBox": [
+      148,
+      224,
+      280,
+      368
+    ],
+    "inkWidth": 132,
+    "inkHeight": 144,
+    "glyphLineBBoxes": [
+      [
+        152,
+        232,
+        248,
+        264
+      ],
+      [
+        152,
+        280,
+        232,
+        312
+      ],
+      [
+        152,
+        328,
+        280,
+        364
+      ]
+    ],
+    "panelColor": [
+      25,
+      32,
+      47
+    ],
+    "barTop": 372
+  },
+  {
+    "sourceFrame": "captures-crops/spawncommands-autocomplete-square.png",
+    "sourceSize": [
+      316,
+      316
+    ],
+    "inkBBox": [
+      36,
+      112,
+      280,
+      256
+    ],
+    "inkWidth": 244,
+    "inkHeight": 144,
+    "glyphLineBBoxes": [
+      [
+        40,
+        120,
+        204,
+        156
+      ],
+      [
+        40,
+        168,
+        256,
+        204
+      ],
+      [
+        40,
+        216,
+        280,
+        252
+      ]
+    ],
+    "panelColor": [
+      25,
+      32,
+      47
+    ],
+    "barTop": 260
+  },
+  {
+    "sourceFrame": "captures-crops2/frames/spawncommands-spawn-wide-full.png",
+    "sourceSize": [
+      5120,
+      2160
+    ],
+    "inkBBox": [
+      36,
+      1956,
+      280,
+      2100
+    ],
+    "inkWidth": 244,
+    "inkHeight": 144,
+    "glyphLineBBoxes": [
+      [
+        40,
+        1964,
+        204,
+        2000
+      ],
+      [
+        40,
+        2012,
+        252,
+        2044
+      ],
+      [
+        40,
+        2060,
+        276,
+        2092
+      ]
+    ],
+    "panelColor": [
+      32,
+      37,
+      47
+    ],
+    "barTop": 2104
+  },
+  {
+    "sourceFrame": "captures-crops2/frames/simplehomes-home-wide-full.png",
+    "sourceSize": [
+      5120,
+      2160
+    ],
+    "inkBBox": [
+      148,
+      1956,
+      280,
+      2100
+    ],
+    "inkWidth": 132,
+    "inkHeight": 144,
+    "glyphLineBBoxes": [
+      [
+        152,
+        1964,
+        248,
+        1996
+      ],
+      [
+        152,
+        2012,
+        228,
+        2040
+      ],
+      [
+        152,
+        2060,
+        276,
+        2092
+      ]
+    ],
+    "panelColor": [
+      32,
+      37,
+      47
+    ],
+    "barTop": 2104
+  }
+]

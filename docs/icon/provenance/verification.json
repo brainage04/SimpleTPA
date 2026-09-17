@@ -1,0 +1,50 @@
+{
+  "passed": true,
+  "images": [
+    {
+      "project": "SimpleTPA",
+      "size": [
+        340,
+        340
+      ],
+      "skyLeft": 36,
+      "skyRight": 36,
+      "cropPixelSHA256": "8b1e16b2eb56603a4b9209c259bdb62e4c9bffe544821e291b6a7bb5b1d9287f",
+      "fileSHA256": "5ffcbd61c50e3854d43c3be00a0352c531cba2bafbb7836584c12b46e3f16eea",
+      "exactSourceCrop": true
+    },
+    {
+      "project": "SimpleHomes",
+      "size": [
+        340,
+        340
+      ],
+      "skyLeft": 104,
+      "skyRight": 104,
+      "cropPixelSHA256": "83fd098a837648354fdace4eca50e7f056328428f7e518b2fc0a670c3d8613a9",
+      "fileSHA256": "c16a24fc90292caee833903f60b598db1f290fc44b7bc1ec265245372601aa33",
+      "exactSourceCrop": true
+    },
+    {
+      "project": "SpawnCommands",
+      "size": [
+        340,
+        340
+      ],
+      "skyLeft": 36,
+      "skyRight": 60,
+      "cropPixelSHA256": "878b6d1cd37738b0525aa23f4a80496b357ce6524ef64d8f2e2f10ed6e4e4b21",
+      "fileSHA256": "8feea9f46190f7f66bc84bef2091104b77486cdd96da58de43d01210aeeeef73",
+      "exactSourceCrop": true
+    }
+  ],
+  "approvedReferenceByteIdentical": true,
+  "spawn340MinimumPossibleAsymmetry": 24,
+  "spawn316AlternativeMargins": [
+    36,
+    36
+  ],
+  "resizedPixels": 0,
+  "compositedPixels": 0,
+  "visualInspection": "All three final PNGs viewed at their native 340x340 dimensions: all listed completion entries readable and complete; Homes intentionally omits the input bar."
+}

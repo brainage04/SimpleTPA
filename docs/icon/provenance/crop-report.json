@@ -1,0 +1,420 @@
+{
+  "coordinateConvention": "[left,top,right,bottom), exclusive right/bottom; ink bbox includes the complete native autocomplete panel and its glyphs",
+  "requestedSize": [
+    340,
+    340
+  ],
+  "primaryOutputCount": 3,
+  "rootCause": "Previous algorithm anchored every crop at the frame left and set side = 2*panelLeft + panelWidth, yielding 340/428/316. Fixing side to 340 requires an x44 crop for Homes, but x-12 for Spawn; a 5120px-wide recapture confirms native GUI anchoring is unchanged.",
+  "images": [
+    {
+      "sourceFrame": "captures-crops/simpletpa-autocomplete-square.png",
+      "sourceSize": [
+        340,
+        340
+      ],
+      "inkBBox": [
+        36,
+        88,
+        304,
+        280
+      ],
+      "inkWidth": 268,
+      "inkHeight": 192,
+      "glyphLineBBoxes": [
+        [
+          40,
+          96,
+          216,
+          132
+        ],
+        [
+          40,
+          144,
+          304,
+          180
+        ],
+        [
+          40,
+          192,
+          176,
+          228
+        ],
+        [
+          40,
+          240,
+          240,
+          276
+        ]
+      ],
+      "panelColor": [
+        25,
+        32,
+        47
+      ],
+      "barTop": 284,
+      "project": "SimpleTPA",
+      "path": "captures-crops2/simpletpa-autocomplete-square.png",
+      "sourceSHA256": "5ffcbd61c50e3854d43c3be00a0352c531cba2bafbb7836584c12b46e3f16eea",
+      "outputSHA256": "5ffcbd61c50e3854d43c3be00a0352c531cba2bafbb7836584c12b46e3f16eea",
+      "cropBox": [
+        0,
+        0,
+        340,
+        340
+      ],
+      "outputSize": [
+        340,
+        340
+      ],
+      "nativeGuiScale": 4,
+      "idealCropLeft": 0.0,
+      "inkBBoxInOutput": [
+        36,
+        88,
+        304,
+        280
+      ],
+      "trimFromSource": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "measuredSky": {
+        "left": 36,
+        "right": 36,
+        "absoluteDifference": 0,
+        "pureSkyColumnsLeft": 36,
+        "pureSkyColumnsRight": 36,
+        "measurementBand": [
+          88,
+          280
+        ],
+        "skyChannelExtrema": [
+          [
+            [
+              133,
+              133
+            ],
+            [
+              171,
+              172
+            ],
+            [
+              255,
+              255
+            ]
+          ],
+          [
+            [
+              132,
+              132
+            ],
+            [
+              171,
+              171
+            ],
+            [
+              255,
+              255
+            ]
+          ]
+        ]
+      },
+      "entries": [
+        "tpaccept",
+        "tpautoaccept",
+        "tpdeny",
+        "tprequest"
+      ],
+      "entryBBoxesContained": true,
+      "pixelIdenticalToSourceCrop": true,
+      "scaling": "none",
+      "interpolation": "none",
+      "padding": "none",
+      "inputBar": "included; native full-width bar is cropped at right as in approved reference"
+    },
+    {
+      "sourceFrame": "captures-crops2/frames/simplehomes-home-wide-full.png",
+      "sourceSize": [
+        5120,
+        2160
+      ],
+      "inkBBox": [
+        148,
+        1956,
+        280,
+        2100
+      ],
+      "inkWidth": 132,
+      "inkHeight": 144,
+      "glyphLineBBoxes": [
+        [
+          152,
+          1964,
+          248,
+          1996
+        ],
+        [
+          152,
+          2012,
+          228,
+          2040
+        ],
+        [
+          152,
+          2060,
+          276,
+          2092
+        ]
+      ],
+      "panelColor": [
+        32,
+        37,
+        47
+      ],
+      "barTop": 2104,
+      "project": "SimpleHomes",
+      "path": "captures-crops2/simplehomes-autocomplete-square.png",
+      "sourceSHA256": "e1c8935db6f9b24649bafcdbd1e97c5d8d9d8766152b04a90797981fdbed7f25",
+      "outputSHA256": "c16a24fc90292caee833903f60b598db1f290fc44b7bc1ec265245372601aa33",
+      "cropBox": [
+        44,
+        1764,
+        384,
+        2104
+      ],
+      "outputSize": [
+        340,
+        340
+      ],
+      "nativeGuiScale": 4,
+      "idealCropLeft": 44.0,
+      "inkBBoxInOutput": [
+        104,
+        192,
+        236,
+        336
+      ],
+      "trimFromSource": {
+        "left": 44,
+        "top": 1764,
+        "right": 4736,
+        "bottom": 56
+      },
+      "measuredSky": {
+        "left": 104,
+        "right": 104,
+        "absoluteDifference": 0,
+        "pureSkyColumnsLeft": 104,
+        "pureSkyColumnsRight": 104,
+        "measurementBand": [
+          192,
+          336
+        ],
+        "skyChannelExtrema": [
+          [
+            [
+              173,
+              173
+            ],
+            [
+              202,
+              202
+            ],
+            [
+              255,
+              255
+            ]
+          ],
+          [
+            [
+              173,
+              173
+            ],
+            [
+              202,
+              202
+            ],
+            [
+              255,
+              255
+            ]
+          ]
+        ]
+      },
+      "entries": [
+        "base",
+        "mine",
+        "village"
+      ],
+      "entryBBoxesContained": true,
+      "pixelIdenticalToSourceCrop": true,
+      "scaling": "none",
+      "interpolation": "none",
+      "padding": "none",
+      "inputBar": "omitted entirely by vertical crop; no truncated command text"
+    },
+    {
+      "sourceFrame": "captures-crops2/frames/spawncommands-spawn-wide-full.png",
+      "sourceSize": [
+        5120,
+        2160
+      ],
+      "inkBBox": [
+        36,
+        1956,
+        280,
+        2100
+      ],
+      "inkWidth": 244,
+      "inkHeight": 144,
+      "glyphLineBBoxes": [
+        [
+          40,
+          1964,
+          204,
+          2000
+        ],
+        [
+          40,
+          2012,
+          252,
+          2044
+        ],
+        [
+          40,
+          2060,
+          276,
+          2092
+        ]
+      ],
+      "panelColor": [
+        32,
+        37,
+        47
+      ],
+      "barTop": 2104,
+      "project": "SpawnCommands",
+      "path": "captures-crops2/spawncommands-autocomplete-square.png",
+      "sourceSHA256": "0b823d495ea742a2c0e8e47ac4052aaac2545d97630db23f2241a9f49e9eafcc",
+      "outputSHA256": "8feea9f46190f7f66bc84bef2091104b77486cdd96da58de43d01210aeeeef73",
+      "cropBox": [
+        0,
+        1820,
+        340,
+        2160
+      ],
+      "outputSize": [
+        340,
+        340
+      ],
+      "nativeGuiScale": 4,
+      "idealCropLeft": -12.0,
+      "inkBBoxInOutput": [
+        36,
+        136,
+        280,
+        280
+      ],
+      "trimFromSource": {
+        "left": 0,
+        "top": 1820,
+        "right": 4780,
+        "bottom": 0
+      },
+      "measuredSky": {
+        "left": 36,
+        "right": 60,
+        "absoluteDifference": 24,
+        "pureSkyColumnsLeft": 36,
+        "pureSkyColumnsRight": 60,
+        "measurementBand": [
+          136,
+          280
+        ],
+        "skyChannelExtrema": [
+          [
+            [
+              173,
+              173
+            ],
+            [
+              202,
+              202
+            ],
+            [
+              255,
+              255
+            ]
+          ],
+          [
+            [
+              173,
+              173
+            ],
+            [
+              202,
+              202
+            ],
+            [
+              255,
+              255
+            ]
+          ]
+        ]
+      },
+      "entries": [
+        "spawnof",
+        "spawnpoint",
+        "spawnshare"
+      ],
+      "entryBBoxesContained": true,
+      "pixelIdenticalToSourceCrop": true,
+      "scaling": "none",
+      "interpolation": "none",
+      "padding": "none",
+      "inputBar": "included; native full-width bar is cropped at right as in approved reference"
+    }
+  ],
+  "closestExactSymmetryAlternative": {
+    "project": "SpawnCommands",
+    "path": "captures-crops2/evidence/closest-equal-sky/spawncommands-autocomplete-316.png",
+    "sourceFrame": "captures-crops2/frames/spawncommands-spawn-wide-full.png",
+    "size": [
+      316,
+      316
+    ],
+    "cropBox": [
+      0,
+      1844,
+      316,
+      2160
+    ],
+    "trimFromSource": {
+      "left": 0,
+      "top": 1844,
+      "right": 4804,
+      "bottom": 0
+    },
+    "inkBBox": [
+      36,
+      1956,
+      280,
+      2100
+    ],
+    "inkBBoxInOutput": [
+      36,
+      112,
+      280,
+      256
+    ],
+    "measuredSky": {
+      "left": 36,
+      "right": 36
+    },
+    "outputSHA256": "97c15fa0746f85841c031078f7614c06582f442bb0a6eb5fa8ac83395634e38a",
+    "reason": "largest feasible exactly symmetric crop at GUI scale 4: side <= 2*36+244 = 316; therefore also closest such integer side to 340"
+  }
+}

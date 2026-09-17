@@ -1,0 +1,29 @@
+{
+  "blockers": [],
+  "notes": [
+    {
+      "item": "No re-capture was needed",
+      "detail": "All three existing frames already contain enough sky for the equality: the entry block of every frame starts 36 px (SimpleTPA, SpawnCommands) or 148 px (SimpleHomes) right of the frame's left edge, so trimming the right side down to the same width is possible without touching the left edge and without losing any part of the entries or of the chat input line.",
+      "impact": "The three deliverables are crops of the existing verified frames; no new Minecraft session was started for this item.",
+      "evidence": "captures-crops/crop-report.json"
+    },
+    {
+      "item": "Which edge of the entry block counts as \"the autocomplete entries\"",
+      "detail": "The entries are drawn by the game as a translucent dark panel (rgb 25,32,47) with the entry texts on top, so the ink-detected block includes that panel (36..303 / 148..279 / 36..279). Inside the panel the glyphs carry the game's usual 1 GUI px left padding (4 screen px) and no right padding, so centring the glyph columns instead of the panel would give a square 4 px larger (344 / 432 / 320 instead of 340 / 428 / 316).",
+      "impact": "The delivered squares centre the entry block including its panel (sky left == sky right == 36/148/36 px). The glyph-only alternative is recorded per image in crop-report.json under glyphBlockAlternative if that variant is preferred.",
+      "evidence": "captures-crops/crop-report.json; captures-crops/ocr.py"
+    },
+    {
+      "item": "The chat input bar is cut by the right edge of every crop",
+      "detail": "In the frames the chat input background bar spans the full screen width (x8..3831 of 3840); it cannot be contained by any crop that centres the entries, and it was already cut in the previous 392/456/368 px squares.",
+      "impact": "Consequence: the bar runs to the right edge of each delivered image, exactly as in the source frame; no entry or input text is affected.",
+      "evidence": "captures-crops/crop-report.json (chatBarTop 2104 in all three frames)"
+    },
+    {
+      "item": "Only the top and the right were trimmed, so the image is not vertically symmetric",
+      "detail": "The task is to trim the top and right and keep the image square; the bottom edge stays on the frame's bottom edge (the chat bar is 8 px above it). Sky above the entry block is 88 / 224 / 112 px, sky below the block (within the bar band) is 60 px.",
+      "impact": "Intentional per the instruction; the left/right sky equality is what was requested and is exact.",
+      "evidence": "captures-crops/crop-report.json (margins)"
+    }
+  ]
+}

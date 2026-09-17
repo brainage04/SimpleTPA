@@ -1,0 +1,39 @@
+{
+  "entries": [
+    {
+      "project": "SimpleTPA",
+      "label": "SimpleTPA chat autocomplete \u2014 340x340, native GUI scale 4",
+      "path": "captures-crops2/simpletpa-autocomplete-square.png",
+      "method": "Byte-identical copy of approved reference",
+      "source": "captures-crops/simpletpa-autocomplete-square.png",
+      "notes": "340x340; sky 36 left / 36 right; ink bbox [36, 88, 304, 280]; crop [0, 0, 340, 340]. included; native full-width bar is cropped at right as in approved reference. See captures-crops2/crop-report.json for pixel/hash evidence."
+    },
+    {
+      "project": "SimpleHomes",
+      "label": "SimpleHomes chat autocomplete \u2014 340x340, bottom-left anchored (native GUI scale 4)",
+      "path": "captures-crops2/simplehomes-autocomplete-square.png",
+      "method": "Integer crop of new native F2 screenshot; no resize, resampling, interpolation, compositing or padding",
+      "source": "captures-crops2/frames/simplehomes-home-wide-full.png",
+      "notes": "Re-cropped from frames/simplehomes-home-wide-full.png anchored to the BOTTOM-LEFT of the frame (box [0, 1820, 340, 2160]), matching the SimpleTPA and SpawnCommands crops: the native autocomplete panel and the typed input line are both fully visible, the panel occupies 132x144 px inside the crop. Panel bbox [148, 136, 279, 279]. Superseded centred crop kept at evidence/simplehomes-autocomplete-square-previous.png.",
+      "fixedFrom": "evidence/simplehomes-autocomplete-square-previous.png"
+    },
+    {
+      "project": "SpawnCommands",
+      "label": "SpawnCommands chat autocomplete \u2014 340x340, native GUI scale 4",
+      "path": "captures-crops2/spawncommands-autocomplete-square.png",
+      "method": "Integer crop of new native F2 screenshot; no resize, resampling, interpolation, compositing or padding",
+      "source": "captures-crops2/frames/spawncommands-spawn-wide-full.png",
+      "notes": "340x340; sky 36 left / 60 right; ink bbox [36, 1956, 280, 2100]; crop [0, 1820, 340, 2160]. included; native full-width bar is cropped at right as in approved reference. See captures-crops2/crop-report.json for pixel/hash evidence."
+    }
+  ],
+  "alternatives": [
+    {
+      "project": "SpawnCommands",
+      "label": "Closest exact-symmetry fallback \u2014 316x316, NOT part of the three 340x340 primaries",
+      "path": "captures-crops2/evidence/closest-equal-sky/spawncommands-autocomplete-316.png",
+      "method": "Integer crop only of wider native scale-4 screenshot",
+      "source": "captures-crops2/frames/spawncommands-spawn-wide-full.png",
+      "notes": "36/36 sky, all three entries and input text retained; same native typography, different canvas size."
+    }
+  ]
+}

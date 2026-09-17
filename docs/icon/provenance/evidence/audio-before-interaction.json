@@ -1,0 +1,6 @@
+{
+  "sinks": "59\talsa_output.usb-Generic_USB_Audio-00.HiFi__SPDIF__sink\tPipeWire\ts16le 2ch 48000Hz\tSUSPENDED\n60\talsa_output.usb-Generic_USB_Audio-00.HiFi__Speaker__sink\tPipeWire\ts32le 2ch 48000Hz\tSUSPENDED\n61\talsa_output.usb-Generic_USB_Audio-00.HiFi__Headphones__sink\tPipeWire\ts32le 2ch 48000Hz\tSUSPENDED\n64\talsa_output.usb-HP__Inc_HyperX_Cloud_III_000000000000-00.analog-stereo\tPipeWire\ts24le 2ch 48000Hz\tSUSPENDED\n1818\talsa_output.pci-0000_01_00.1.hdmi-stereo\tPipeWire\ts16le 2ch 48000Hz\tSUSPENDED\n2850\tround3_dimension\tPipeWire\tfloat32le 2ch 48000Hz\tRUNNING\n2879\tround3_crops2\tPipeWire\tfloat32le 2ch 48000Hz\tRUNNING\n",
+  "sinkInputs": "2898\t2879\t2892\tPipeWire\tfloat32le 2ch 48000Hz\n3112\t2850\t3106\tPipeWire\tfloat32le 2ch 48000Hz\n",
+  "ownSinkId": "2879",
+  "soundDevice": "Round3Crops2"
+}
