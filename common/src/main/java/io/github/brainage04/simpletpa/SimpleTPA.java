@@ -3,6 +3,7 @@ package io.github.brainage04.simpletpa;
 import io.github.brainage04.brainagelib.feedback.ModFeedback;
 import io.github.brainage04.brainagelib.help.ServerModHelpEntry;
 import io.github.brainage04.brainagelib.help.ServerModHelpRegistry;
+import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.command.core.ModCommands;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
 import io.github.brainage04.simpletpa.event.ModTickEvents;
@@ -28,7 +29,13 @@ public final class SimpleTPA {
 		platform.registerCommands(ModCommands::register);
 		platform.registerEndServerTick(ModTickEvents::onEndServerTick);
 		platform.registerServerStarted(InstantTpaWhitelist::load);
-		platform.registerServerStopping(InstantTpaWhitelist::save);
+		platform.registerServerStopping(server -> {
+			try {
+				InstantTpaWhitelist.save(server);
+			} finally {
+				TPRequestCommand.TP_REQUESTS.clear();
+			}
+		});
 		ServerModHelpRegistry.register(new ServerModHelpEntry(
 				MOD_ID,
 				MOD_NAME,
