@@ -6,7 +6,7 @@ license="MIT"
 modId="simpletpa"
 version="${version}"
 displayName="SimpleTPA"
-logoFile="assets/simpletpa/icon.png"
+iconFile="assets/simpletpa/icon.png"
 description="Adds player-to-player teleport requests, approvals, and persistent auto-accept lists."
 authors="brainage04"
 
