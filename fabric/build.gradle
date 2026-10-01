@@ -1,3 +1,10 @@
+repositories {
+	exclusiveContent {
+		forRepository { maven { url = "https://api.modrinth.com/maven" } }
+		filter { includeGroup "maven.modrinth" }
+	}
+}
+
 workspaceDependencies {
 	siblingMaven('BrainageLib') {
 		coordinate.set("io.github.brainage04:brainagelib:${rootProject.brainagelib_version}")
