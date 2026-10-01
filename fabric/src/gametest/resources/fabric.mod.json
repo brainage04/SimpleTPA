@@ -7,7 +7,8 @@
 	"environment": "*",
 	"entrypoints": {
 		"fabric-gametest": [
-			"io.github.brainage04.simpletpa.SimpleTPATest"
+			"io.github.brainage04.simpletpa.SimpleTPATest",
+			"io.github.brainage04.simpletpa.SimpleTPAGameTest"
 		],
 		"fabric-client-gametest": [
 			"io.github.brainage04.simpletpa.SimpleTPAClientGameTest"

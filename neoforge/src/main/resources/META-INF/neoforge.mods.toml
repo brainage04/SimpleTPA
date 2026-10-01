@@ -1,6 +1,7 @@
 modLoader="javafml"
 loaderVersion="[11,)"
 license="MIT"
+issueTrackerURL="https://github.com/brainage04/SimpleTPA/issues"
 
 [[mods]]
 modId="simpletpa"
@@ -9,6 +10,7 @@ displayName="SimpleTPA"
 iconFile="assets/simpletpa/icon.png"
 description="Adds player-to-player teleport requests, approvals, and persistent auto-accept lists."
 authors="brainage04"
+displayURL="https://github.com/brainage04/SimpleTPA"
 
 [[dependencies.simpletpa]]
 modId="neoforge"
