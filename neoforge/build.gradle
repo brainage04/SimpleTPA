@@ -5,4 +5,7 @@ workspaceDependencies {
 	}
 }
 
-dependencies { implementation "io.github.brainage04:brainagelib-neoforge:${rootProject.brainagelib_version}" }
+dependencies {
+	implementation "io.github.brainage04:brainagelib-neoforge:${rootProject.brainagelib_version}"
+	productionRuntimeMods "io.github.brainage04:brainagelib-neoforge:${rootProject.brainagelib_version}"
+}

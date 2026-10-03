@@ -36,7 +36,7 @@ SimpleTPA registers with BrainageLib's combined first-join notice. Players can r
 
 ## Verification
 
-`./gradlew runAllGameTests` runs the Fabric and NeoForge server suites. The Fabric suite uses independently controlled Carpet fake players for request, accept, deny, and auto-accept behavior.
+`./gradlew runAllGameTests` runs the Fabric and NeoForge server suites against the release JARs on production servers (`:fabric:runProductionServerGameTest`, `:neoforge:runProductionServerGameTest`), plus the Fabric client suite; `./gradlew runGameTest` runs the server suites in development. The Fabric suite uses independently controlled Carpet fake players for request, accept, deny, and auto-accept behavior.
 
 `./gradlew :fabric:runProductionClientGameTest` launches a visual accept/deny/auto-accept scenario with the connected client in spectator mode. Record that fixture with:
 
