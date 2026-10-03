@@ -33,7 +33,6 @@ bin/
 .fabric/
 mods/
 **/run/*
-!**/run/options.txt
 logs/
 
 # java
