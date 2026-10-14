@@ -75,7 +75,7 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 			ServerPlayer sender = SimpleTPAFakePlayerScenario.requirePlayer(level, SENDER_NAME);
 			ServerPlayer receiver = SimpleTPAFakePlayerScenario.requirePlayer(level, RECEIVER_NAME);
 			SimpleTPAFakePlayerScenario.setPositions(sender, SENDER_POSITION, receiver, RECEIVER_POSITION);
-			SimpleTPAFakePlayerScenario.executeCommand(sender, "tprequest " + RECEIVER_NAME);
+			SimpleTPAFakePlayerScenario.executeCommand(sender, "tpa " + RECEIVER_NAME);
 		});
 		ClientGameTestRecorder.showStep(
 				context,
@@ -109,7 +109,7 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 	) {
 		server.runOnServer(minecraftServer -> actors(minecraftServer.getPlayerList().getPlayer(observerId), (sender, receiver) -> {
 			SimpleTPAFakePlayerScenario.setPositions(sender, SENDER_POSITION, receiver, RECEIVER_POSITION);
-			SimpleTPAFakePlayerScenario.executeCommand(sender, "tprequest " + RECEIVER_NAME);
+			SimpleTPAFakePlayerScenario.executeCommand(sender, "tpa " + RECEIVER_NAME);
 		}));
 		ClientGameTestRecorder.showStep(
 				context,
@@ -146,7 +146,7 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 		);
 		context.waitTicks(25);
 		server.runOnServer(minecraftServer -> actors(minecraftServer.getPlayerList().getPlayer(observerId),
-				(sender, receiver) -> SimpleTPAFakePlayerScenario.executeCommand(sender, "tprequest " + RECEIVER_NAME)));
+				(sender, receiver) -> SimpleTPAFakePlayerScenario.executeCommand(sender, "tpa " + RECEIVER_NAME)));
 		context.waitTicks(30);
 		server.runOnServer(minecraftServer -> actors(minecraftServer.getPlayerList().getPlayer(observerId),
 				(sender, receiver) -> SimpleTPAFakePlayerScenario.assertPlayersTogether(

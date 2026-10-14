@@ -11,6 +11,16 @@ public class SimpleTPAGameTest {
 	}
 
 	@GameTest
+	public void tpaAliasAcceptFlow(GameTestHelper helper) {
+		SimpleTPAGameTests.tpaAliasAcceptFlow(helper);
+	}
+
+	@GameTest
+	public void tpaTabCompletion(GameTestHelper helper) {
+		SimpleTPAGameTests.tpaTabCompletion(helper);
+	}
+
+	@GameTest
 	public void denyFlows(GameTestHelper helper) {
 		SimpleTPAGameTests.denyFlows(helper);
 	}

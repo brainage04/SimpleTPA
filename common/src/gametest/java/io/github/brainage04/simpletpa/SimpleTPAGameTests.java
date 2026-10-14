@@ -40,6 +40,36 @@ public final class SimpleTPAGameTests {
 		});
 	}
 
+	public static void tpaAliasAcceptFlow(GameTestHelper helper) {
+		pair(helper, players -> {
+			players[0].setPos(new Vec3(0, 0, 0));
+			players[1].setPos(new Vec3(10, 10, 10));
+			command(players[0], "tpa " + players[1].getScoreboardName());
+			command(players[1], "tpaccept");
+			helper.runAtTickTime(2, () -> {
+				if (players[0].blockPosition().equals(players[1].blockPosition())) helper.succeed();
+				else helper.fail("/tpa request did not teleport after /tpaccept");
+			});
+		});
+	}
+
+	public static void tpaTabCompletion(GameTestHelper helper) {
+		pair(helper, players -> {
+			var dispatcher = helper.getLevel().getServer().getCommands().getDispatcher();
+			String target = players[1].getScoreboardName();
+			for (String literal : new String[]{"tpa ", "tprequest "}) {
+				var parse = dispatcher.parse(literal, players[0].createCommandSourceStack());
+				boolean suggested = dispatcher.getCompletionSuggestions(parse).join().getList().stream()
+						.anyMatch(suggestion -> suggestion.getText().equals(target));
+				if (!suggested) {
+					helper.fail("/" + literal.trim() + " did not suggest online player " + target);
+					return;
+				}
+			}
+			helper.succeed();
+		});
+	}
+
 	public static void denyFlows(GameTestHelper helper) {
 		pair(helper, players -> {
 			players[0].setPos(new Vec3(0, 0, 0));

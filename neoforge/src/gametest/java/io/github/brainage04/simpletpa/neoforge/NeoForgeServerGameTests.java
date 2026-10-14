@@ -22,6 +22,8 @@ public final class NeoForgeServerGameTests {
 	@SubscribeEvent
 	public static void registerTestFunctions(RegisterEvent event) {
 		register(event, "accept_flows", SimpleTPAGameTests::acceptFlows);
+		register(event, "tpa_alias_accept_flow", SimpleTPAGameTests::tpaAliasAcceptFlow);
+		register(event, "tpa_tab_completion", SimpleTPAGameTests::tpaTabCompletion);
 		register(event, "deny_flows", SimpleTPAGameTests::denyFlows);
 		register(event, "instant_auto_accept_flow", SimpleTPAGameTests::instantAutoAcceptFlow);
 		register(event, "combined_server_help", SimpleTPAGameTests::combinedServerHelp);

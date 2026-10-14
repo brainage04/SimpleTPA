@@ -7,6 +7,7 @@ import io.github.brainage04.simpletpa.command.TPDenyCommand;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
 
@@ -38,7 +39,7 @@ public final class ModCommands {
 					)
 			);
 
-			dispatcher.register(literal("tprequest")
+			LiteralCommandNode<CommandSourceStack> tpa = dispatcher.register(literal("tpa")
 					.then(argument("name", EntityArgument.player())
 							.executes(context -> TPRequestCommand.execute(
 									context.getSource(),
@@ -46,6 +47,10 @@ public final class ModCommands {
 							))
 					)
 			);
+
+			// Legacy name kept for existing users; redirects into /tpa's argument tree so it parses,
+			// suggests and executes identically.
+			dispatcher.register(literal("tprequest").redirect(tpa));
 
 			dispatcher.register(literal("tpautoaccept")
 					.executes(context -> TPAutoAcceptCommand.list(context.getSource()))
@@ -83,7 +88,7 @@ public final class ModCommands {
 
 	private static int showHelp(CommandSourceStack source) {
 		SimpleTPA.FEEDBACK.neutral(source, "Player commands:");
-		SimpleTPA.FEEDBACK.neutral(source, "/tprequest <player> — request to teleport to another player");
+		SimpleTPA.FEEDBACK.neutral(source, "/tpa <player> — request to teleport to another player (/tprequest also works)");
 		SimpleTPA.FEEDBACK.neutral(source, "/tpaccept [player] — accept one incoming request");
 		SimpleTPA.FEEDBACK.neutral(source, "/tpdeny [player] — deny one incoming request");
 		SimpleTPA.FEEDBACK.neutral(source, "/tpautoaccept <list|add|remove|clear> — manage automatic approvals");

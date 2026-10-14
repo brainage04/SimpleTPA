@@ -16,7 +16,7 @@ Players can maintain a persistent auto-accept whitelist. The `simpletpa:allow_in
 ## Commands
 
 - `/simpletpa help` — show the player command summary.
-- `/tprequest <player>` — request to teleport to a player.
+- `/tpa <player>` — request to teleport to a player. `/tprequest <player>` still works and does exactly the same thing.
 - `/tpaccept [player]` — accept the named player's request, or the only pending request.
 - `/tpdeny [player]` — deny the named player's request, or the only pending request.
 - `/tpautoaccept list` — list your auto-accept whitelist.

@@ -85,6 +85,23 @@ public class SimpleTPATest implements CustomTestMethodInvoker {
 	}
 
 	@GameTest
+	public void testTpaAliasAcceptFlow(GameTestHelper helper, ServerPlayer sender, ServerPlayer receiver) {
+		executeRunnables(
+				helper,
+				() -> setPositions(helper, sender, receiver),
+				() -> executeCommand(sender, "tpa %s".formatted(receiver.getScoreboardName())),
+				() -> executeCommand(receiver, "tpaccept"),
+				() -> {
+					if (sender.blockPosition().equals(receiver.blockPosition())) {
+						helper.succeed();
+					} else {
+						helper.fail("/tpa request did not teleport the sender after /tpaccept");
+					}
+				}
+		);
+	}
+
+	@GameTest
 	public void testNamedAcceptFlow(GameTestHelper helper, ServerPlayer sender, ServerPlayer receiver) {
 		requestAcceptCombination(helper, sender, receiver, "tpaccept %s".formatted(sender.getScoreboardName()));
 	}
