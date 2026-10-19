@@ -5,220 +5,197 @@ import io.github.brainage04.fabricmoddingconventions.ClientGameTestServers;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.phys.Vec3;
+import org.lwjgl.glfw.GLFW;
 
-import java.util.UUID;
+import java.util.Properties;
 
+/**
+ * Feature showcase seen through the client player's own eyes: the client types its commands into chat
+ * and sees the replies and teleports as a real user would, while one Carpet fake player is the other side.
+ */
 @SuppressWarnings("UnstableApiUsage")
 public final class SimpleTPAClientGameTest implements FabricClientGameTest {
+	private static final String FRIEND_NAME = "tpaFriend";
+
+	// Showcase captions: edit the on-screen titles and descriptions here.
+	private static final Caption REQUEST = new Caption("simpletpa.request",
+			"Teleport request",
+			"You ask " + FRIEND_NAME + " if you can teleport to them");
+	private static final Caption ACCEPT = new Caption("simpletpa.accept",
+			"Request accepted",
+			FRIEND_NAME + " accepts and you arrive at their side");
+	private static final Caption DENY = new Caption("simpletpa.deny",
+			"Request denied",
+			FRIEND_NAME + " denies, so you stay where you are");
+	private static final Caption AUTO_ACCEPT = new Caption("simpletpa.autoaccept",
+			"Auto-accept",
+			"You whitelist " + FRIEND_NAME + ", who can now teleport to you instantly");
+
 	private static final int STAGE_Y = 64;
-	private static final String SENDER_NAME = "tpaViewSender";
-	private static final String RECEIVER_NAME = "tpaViewRecv";
-	private static final Vec3 SENDER_POSITION = new Vec3(-4.5D, STAGE_Y, 0.5D);
-	private static final Vec3 RECEIVER_POSITION = new Vec3(4.5D, STAGE_Y, 0.5D);
+	// The client stands on the diamond block facing east, the friend on the gold block facing west.
+	private static final Vec3 PLAYER_POSITION = new Vec3(-2.5D, STAGE_Y, 0.5D);
+	private static final Vec3 FRIEND_POSITION = new Vec3(2.5D, STAGE_Y, 0.5D);
+	private static final float EAST = -90.0F;
+	private static final float WEST = 90.0F;
+	private static final float PLAYER_PITCH = 6.0F;
+	private static final int COMMAND_VISIBLE_TICKS = 20;
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
-		ClientGameTestServers.withDedicatedServer(context, "SimpleTPA recording GameTest", server -> {
-			UUID observerId = server.computeOnServer(minecraftServer ->
-					minecraftServer.getPlayerList().getPlayers().getFirst().getUUID());
-			server.runOnServer(minecraftServer -> prepareStage(requireObserver(minecraftServer.getPlayerList().getPlayer(observerId))));
-			waitForActors(context, server, observerId);
-			pointSpectatorCamera(context);
-
-			try {
-				context.waitTicks(20);
-				ClientGameTestRecorder.startRecording(context);
-				ClientGameTestRecorder.showStep(
-						context,
-						"simpletpa.stage",
-						"SimpleTPA",
-						"A spectator observes two independently controlled Carpet players"
-				);
-				context.waitTicks(35);
-
-				showAcceptedRequest(context, server, observerId);
-				showDeniedRequest(context, server, observerId);
-				showAutoAcceptedRequest(context, server, observerId);
-
-				ClientGameTestRecorder.showStep(
-						context,
-						"simpletpa.complete",
-						"SimpleTPA verified",
-						"Accept, deny, and auto-accept flows behaved correctly"
-				);
-				context.waitTicks(35);
-			} finally {
-				server.runOnServer(minecraftServer -> {
-					ServerPlayer observer = minecraftServer.getPlayerList().getPlayer(observerId);
-					if (observer != null) {
-						SimpleTPAFakePlayerScenario.kill(observer.level(), SENDER_NAME);
-						SimpleTPAFakePlayerScenario.kill(observer.level(), RECEIVER_NAME);
-					}
+		String playerName = context.computeOnClient(client -> client.getUser().getName());
+		// Command suggestions would cover the chat while a command sits in the chat box.
+		context.runOnClient(client -> client.options.autoSuggestions().set(false));
+		Properties serverProperties = ClientGameTestServers.flatServerProperties();
+		// The Carpet player joins first and takes a slot, so the client needs a second one.
+		serverProperties.setProperty("max-players", "2");
+		ClientGameTestServers.withDedicatedServer(context, serverProperties, "SimpleTPA recording GameTest",
+				server -> prepareWorld(context, server, playerName),
+				server -> {
+					context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
+					showAcceptedRequest(context, server, playerName);
+					showDeniedRequest(context, server, playerName);
+					showAutoAcceptedRequest(context, server, playerName);
 				});
-			}
-		});
 	}
 
-	private static void showAcceptedRequest(
-			ClientGameTestContext context,
-			TestDedicatedServerContext server,
-			UUID observerId
-	) {
+	private static void showAcceptedRequest(ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+		show(context, REQUEST);
+		context.waitTicks(10);
+		typeCommand(context, "tpa " + FRIEND_NAME);
+		context.waitTicks(30);
+
+		show(context, ACCEPT);
+		context.waitTicks(10);
 		server.runOnServer(minecraftServer -> {
-			ServerLevel level = requireObserver(minecraftServer.getPlayerList().getPlayer(observerId)).level();
-			ServerPlayer sender = SimpleTPAFakePlayerScenario.requirePlayer(level, SENDER_NAME);
-			ServerPlayer receiver = SimpleTPAFakePlayerScenario.requirePlayer(level, RECEIVER_NAME);
-			SimpleTPAFakePlayerScenario.setPositions(sender, SENDER_POSITION, receiver, RECEIVER_POSITION);
-			SimpleTPAFakePlayerScenario.executeCommand(sender, "tpa " + RECEIVER_NAME);
+			ServerPlayer friend = friend(minecraftServer);
+			SimpleTPAFakePlayerScenario.executeCommand(friend, "tpaccept");
+			SimpleTPAFakePlayerScenario.assertLandedOn(player(minecraftServer, playerName), friend,
+					"The client player did not land on " + FRIEND_NAME + " after the request was accepted");
 		});
-		ClientGameTestRecorder.showStep(
-				context,
-				"simpletpa.request",
-				"Teleport requested",
-				SENDER_NAME + " asks to teleport to " + RECEIVER_NAME
-		);
-		context.waitTicks(30);
-
-		ClientGameTestRecorder.showStep(
-				context,
-				"simpletpa.accept",
-				"Request accepted",
-				RECEIVER_NAME + " runs /tpaccept"
-		);
-		server.runOnServer(minecraftServer -> actors(minecraftServer.getPlayerList().getPlayer(observerId),
-				(sender, receiver) -> SimpleTPAFakePlayerScenario.executeCommand(receiver, "tpaccept")));
-		context.waitTicks(30);
-		server.runOnServer(minecraftServer -> actors(minecraftServer.getPlayerList().getPlayer(observerId),
-				(sender, receiver) -> SimpleTPAFakePlayerScenario.assertPlayersTogether(
-						sender,
-						receiver,
-						"Sender did not teleport after the request was accepted."
-				)));
+		// Both players now share one spot; they stay there until the next step resets them.
+		context.waitTicks(38);
 	}
 
-	private static void showDeniedRequest(
-			ClientGameTestContext context,
-			TestDedicatedServerContext server,
-			UUID observerId
-	) {
-		server.runOnServer(minecraftServer -> actors(minecraftServer.getPlayerList().getPlayer(observerId), (sender, receiver) -> {
-			SimpleTPAFakePlayerScenario.setPositions(sender, SENDER_POSITION, receiver, RECEIVER_POSITION);
-			SimpleTPAFakePlayerScenario.executeCommand(sender, "tpa " + RECEIVER_NAME);
-		}));
-		ClientGameTestRecorder.showStep(
-				context,
-				"simpletpa.deny",
-				"Request denied",
-				RECEIVER_NAME + " runs /tpdeny; both players should stay apart"
-		);
+	private static void showDeniedRequest(ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+		show(context, DENY);
+		server.runOnServer(minecraftServer -> placeActors(player(minecraftServer, playerName), friend(minecraftServer)));
+		context.waitTicks(10);
+		typeCommand(context, "tpa " + FRIEND_NAME);
 		context.waitTicks(25);
-		server.runOnServer(minecraftServer -> actors(minecraftServer.getPlayerList().getPlayer(observerId),
-				(sender, receiver) -> SimpleTPAFakePlayerScenario.executeCommand(receiver, "tpdeny")));
-		context.waitTicks(30);
-		server.runOnServer(minecraftServer -> actors(minecraftServer.getPlayerList().getPlayer(observerId),
-				(sender, receiver) -> SimpleTPAFakePlayerScenario.assertPlayersApart(
-						sender,
-						receiver,
-						"Sender teleported despite the request being denied."
-				)));
+		server.runOnServer(minecraftServer -> SimpleTPAFakePlayerScenario.executeCommand(friend(minecraftServer), "tpdeny"));
+		context.waitTicks(35);
+		server.runOnServer(minecraftServer -> SimpleTPAFakePlayerScenario.assertPlayersApart(
+				player(minecraftServer, playerName),
+				friend(minecraftServer),
+				"The client player teleported despite the request being denied."));
 	}
 
-	private static void showAutoAcceptedRequest(
-			ClientGameTestContext context,
-			TestDedicatedServerContext server,
-			UUID observerId
-	) {
-		server.runOnServer(minecraftServer -> actors(minecraftServer.getPlayerList().getPlayer(observerId), (sender, receiver) -> {
-			SimpleTPAFakePlayerScenario.executeCommand(receiver, "tpautoaccept add " + SENDER_NAME);
-			SimpleTPAFakePlayerScenario.setPositions(sender, SENDER_POSITION, receiver, RECEIVER_POSITION);
-		}));
-		ClientGameTestRecorder.showStep(
-				context,
-				"simpletpa.autoaccept",
-				"Auto-accept whitelist",
-				"The next request should teleport immediately without /tpaccept"
-		);
+	/** The last step: the recording ends right after it, without a closing caption card. */
+	private static void showAutoAcceptedRequest(ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+		show(context, AUTO_ACCEPT);
+		context.waitTicks(10);
+		typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
 		context.waitTicks(25);
-		server.runOnServer(minecraftServer -> actors(minecraftServer.getPlayerList().getPlayer(observerId),
-				(sender, receiver) -> SimpleTPAFakePlayerScenario.executeCommand(sender, "tpa " + RECEIVER_NAME)));
-		context.waitTicks(30);
-		server.runOnServer(minecraftServer -> actors(minecraftServer.getPlayerList().getPlayer(observerId),
-				(sender, receiver) -> SimpleTPAFakePlayerScenario.assertPlayersTogether(
-						sender,
-						receiver,
-						"Auto-accepted request did not teleport the sender."
-				)));
+		server.runOnServer(minecraftServer -> {
+			ServerPlayer friend = friend(minecraftServer);
+			SimpleTPAFakePlayerScenario.executeCommand(friend, "tpa " + playerName);
+			SimpleTPAFakePlayerScenario.assertLandedOn(friend, player(minecraftServer, playerName),
+					"The whitelisted " + FRIEND_NAME + " did not land on the client player instantly");
+		});
+		context.waitTicks(38);
 	}
 
-	private static void prepareStage(ServerPlayer observer) {
-		ServerLevel level = observer.level();
-		for (BlockPos position : BlockPos.betweenClosed(-10, STAGE_Y - 1, -5, 10, STAGE_Y + 4, 5)) {
+	/**
+	 * Opens chat, enters {@code command} and sends it after a pause, as a player would. The command is
+	 * entered whole: typed one character at a time, the partial command shows a parse error above it.
+	 */
+	private static void typeCommand(ClientGameTestContext context, String command) {
+		context.setScreen(() -> new ChatScreen("", false));
+		context.getInput().typeChars("/" + command);
+		context.waitTicks(COMMAND_VISIBLE_TICKS);
+		context.getInput().pressKey(GLFW.GLFW_KEY_ENTER);
+	}
+
+	private static void show(ClientGameTestContext context, Caption caption) {
+		ClientGameTestRecorder.showStep(context, caption.id(), caption.title(), caption.description());
+	}
+
+	/** Runs before the client joins, so none of the setup is in the recording. */
+	private static void prepareWorld(ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+		server.runOnServer(minecraftServer -> {
+			ServerLevel level = minecraftServer.overworld();
+			buildStage(level);
+			// At noon the sun is overhead and out of view, instead of behind the friend's name tag.
+			minecraftServer.getCommands().performPrefixedCommand(
+					minecraftServer.createCommandSourceStack().withSuppressedOutput(), "time set noon");
+			minecraftServer.getGameRules().set(GameRules.ADVANCE_TIME, false, minecraftServer);
+			// A new player joins exactly on the world spawn, facing its yaw and pitch.
+			minecraftServer.getGameRules().set(GameRules.RESPAWN_RADIUS, 0, minecraftServer);
+			minecraftServer.setRespawnData(LevelData.RespawnData.of(
+					Level.OVERWORLD, BlockPos.containing(PLAYER_POSITION), EAST, PLAYER_PITCH));
+			SimpleTPAFakePlayerScenario.spawn(level, FRIEND_NAME, FRIEND_POSITION);
+		});
+		waitForFriend(context, server);
+		server.runOnServer(minecraftServer -> {
+			ServerLevel level = minecraftServer.overworld();
+			placeFriend(friend(minecraftServer));
+			SimpleTPAFakePlayerScenario.colorName(level, playerName, "aqua");
+			SimpleTPAFakePlayerScenario.colorName(level, FRIEND_NAME, "gold");
+		});
+	}
+
+	private static void buildStage(ServerLevel level) {
+		// A plain dark floor reaching far back, with the client's diamond block and the friend's gold block.
+		for (BlockPos position : BlockPos.betweenClosed(-30, STAGE_Y - 1, -24, 30, STAGE_Y + 4, 24)) {
 			level.setBlock(position, position.getY() == STAGE_Y - 1
-					? Blocks.SMOOTH_STONE.defaultBlockState()
+					? Blocks.POLISHED_DEEPSLATE.defaultBlockState()
 					: Blocks.AIR.defaultBlockState(), 3);
 		}
-		level.setBlock(new BlockPos(-5, STAGE_Y - 1, 0), Blocks.DIAMOND_BLOCK.defaultBlockState(), 3);
-		level.setBlock(new BlockPos(4, STAGE_Y - 1, 0), Blocks.GOLD_BLOCK.defaultBlockState(), 3);
-
-		observer.setGameMode(GameType.SPECTATOR);
-		observer.teleportTo(0.5D, STAGE_Y + 5.0D, 11.5D);
-		observer.setDeltaMovement(Vec3.ZERO);
-		SimpleTPAFakePlayerScenario.spawn(level, SENDER_NAME, SENDER_POSITION);
-		SimpleTPAFakePlayerScenario.spawn(level, RECEIVER_NAME, RECEIVER_POSITION);
+		level.setBlock(BlockPos.containing(PLAYER_POSITION).below(), Blocks.DIAMOND_BLOCK.defaultBlockState(), 3);
+		level.setBlock(BlockPos.containing(FRIEND_POSITION).below(), Blocks.GOLD_BLOCK.defaultBlockState(), 3);
 	}
 
-	private static void waitForActors(
-			ClientGameTestContext context,
-			TestDedicatedServerContext server,
-			UUID observerId
-	) {
+	private static void waitForFriend(ClientGameTestContext context, TestDedicatedServerContext server) {
 		for (int tick = 0; tick < 100; tick++) {
-			boolean ready = server.computeOnServer(minecraftServer -> {
-				ServerLevel level = requireObserver(minecraftServer.getPlayerList().getPlayer(observerId)).level();
-				return SimpleTPAFakePlayerScenario.isReady(level, SENDER_NAME)
-						&& SimpleTPAFakePlayerScenario.isReady(level, RECEIVER_NAME);
-			});
-			if (ready) {
+			if (server.computeOnServer(minecraftServer -> SimpleTPAFakePlayerScenario.isReady(minecraftServer.overworld(), FRIEND_NAME))) {
 				return;
 			}
 			context.waitTick();
 		}
-		throw new AssertionError("Timed out waiting for the SimpleTPA Carpet actors.");
+		throw new AssertionError("Timed out waiting for the SimpleTPA Carpet player.");
 	}
 
-	private static void actors(ServerPlayer observer, ActorAction action) {
-		ServerLevel level = requireObserver(observer).level();
-		action.run(
-				SimpleTPAFakePlayerScenario.requirePlayer(level, SENDER_NAME),
-				SimpleTPAFakePlayerScenario.requirePlayer(level, RECEIVER_NAME)
-		);
+	private static void placeActors(ServerPlayer player, ServerPlayer friend) {
+		SimpleTPAFakePlayerScenario.place(player, PLAYER_POSITION, EAST, PLAYER_PITCH);
+		placeFriend(friend);
 	}
 
-	private static void pointSpectatorCamera(ClientGameTestContext context) {
-		context.runOnClient(client -> {
-			if (client.player == null) {
-				throw new AssertionError("Expected a connected spectator for the recording.");
-			}
-			client.player.setYRot(180.0F);
-			client.player.setXRot(20.0F);
-		});
+	private static void placeFriend(ServerPlayer friend) {
+		SimpleTPAFakePlayerScenario.place(friend, FRIEND_POSITION, WEST, 0.0F);
 	}
 
-	private static ServerPlayer requireObserver(ServerPlayer observer) {
-		if (observer == null) {
-			throw new AssertionError("Expected the recording spectator to remain connected.");
+	private static ServerPlayer friend(MinecraftServer server) {
+		return SimpleTPAFakePlayerScenario.requirePlayer(server.overworld(), FRIEND_NAME);
+	}
+
+	private static ServerPlayer player(MinecraftServer server, String playerName) {
+		ServerPlayer player = server.getPlayerList().getPlayerByName(playerName);
+		if (player == null) {
+			throw new AssertionError("Expected the client player " + playerName + " to remain connected.");
 		}
-		return observer;
+		return player;
 	}
 
-	@FunctionalInterface
-	private interface ActorAction {
-		void run(ServerPlayer sender, ServerPlayer receiver);
+	private record Caption(String id, String title, String description) {
 	}
 }

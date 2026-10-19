@@ -2,13 +2,17 @@ package io.github.brainage04.simpletpa.command;
 
 import io.github.brainage04.simpletpa.SimpleTPA;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
-import io.github.brainage04.simpletpa.SimpleTPA;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
 
 public class TPRequestCommand {
@@ -38,21 +42,36 @@ public class TPRequestCommand {
 			}
 		}
 
-		if (source.getServer().getGameRules().get(SimpleTPA.ALLOW_INSTANT_TPA_ACCEPTING)
+		if (source.getServer().getGameRules().get(SimpleTPA.AUTO_ACCEPT)
 				&& InstantTpaWhitelist.allows(to, from)) {
 			teleport(from, to);
-			SimpleTPA.FEEDBACK.success(from, "%s has auto-accepted your TP request.", to.getScoreboardName());
-			SimpleTPA.FEEDBACK.success(to, "%s instantly teleported to you from your auto-accept whitelist.", from.getScoreboardName());
+			SimpleTPA.FEEDBACK.success(from, "%s has automatically accepted your TP request.", to.getScoreboardName());
+			SimpleTPA.FEEDBACK.success(to, "%s has teleported to you.", from.getScoreboardName());
 			SimpleTPA.FEEDBACK.click(to);
 			return 1;
 		}
 
 		TP_REQUESTS.add(request);
 
-		SimpleTPA.FEEDBACK.neutral(to, "%s has sent you a TP request. Use /tpaccept to accept, or /tpdeny to deny.", from.getScoreboardName());
+		SimpleTPA.FEEDBACK.neutral(to, incomingRequestMessage(from.getScoreboardName()));
 		SimpleTPA.FEEDBACK.neutral(from, "You have sent %s a TP request.", to.getScoreboardName());
 		SimpleTPA.FEEDBACK.click(to);
 		return 1;
+	}
+
+	/** The request notice for the target, with [Accept] and [Deny] buttons that run the commands for this requester. */
+	public static MutableComponent incomingRequestMessage(String fromName) {
+		return Component.literal("%s has sent you a TP request. Use /tpaccept to accept, or /tpdeny to deny. ".formatted(fromName))
+				.append(button("[Accept]", ChatFormatting.GREEN, "/tpaccept " + fromName, "Click to accept %s's TP request".formatted(fromName)))
+				.append(" ")
+				.append(button("[Deny]", ChatFormatting.RED, "/tpdeny " + fromName, "Click to deny %s's TP request".formatted(fromName)));
+	}
+
+	private static MutableComponent button(String label, ChatFormatting color, String command, String hover) {
+		return Component.literal(label).withStyle(style -> style
+				.withColor(color)
+				.withClickEvent(new ClickEvent.RunCommand(command))
+				.withHoverEvent(new HoverEvent.ShowText(Component.literal(hover))));
 	}
 
 	public static void teleport(ServerPlayer from, ServerPlayer to) {

@@ -23,7 +23,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 @Mod(SimpleTPA.MOD_ID)
 public final class SimpleTPANeoForge implements ServerPlatform {
 	private static final DeferredRegister<GameRule<?>> GAME_RULES = DeferredRegister.create(Registries.GAME_RULE, SimpleTPA.MOD_ID);
-	private static final DeferredHolder<GameRule<?>, GameRule<Boolean>> ALLOW_INSTANT_TPA_ACCEPTING = GAME_RULES.register("allow_instant_tpa_accepting", () -> new GameRule<>(
+	private static final DeferredHolder<GameRule<?>, GameRule<Boolean>> AUTO_ACCEPT = GAME_RULES.register("auto_accept", () -> new GameRule<>(
 			GameRuleCategory.PLAYER, GameRuleType.BOOL, com.mojang.brigadier.arguments.BoolArgumentType.bool(),
 			(visitor, rule) -> visitor.visitBoolean(rule), com.mojang.serialization.Codec.BOOL,
 			value -> value ? 1 : 0, true, FeatureFlagSet.of()
@@ -34,7 +34,7 @@ public final class SimpleTPANeoForge implements ServerPlatform {
 		modEventBus.addListener((FMLCommonSetupEvent event) -> SimpleTPA.initialize(this));
 	}
 	@Override public String loaderName() { return "NeoForge"; }
-	@Override public GameRule<Boolean> registerInstantAcceptGameRule() { return ALLOW_INSTANT_TPA_ACCEPTING.get(); }
+	@Override public GameRule<Boolean> registerAutoAcceptGameRule() { return AUTO_ACCEPT.get(); }
 	@Override public void registerCommands(java.util.function.Consumer<CommandDispatcher<CommandSourceStack>> registration) { net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent event) -> registration.accept(event.getDispatcher())); }
 	@Override public void registerEndServerTick(java.util.function.Consumer<MinecraftServer> callback) { net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post event) -> callback.accept(event.getServer())); }
 	@Override public void registerServerStarted(java.util.function.Consumer<MinecraftServer> callback) { net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((ServerStartedEvent event) -> callback.accept(event.getServer())); }

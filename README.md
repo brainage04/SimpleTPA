@@ -1,45 +1,31 @@
 # SimpleTPA
 
-SimpleTPA is a server-side Fabric and NeoForge mod for Minecraft 26.2 that adds player-to-player teleport requests. Vanilla clients can join without installing the mod.
+SimpleTPA is a server-side only Fabric and NeoForge mod for Minecraft 26.2 that adds a player-to-player teleport request system.
 
-Requests expire after 60 seconds. Accepting a request teleports the requester to the accepting player's dimension, position, and rotation; denying it expires the request immediately.
+Requests expire after 60 seconds. Accepting a request teleports the requester to the accepting player's position, and denying it expires the request immediately.
 
-Players can maintain a persistent auto-accept whitelist. The `simpletpa:allow_instant_tpa_accepting` gamerule controls whether listed players may teleport immediately and is enabled by default.
+Players can control an "auto-accept" whitelist which specifies who is allowed to teleport to them without their requests having to be accepted using `/tpautoaccept`. This functionality is controlled by the `simpletpa:auto_accept` gamerule, and is enabled by default.
 
-## Requirements
+## Dependencies
 
-- Minecraft 26.2
-- Fabric Loader 0.19.3 or newer with Fabric API, or NeoForge 26.2.0.88 or newer
-- BrainageLib 1.0.1 or newer
-- Java 25 or newer
+- Fabric Loader >=0.19.3 with Fabric API OR NeoForge >=26.2.0.88
+- BrainageLib >=1.0.1
 
 ## Commands
 
-- `/simpletpa help` — show the player command summary.
-- `/tpa <player>` — request to teleport to a player. `/tprequest <player>` still works and does exactly the same thing.
-- `/tpaccept [player]` — accept the named player's request, or the only pending request.
-- `/tpdeny [player]` — deny the named player's request, or the only pending request.
-- `/tpautoaccept list` — list your auto-accept whitelist.
-- `/tpautoaccept add <player>` — allow a player to teleport to you immediately while the gamerule permits it.
-- `/tpautoaccept remove <player>` — remove a player from your auto-accept whitelist.
-- `/tpautoaccept clear` — clear your auto-accept whitelist.
+- `/simpletpa help` - prints this list.
+- `/tpa <player>`, `/tprequest <player>` - request to teleport to a player.
+- `/tpaccept [player]` - accept a specific player's request (`[player]` can be left blank if only one request is pending)
+- `/tpdeny [player]` - deny a specific player's request (`[player]` can be left blank if only one request is pending)
+- `/tpautoaccept list` - prints your "auto-accept" whitelist of players who can automatically teleport to you without their requests having to be accepted.
+- `/tpautoaccept add <player>` - allow a specific player to be able to teleport to you immediately (if `simpletpa:auto_accept` is `true`)
+- `/tpautoaccept remove <player>` - remove a player from your "auto-accept" whitelist.
+- `/tpautoaccept clear` - clear your "auto-accept" whitelist.
+- `/tpautoaccept *` - auto-accept requests from everyone (if `simpletpa:auto_accept` is `true`). Run it twice within 30 seconds to turn it on, and again to turn it off. `*` can be left out.
+- `/tpauto` - short for `/tpautoaccept`, with all the same subcommands.
+- `/gamerule simpletpa:auto_accept <true|false>` - when set to `true`, allows players to be able to teleport to each other instantly, if the player they are teleporting to has them added to their "auto-accept" whitelist.
 
-Operators can change automatic approval with `/gamerule simpletpa:allow_instant_tpa_accepting <true|false>`.
+### BrainageLib commands
 
-## Migrating from the Fabric-only release
-
-Install exactly one SimpleTPA JAR: the Fabric JAR on Fabric, or the `-neoforge` JAR on NeoForge. Remove the old SimpleTPA JAR before switching loaders. SimpleTPA remains server-side, so vanilla clients do not need it; install the matching loader-specific BrainageLib dependency on the server. The stable `simpletpa` mod ID and its world-stored auto-accept data path are unchanged. Building the repository root produces both loader artifacts under `build/libs`.
-
-## Shared server help
-
-SimpleTPA registers with BrainageLib's combined first-join notice. Players can run `/servermods help`; operators can also run `/servermods config`.
-
-## Verification
-
-`./gradlew runAllGameTests` runs the Fabric and NeoForge server suites against the release JARs on production servers (`:fabric:runProductionServerGameTest`, `:neoforge:runProductionServerGameTest`), plus the Fabric client suite; `./gradlew runGameTest` runs the server suites in development. The Fabric suite uses independently controlled Carpet fake players for request, accept, deny, and auto-accept behavior.
-
-`./gradlew :fabric:runProductionClientGameTest` launches a visual accept/deny/auto-accept scenario with the connected client in spectator mode. Record that fixture with:
-
-```shell
-GTR_RECORDING_PROFILE=showcase ./gradlew --no-daemon :fabric:recordClientGameTest
-```
+- `/servermods help` - prints the help lists for all mods which depend on BrainageLib.
+- `/servermods config` - (operators only) prints the settings command for each mod which depends on BrainageLib (for SimpleTPA, the `/gamerule` command above).

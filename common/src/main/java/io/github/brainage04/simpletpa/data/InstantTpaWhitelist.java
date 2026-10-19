@@ -16,16 +16,26 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 
+/**
+ * Per-player auto-accept settings: a whitelist of requesters plus an "accept everyone" switch.
+ * Both are stored in one JSON file keyed by owner UUID; accept-all is an entry whose uuid is
+ * {@value #ACCEPT_ALL_MARKER}. Files written before accept-all existed load unchanged, and older
+ * versions skip the marker entry because it is not a valid UUID.
+ */
 public final class InstantTpaWhitelist {
+	public static final String ACCEPT_ALL_MARKER = "*";
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Type FILE_TYPE = new TypeToken<Map<String, List<Entry>>>() {
 	}.getType();
 	private static final Map<UUID, Map<UUID, String>> WHITELISTS = new HashMap<>();
+	private static final Set<UUID> ACCEPT_ALL = new HashSet<>();
 	private static Path filePath;
 
 	private InstantTpaWhitelist() {
@@ -34,6 +44,7 @@ public final class InstantTpaWhitelist {
 	public static synchronized void load(MinecraftServer server) {
 		filePath = server.getWorldPath(LevelResource.ROOT).resolve("simpletpa-instant-accept-whitelist.json");
 		WHITELISTS.clear();
+		ACCEPT_ALL.clear();
 
 		if (!Files.isRegularFile(filePath)) {
 			return;
@@ -59,6 +70,10 @@ public final class InstantTpaWhitelist {
 					if (allowedEntry == null) {
 						continue;
 					}
+					if (ACCEPT_ALL_MARKER.equals(allowedEntry.uuid)) {
+						ACCEPT_ALL.add(ownerId);
+						continue;
+					}
 					UUID allowedId = parseUuid(allowedEntry.uuid);
 
 					if (allowedId != null) {
@@ -82,16 +97,18 @@ public final class InstantTpaWhitelist {
 
 		Map<String, List<Entry>> saved = new TreeMap<>();
 
-		for (Map.Entry<UUID, Map<UUID, String>> ownerEntry : WHITELISTS.entrySet()) {
+		for (UUID ownerId : ACCEPT_ALL) {
 			List<Entry> entries = new ArrayList<>();
+			entries.add(new Entry(ACCEPT_ALL_MARKER, "everyone"));
+			saved.put(ownerId.toString(), entries);
+		}
+
+		for (Map.Entry<UUID, Map<UUID, String>> ownerEntry : WHITELISTS.entrySet()) {
+			List<Entry> entries = saved.computeIfAbsent(ownerEntry.getKey().toString(), ignored -> new ArrayList<>());
 
 			ownerEntry.getValue().entrySet().stream()
 					.sorted(Comparator.comparing(entry -> entry.getValue().toLowerCase()))
 					.forEach(entry -> entries.add(new Entry(entry.getKey().toString(), entry.getValue())));
-
-			if (!entries.isEmpty()) {
-				saved.put(ownerEntry.getKey().toString(), entries);
-			}
 		}
 
 		try {
@@ -106,7 +123,20 @@ public final class InstantTpaWhitelist {
 	}
 
 	public static synchronized boolean allows(ServerPlayer owner, ServerPlayer requester) {
-		return WHITELISTS.getOrDefault(owner.getUUID(), Map.of()).containsKey(requester.getUUID());
+		return ACCEPT_ALL.contains(owner.getUUID())
+				|| WHITELISTS.getOrDefault(owner.getUUID(), Map.of()).containsKey(requester.getUUID());
+	}
+
+	public static synchronized boolean acceptsAll(ServerPlayer owner) {
+		return ACCEPT_ALL.contains(owner.getUUID());
+	}
+
+	public static synchronized void setAcceptAll(ServerPlayer owner, boolean acceptAll) {
+		if (acceptAll) {
+			ACCEPT_ALL.add(owner.getUUID());
+		} else {
+			ACCEPT_ALL.remove(owner.getUUID());
+		}
 	}
 
 	public static synchronized boolean add(ServerPlayer owner, ServerPlayer requester) {

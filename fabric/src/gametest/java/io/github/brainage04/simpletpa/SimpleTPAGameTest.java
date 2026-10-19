@@ -31,6 +31,51 @@ public class SimpleTPAGameTest {
 	}
 
 	@GameTest
+	public void requestButtons(GameTestHelper helper) {
+		SimpleTPAGameTests.requestButtons(helper);
+	}
+
+	@GameTest
+	public void tpautoAlias(GameTestHelper helper) {
+		SimpleTPAGameTests.tpautoAlias(helper);
+	}
+
+	@GameTest
+	public void acceptAllNeedsConfirmation(GameTestHelper helper) {
+		SimpleTPAGameTests.acceptAllNeedsConfirmation(helper);
+	}
+
+	@GameTest(maxTicks = SimpleTPAGameTests.ACCEPT_ALL_EXPIRY_MAX_TICKS)
+	public void acceptAllConfirmationExpires(GameTestHelper helper) {
+		SimpleTPAGameTests.acceptAllConfirmationExpires(helper);
+	}
+
+	@GameTest
+	public void acceptAllTeleports(GameTestHelper helper) {
+		SimpleTPAGameTests.acceptAllTeleports(helper);
+	}
+
+	@GameTest
+	public void acceptAllToggleOff(GameTestHelper helper) {
+		SimpleTPAGameTests.acceptAllToggleOff(helper);
+	}
+
+	@GameTest(environment = SimpleTPAGameTests.AUTO_ACCEPT_OFF_ENVIRONMENT)
+	public void acceptAllGameruleOff(GameTestHelper helper) {
+		SimpleTPAGameTests.acceptAllGameruleOff(helper);
+	}
+
+	@GameTest
+	public void acceptAllPersistence(GameTestHelper helper) {
+		SimpleTPAGameTests.acceptAllPersistence(helper);
+	}
+
+	@GameTest
+	public void addWildcardRejected(GameTestHelper helper) {
+		SimpleTPAGameTests.addWildcardRejected(helper);
+	}
+
+	@GameTest
 	public void combinedServerHelp(GameTestHelper helper) {
 		SimpleTPAGameTests.combinedServerHelp(helper);
 	}

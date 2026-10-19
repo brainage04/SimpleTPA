@@ -5,9 +5,64 @@ import io.github.brainage04.simpletpa.SimpleTPA;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class TPAutoAcceptCommand {
+	/** How long after the accept-all warning a second run confirms it: 30 seconds at 20 ticks per second. */
+	public static final int CONFIRM_WINDOW_TICKS = 30 * 20;
+	/** Server tick at which each player was last warned about accept-all; cleared when the server stops. */
+	public static final Map<UUID, Integer> PENDING_ACCEPT_ALL = new HashMap<>();
+
+	/**
+	 * Toggles accepting requests from everyone. Turning it on needs a second run within
+	 * {@link #CONFIRM_WINDOW_TICKS}; turning it off is immediate.
+	 *
+	 * @param input the command as typed, echoed back so the player can repeat it
+	 */
+	public static int acceptAll(CommandSourceStack source, String input) {
+		ServerPlayer owner = source.getPlayer();
+
+		if (owner == null) {
+			SimpleTPA.FEEDBACK.failure(source, "This command can only be used by players!");
+			return -1;
+		}
+
+		SimpleTPA.FEEDBACK.click(owner);
+
+		String command = input.startsWith("/") ? input.strip() : "/" + input.strip();
+
+		if (InstantTpaWhitelist.acceptsAll(owner)) {
+			InstantTpaWhitelist.setAcceptAll(owner, false);
+			InstantTpaWhitelist.save(source.getServer());
+			PENDING_ACCEPT_ALL.remove(owner.getUUID());
+			SimpleTPA.FEEDBACK.success(owner, "Accept-all is now off. Only players on your auto-accept whitelist can teleport to you without asking.");
+			return 1;
+		}
+
+		int now = source.getServer().getTickCount();
+		Integer warnedAt = PENDING_ACCEPT_ALL.remove(owner.getUUID());
+
+		if (warnedAt == null || now - warnedAt > CONFIRM_WINDOW_TICKS) {
+			PENDING_ACCEPT_ALL.put(owner.getUUID(), now);
+			SimpleTPA.FEEDBACK.error(owner, "Warning: accept-all lets anyone on the server teleport to you at any time without asking.");
+			SimpleTPA.FEEDBACK.neutral(owner, "Run %s again within %d seconds to turn it on.", command, CONFIRM_WINDOW_TICKS / 20);
+			return 1;
+		}
+
+		InstantTpaWhitelist.setAcceptAll(owner, true);
+		InstantTpaWhitelist.save(source.getServer());
+		SimpleTPA.FEEDBACK.success(owner, "Accept-all is now on. Anyone on the server can teleport to you without asking. Run %s again to turn it off.", command);
+
+		if (!source.getServer().getGameRules().get(SimpleTPA.AUTO_ACCEPT)) {
+			SimpleTPA.FEEDBACK.neutral(owner, "It has no effect while the simpletpa:auto_accept gamerule is false.");
+		}
+
+		return 1;
+	}
+
 	public static int list(CommandSourceStack source) {
 		ServerPlayer player = source.getPlayer();
 
@@ -17,6 +72,12 @@ public class TPAutoAcceptCommand {
 		}
 
 		SimpleTPA.FEEDBACK.click(player);
+
+		if (InstantTpaWhitelist.acceptsAll(player)) {
+			SimpleTPA.FEEDBACK.neutral(player, "Accept-all is on: anyone on the server can teleport to you without asking.");
+		} else {
+			SimpleTPA.FEEDBACK.neutral(player, "Accept-all is off.");
+		}
 
 		List<String> allowedPlayers = InstantTpaWhitelist.list(player);
 

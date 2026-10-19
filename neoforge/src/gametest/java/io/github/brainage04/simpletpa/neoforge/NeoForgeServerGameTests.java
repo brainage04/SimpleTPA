@@ -26,6 +26,15 @@ public final class NeoForgeServerGameTests {
 		register(event, "tpa_tab_completion", SimpleTPAGameTests::tpaTabCompletion);
 		register(event, "deny_flows", SimpleTPAGameTests::denyFlows);
 		register(event, "instant_auto_accept_flow", SimpleTPAGameTests::instantAutoAcceptFlow);
+		register(event, "request_buttons", SimpleTPAGameTests::requestButtons);
+		register(event, "tpauto_alias", SimpleTPAGameTests::tpautoAlias);
+		register(event, "accept_all_needs_confirmation", SimpleTPAGameTests::acceptAllNeedsConfirmation);
+		register(event, "accept_all_confirmation_expires", SimpleTPAGameTests::acceptAllConfirmationExpires);
+		register(event, "accept_all_teleports", SimpleTPAGameTests::acceptAllTeleports);
+		register(event, "accept_all_toggle_off", SimpleTPAGameTests::acceptAllToggleOff);
+		register(event, "accept_all_gamerule_off", SimpleTPAGameTests::acceptAllGameruleOff);
+		register(event, "accept_all_persistence", SimpleTPAGameTests::acceptAllPersistence);
+		register(event, "add_wildcard_rejected", SimpleTPAGameTests::addWildcardRejected);
 		register(event, "combined_server_help", SimpleTPAGameTests::combinedServerHelp);
 		register(event, "gamerule_registration", SimpleTPAGameTests::gameruleRegistration);
 	}

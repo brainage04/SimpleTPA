@@ -1,3 +1,4 @@
 {
-	"gamerule.simpletpa.allow_instant_tpa_accepting": "Allow instant TPA accepting"
+	"gamerule.simpletpa.auto_accept": "Auto-accept teleport requests",
+	"gamerule.simpletpa.auto_accept.description": "Lets players' /tpautoaccept whitelist and accept-all teleport requesters to them without asking"
 }

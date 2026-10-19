@@ -5,6 +5,7 @@ import io.github.brainage04.simpletpa.command.TPAcceptCommand;
 import io.github.brainage04.simpletpa.command.TPAutoAcceptCommand;
 import io.github.brainage04.simpletpa.command.TPDenyCommand;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
+import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.tree.LiteralCommandNode;
@@ -52,8 +53,11 @@ public final class ModCommands {
 			// suggests and executes identically.
 			dispatcher.register(literal("tprequest").redirect(tpa));
 
-			dispatcher.register(literal("tpautoaccept")
-					.executes(context -> TPAutoAcceptCommand.list(context.getSource()))
+			LiteralCommandNode<CommandSourceStack> tpautoaccept = dispatcher.register(literal("tpautoaccept")
+					.executes(context -> TPAutoAcceptCommand.acceptAll(context.getSource(), context.getInput()))
+					.then(literal(InstantTpaWhitelist.ACCEPT_ALL_MARKER)
+							.executes(context -> TPAutoAcceptCommand.acceptAll(context.getSource(), context.getInput()))
+					)
 					.then(literal("list")
 							.executes(context -> TPAutoAcceptCommand.list(context.getSource()))
 					)
@@ -78,6 +82,13 @@ public final class ModCommands {
 					)
 			);
 
+			// Short alias. A redirect alone does not run when nothing follows the literal, so the
+			// bare /tpauto form gets its own executes; everything after it goes through /tpautoaccept.
+			dispatcher.register(literal("tpauto")
+					.executes(context -> TPAutoAcceptCommand.acceptAll(context.getSource(), context.getInput()))
+					.redirect(tpautoaccept)
+			);
+
 			dispatcher.register(literal("simpletpa")
 					.executes(context -> showHelp(context.getSource()))
 					.then(literal("help")
@@ -88,10 +99,11 @@ public final class ModCommands {
 
 	private static int showHelp(CommandSourceStack source) {
 		SimpleTPA.FEEDBACK.neutral(source, "Player commands:");
-		SimpleTPA.FEEDBACK.neutral(source, "/tpa <player> — request to teleport to another player (/tprequest also works)");
-		SimpleTPA.FEEDBACK.neutral(source, "/tpaccept [player] — accept one incoming request");
-		SimpleTPA.FEEDBACK.neutral(source, "/tpdeny [player] — deny one incoming request");
-		SimpleTPA.FEEDBACK.neutral(source, "/tpautoaccept <list|add|remove|clear> — manage automatic approvals");
+		SimpleTPA.FEEDBACK.neutral(source, "/tpa <player> - request to teleport to another player (/tprequest also works)");
+		SimpleTPA.FEEDBACK.neutral(source, "/tpaccept [player] - accept one incoming request");
+		SimpleTPA.FEEDBACK.neutral(source, "/tpdeny [player] - deny one incoming request");
+		SimpleTPA.FEEDBACK.neutral(source, "/tpautoaccept <list|add|remove|clear> - manage automatic approvals (/tpauto also works)");
+		SimpleTPA.FEEDBACK.neutral(source, "/tpautoaccept [*] - accept requests from everyone (run twice to confirm, again to turn off)");
 		return 1;
 	}
 }
