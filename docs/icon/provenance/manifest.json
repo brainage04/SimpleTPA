@@ -2,7 +2,7 @@
   "entries": [
     {
       "project": "SimpleTPA",
-      "label": "SimpleTPA chat autocomplete \u2014 340x340, native GUI scale 4",
+      "label": "SimpleTPA chat autocomplete - 340x340, native GUI scale 4",
       "path": "captures-crops2/simpletpa-autocomplete-square.png",
       "method": "Byte-identical copy of approved reference",
       "source": "captures-crops/simpletpa-autocomplete-square.png",
@@ -10,7 +10,7 @@
     },
     {
       "project": "SimpleHomes",
-      "label": "SimpleHomes chat autocomplete \u2014 340x340, bottom-left anchored (native GUI scale 4)",
+      "label": "SimpleHomes chat autocomplete - 340x340, bottom-left anchored (native GUI scale 4)",
       "path": "captures-crops2/simplehomes-autocomplete-square.png",
       "method": "Integer crop of new native F2 screenshot; no resize, resampling, interpolation, compositing or padding",
       "source": "captures-crops2/frames/simplehomes-home-wide-full.png",
@@ -19,7 +19,7 @@
     },
     {
       "project": "SpawnCommands",
-      "label": "SpawnCommands chat autocomplete \u2014 340x340, native GUI scale 4",
+      "label": "SpawnCommands chat autocomplete - 340x340, native GUI scale 4",
       "path": "captures-crops2/spawncommands-autocomplete-square.png",
       "method": "Integer crop of new native F2 screenshot; no resize, resampling, interpolation, compositing or padding",
       "source": "captures-crops2/frames/spawncommands-spawn-wide-full.png",
@@ -29,7 +29,7 @@
   "alternatives": [
     {
       "project": "SpawnCommands",
-      "label": "Closest exact-symmetry fallback \u2014 316x316, NOT part of the three 340x340 primaries",
+      "label": "Closest exact-symmetry fallback - 316x316, NOT part of the three 340x340 primaries",
       "path": "captures-crops2/evidence/closest-equal-sky/spawncommands-autocomplete-316.png",
       "method": "Integer crop only of wider native scale-4 screenshot",
       "source": "captures-crops2/frames/spawncommands-spawn-wide-full.png",

@@ -2,7 +2,7 @@
 
 ## What this is
 
-The mod's icon: `icon.png` — 512x512 RGBA PNG, 4 573 bytes,
+The mod's icon: `icon.png` - 512x512 RGBA PNG, 4 573 bytes,
 sha256 `5b6882552eb49275a931d6267404fb55b7573487efc5023cf1f5dfca0ee2ff3d`.
 
 It is a real in-game screenshot of the mod's `/tp` tab-completion: the 340x340 square capture
@@ -26,8 +26,8 @@ The screenshot itself comes from the BrainageHUD/UI capture session (round-3 `ca
 | Audio | own PulseAudio null sink `round3_ui_mcscreens` |
 | Renderer | software OpenGL (Mesa llvmpipe) |
 | Shader pack / resource pack | **none** / **none** |
-| World | `UI Void` — flat generator, `layers=[]`, biome `minecraft:the_void`, seed `20260910`: pure void |
-| Scene | `/gamemode spectator`, `/time set noon`, `/weather clear`, `/tick freeze`, `/tp @s 0.5 -60 0.5 0 -90` — camera looking straight up into the void sky |
+| World | `UI Void` - flat generator, `layers=[]`, biome `minecraft:the_void`, seed `20260910`: pure void |
+| Scene | `/gamemode spectator`, `/time set noon`, `/weather clear`, `/tick freeze`, `/tp @s 0.5 -60 0.5 0 -90` - camera looking straight up into the void sky |
 | Screenshot | chat history cleared with F3+D, then `t`, the literal text `/tp` typed, then the game's own native F2 PNG at GUI scale 4 (`captures-ui/renders/frames/simpletpa-tp-full.png`) |
 
 The client completes `/tp` to `/tpaccept` and draws the completions `tpaccept` (selected,
@@ -66,13 +66,13 @@ top level (and `evidence/`) is the later round-3 delivery pass that copied and r
 
 | Path | What it is |
 |---|---|
-| `capture-crop.png` | **The 340x340 capture crop** (formerly `icon.png`, byte-identical) — the only surviving copy of this crop |
+| `capture-crop.png` | **The 340x340 capture crop** (formerly `icon.png`, byte-identical) - the only surviving copy of this crop |
 | `native_scale.py` | **The script that writes `icon.png`** from `capture-crop.png` (native 85x85 recovery, 6x NEAREST, centred on 512x512) and the two shipped 128x128 copies |
 | `manifest.json` | Round-3 delivery record: label, method ("byte-identical copy of approved reference"), source, measured sky margins, ink box and crop box |
-| `captures-crops/crop.py` | **The script that produced the capture crop** — ink detection on the 3840x2160 frame, square side `2 * sky_left + block_width`, anchored on the frame's left/bottom edge, with assertions that the block and the input line stay inside |
+| `captures-crops/crop.py` | **The script that produced the capture crop** - ink detection on the 3840x2160 frame, square side `2 * sky_left + block_width`, anchored on the frame's left/bottom edge, with assertions that the block and the input line stay inside |
 | `captures-crops/crop-report.json` | Full measurement of the derivation: old 392 px square and its 88 px right margin, the new 340 px square, the entry block, the four entry line boxes, the glyph-only 344 px alternative, the 52 px top/right trim, the chat-bar top, and the per-file verification |
 | `captures-crops/verify.py`, `captures-crops/verification.json` | The independent re-check: exact pixels from the frame, sky left == sky right == 36 px, all four entries and the input line fully inside |
-| `captures-crops/ocr.py`, `captures-crops/ocr.json` | Exact client-font template matching that decodes the four entry texts and the input line — this is how the entries are named with certainty |
+| `captures-crops/ocr.py`, `captures-crops/ocr.json` | Exact client-font template matching that decodes the four entry texts and the input line - this is how the entries are named with certainty |
 | `captures-crops/profile.py` | Row/column ink profile of the chat region, with the sky / chat-bar / ink colour classes |
 | `captures-crops/manifest.json`, `captures-crops/blockers.json` | The derivation session's own delivery record and notes (including the loss of the source frame) |
 | `crop.py`, `verify.py`, `measure.py`, `capture_scene.py`, `prepare.py` | The delivery pass's scripts: `crop.py` copies the approved file byte for byte and writes the three 340x340 crops, `verify.py` re-asserts the byte identity, `measure.py` re-measures the panel bands, `capture_scene.py`/`prepare.py` are the capture driver and runtime builder of that session |
@@ -117,7 +117,7 @@ superseded icons and are not needed for this one.
   referenced by the crop report (`captures-ui/renders/frames/simpletpa-tp-full.png`) were
   deleted before the later crop pass, and re-opening them raised `FileNotFoundError`. The
   approved 340x340 PNG survived, and that PNG is `capture-crop.png` (shipped as the icon until
-  2026-10-02) — it is the only surviving copy of this crop. Both sessions' measurement records
+  2026-10-02) - it is the only surviving copy of this crop. Both sessions' measurement records
   are shipped, so the geometry remains reproducible *if* the scene is re-captured.
 * The capture crop is byte-identical to the earlier approved reference
   (`captures-crops/simpletpa-autocomplete-square.png`, the same sha256); it was not re-captured
