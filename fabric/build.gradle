@@ -12,8 +12,6 @@ workspaceDependencies {
 	}
 }
 
-clientGameTestRecorder { guiScale.set('2') }
-
 productionGameTests {
 	runtimeModDependencies.add("maven.modrinth:carpet:${project.carpet_version}")
 }

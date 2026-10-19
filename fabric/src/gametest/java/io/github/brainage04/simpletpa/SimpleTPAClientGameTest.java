@@ -1,8 +1,8 @@
 package io.github.brainage04.simpletpa;
 
 import com.mojang.blaze3d.platform.Window;
-import io.github.brainage04.fabricmoddingconventions.ClientGameTestRecorder;
-import io.github.brainage04.fabricmoddingconventions.ClientGameTestServers;
+import io.github.brainage04.minecraftmodconventions.ClientGameTestRecorder;
+import io.github.brainage04.minecraftmodconventions.ClientGameTestServers;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext;

@@ -1,1 +1,1 @@
-{"environment":"simpletpa:auto_accept_off","structure":"fabricmoddingconventions:empty","max_ticks":20,"type":"minecraft:function","function":"simpletpa:accept_all_gamerule_off"}
+{"environment":"simpletpa:auto_accept_off","structure":"minecraftmodconventions:empty","max_ticks":20,"type":"minecraft:function","function":"simpletpa:accept_all_gamerule_off"}

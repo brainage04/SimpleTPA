@@ -1,7 +1,7 @@
 pluginManagement {
 	repositories {
 		maven {
-			url = uri("../FabricModdingConventions/build/local-repo")
+			url = uri("../MinecraftModConventions/build/local-repo")
 		}
 		maven { url = 'https://maven.architectury.dev/' }
 		maven { url = 'https://maven.neoforged.net/releases/' }
@@ -30,8 +30,8 @@ pluginManagement {
 	}
 }
 
-if (file("../FabricModdingConventions/settings.gradle").exists()) {
-	includeBuild("../FabricModdingConventions")
+if (file("../MinecraftModConventions/settings.gradle").exists()) {
+	includeBuild("../MinecraftModConventions")
 }
 
 rootProject.name = 'SimpleTPA'

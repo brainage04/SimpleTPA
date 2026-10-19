@@ -4,7 +4,7 @@
 
 The showcase (`fabric/src/gametest/.../SimpleTPAClientGameTest.java`) records one real client while a Carpet fake player (`tpaFriend`) plays the other side. A future attempt could record two real Fabric clients and show both views side by side. Rough cost: about a day plus several test recordings; keeping the two clients in step is the main risk.
 
-What it needs, mostly in FabricModdingConventions so other mods can use it too:
+What it needs, mostly in MinecraftModConventions so other mods can use it too:
 
 - **Connect by address:** today each client GameTest starts its own dedicated server inside its JVM on a random port (`ClientGameTestServers.withDedicatedServer`, online-mode off). Client A would host and write its port to a file; client B would connect to that address instead of starting a server, with a different username.
 - **Two-client barrier:** both test scripts wait for each other at every step (for example through marker files in a shared directory), so a command typed on one client is answered on the other at the right moment.
