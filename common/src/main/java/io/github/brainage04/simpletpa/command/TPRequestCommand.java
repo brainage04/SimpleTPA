@@ -59,12 +59,12 @@ public class TPRequestCommand {
 		return 1;
 	}
 
-	/** The request notice for the target, with [Accept] and [Deny] buttons that run the commands for this requester. */
+	/** The request notice for the target, with [ACCEPT] and [DENY] buttons that run the commands for this requester. */
 	public static MutableComponent incomingRequestMessage(String fromName) {
 		return Component.literal("%s has sent you a TP request. Use /tpaccept to accept, or /tpdeny to deny. ".formatted(fromName))
-				.append(button("[Accept]", ChatFormatting.GREEN, "/tpaccept " + fromName, "Click to accept %s's TP request".formatted(fromName)))
+				.append(button("[ACCEPT]", ChatFormatting.GREEN, "/tpaccept " + fromName, "Click to accept %s's TP request".formatted(fromName)))
 				.append(" ")
-				.append(button("[Deny]", ChatFormatting.RED, "/tpdeny " + fromName, "Click to deny %s's TP request".formatted(fromName)));
+				.append(button("[DENY]", ChatFormatting.RED, "/tpdeny " + fromName, "Click to deny %s's TP request".formatted(fromName)));
 	}
 
 	private static MutableComponent button(String label, ChatFormatting color, String command, String hover) {

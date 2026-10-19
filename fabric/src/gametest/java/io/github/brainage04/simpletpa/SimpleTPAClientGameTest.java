@@ -1,12 +1,18 @@
 package io.github.brainage04.simpletpa;
 
+import com.mojang.blaze3d.platform.Window;
 import io.github.brainage04.fabricmoddingconventions.ClientGameTestRecorder;
 import io.github.brainage04.fabricmoddingconventions.ClientGameTestServers;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.ActiveTextCollector;
+import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,7 +26,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.Properties;
 
 /**
- * Feature showcase seen through the client player's own eyes: the client types its commands into chat
+ * Feature showcase seen through the client player's own eyes: the client types its commands into chat (or clicks them there)
  * and sees the replies and teleports as a real user would, while one Carpet fake player is the other side.
  */
 @SuppressWarnings("UnstableApiUsage")
@@ -37,6 +43,9 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 	private static final Caption DENY = new Caption("simpletpa.deny",
 			"Request denied",
 			FRIEND_NAME + " denies, so you stay where you are");
+	private static final Caption CLICK_ACCEPT = new Caption("simpletpa.clickaccept",
+			"Accept in chat",
+			FRIEND_NAME + " asks to teleport to you and you click [ACCEPT]");
 	private static final Caption AUTO_ACCEPT = new Caption("simpletpa.autoaccept",
 			"Auto-accept",
 			"You whitelist " + FRIEND_NAME + ", who can now teleport to you instantly");
@@ -64,6 +73,7 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 					context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
 					showAcceptedRequest(context, server, playerName);
 					showDeniedRequest(context, server, playerName);
+					showClickedAccept(context, server, playerName);
 					showAutoAcceptedRequest(context, server, playerName);
 				});
 	}
@@ -100,9 +110,67 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 				"The client player teleported despite the request being denied."));
 	}
 
+	/** tpaFriend asks to come over and the player clicks the [ACCEPT] button in the chat window with the mouse. */
+	private static void showClickedAccept(ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+		show(context, CLICK_ACCEPT);
+		server.runOnServer(minecraftServer -> placeActors(player(minecraftServer, playerName), friend(minecraftServer)));
+		context.waitTicks(10);
+		server.runOnServer(minecraftServer -> SimpleTPAFakePlayerScenario.executeCommand(friend(minecraftServer), "tpa " + playerName));
+		context.waitTicks(25);
+		context.setScreen(() -> new ChatScreen("", false));
+		context.waitTicks(10);
+		String acceptCommand = "/tpaccept " + FRIEND_NAME;
+		double[] button = context.computeOnClient(client -> findRunCommand(client, acceptCommand));
+		// Hover first, so the button's tooltip shows before the click.
+		context.getInput().setCursorPos(button[0], button[1]);
+		context.waitTicks(25);
+		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+		context.waitTicks(5);
+		server.runOnServer(minecraftServer -> SimpleTPAFakePlayerScenario.assertLandedOn(friend(minecraftServer), player(minecraftServer, playerName),
+				FRIEND_NAME + " did not land on the client player after [ACCEPT] was clicked"));
+		context.waitTicks(15);
+		if (context.computeOnClient(client -> client.gui.screen() instanceof ChatScreen)) {
+			context.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
+		}
+		context.waitTicks(30);
+	}
+
+	/**
+	 * Finds the chat text whose click event runs {@code command}, the way {@link ChatScreen} looks up what was
+	 * clicked, and returns the middle of it in window pixels for {@code TestInput.setCursorPos}.
+	 */
+	private static double[] findRunCommand(Minecraft client, String command) {
+		Window window = client.getWindow();
+		ChatComponent chat = client.gui.hud.getChat();
+		int guiWidth = window.getGuiScaledWidth();
+		int guiHeight = window.getGuiScaledHeight();
+		long sumX = 0;
+		long sumY = 0;
+		int hits = 0;
+		for (int y = guiHeight / 2; y < guiHeight; y++) {
+			for (int x = 0; x < guiWidth; x++) {
+				ActiveTextCollector.ClickableStyleFinder finder = new ActiveTextCollector.ClickableStyleFinder(client.font, x, y);
+				chat.captureClickableText(finder, guiHeight, client.gui.hud.getGuiTicks(), ChatComponent.DisplayMode.FOREGROUND);
+				Style style = finder.result();
+				if (style != null && style.getClickEvent() instanceof ClickEvent.RunCommand(String run) && run.equals(command)) {
+					sumX += x;
+					sumY += y;
+					hits++;
+				}
+			}
+		}
+		if (hits == 0) {
+			throw new AssertionError("No chat text runs " + command);
+		}
+		double scaleX = (double) window.getScreenWidth() / guiWidth;
+		double scaleY = (double) window.getScreenHeight() / guiHeight;
+		return new double[]{(sumX / (double) hits + 0.5D) * scaleX, (sumY / (double) hits + 0.5D) * scaleY};
+	}
+
 	/** The last step: the recording ends right after it, without a closing caption card. */
 	private static void showAutoAcceptedRequest(ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
 		show(context, AUTO_ACCEPT);
+		server.runOnServer(minecraftServer -> placeActors(player(minecraftServer, playerName), friend(minecraftServer)));
 		context.waitTicks(10);
 		typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
 		context.waitTicks(25);

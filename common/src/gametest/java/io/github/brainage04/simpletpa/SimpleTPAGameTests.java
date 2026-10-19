@@ -139,23 +139,23 @@ public final class SimpleTPAGameTests {
 					helper.fail("receiver got no request notice");
 					return;
 				}
-				String expectedText = "[SimpleTPA] " + sender + " has sent you a TP request. Use /tpaccept to accept, or /tpdeny to deny. [Accept] [Deny]";
+				String expectedText = "[SimpleTPA] " + sender + " has sent you a TP request. Use /tpaccept to accept, or /tpdeny to deny. [ACCEPT] [DENY]";
 				if (!notice.getString().equals(expectedText)) {
 					helper.fail("notice text was \"" + notice.getString() + "\"");
 					return;
 				}
-				String accept = checkButton(notice, "[Accept]", ChatFormatting.GREEN, "/tpaccept " + sender, "Click to accept " + sender + "'s TP request");
-				String deny = checkButton(notice, "[Deny]", ChatFormatting.RED, "/tpdeny " + sender, "Click to deny " + sender + "'s TP request");
+				String accept = checkButton(notice, "[ACCEPT]", ChatFormatting.GREEN, "/tpaccept " + sender, "Click to accept " + sender + "'s TP request");
+				String deny = checkButton(notice, "[DENY]", ChatFormatting.RED, "/tpdeny " + sender, "Click to deny " + sender + "'s TP request");
 				if (accept != null || deny != null) {
 					helper.fail(accept != null ? accept : deny);
 					return;
 				}
-				// Run what the [Accept] button would send, without the leading slash like the client does.
+				// Run what the [ACCEPT] button would send, without the leading slash like the client does.
 				command(players[1], "tpaccept " + sender);
 			});
 			helper.runAtTickTime(4, () -> {
 				if (players[0].blockPosition().equals(players[1].blockPosition())) helper.succeed();
-				else helper.fail("[Accept] button command did not teleport");
+				else helper.fail("[ACCEPT] button command did not teleport");
 			});
 		});
 	}
