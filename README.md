@@ -4,12 +4,15 @@ SimpleTPA is a server-side only Fabric and NeoForge mod for Minecraft 26.2 that 
 
 Requests expire after 60 seconds. Accepting a request teleports the requester to the accepting player's position, and denying it expires the request immediately.
 
+## Features
+
 Players can control an "auto-accept" whitelist which specifies who is allowed to teleport to them without their requests having to be accepted using `/tpautoaccept`. This functionality is controlled by the `simpletpa:auto_accept` gamerule, and is enabled by default.
 
-## Dependencies
+## Getting started
 
 - Fabric Loader >=0.19.3 with Fabric API OR NeoForge >=26.2.0.88
 - BrainageLib >=1.0.1
+- Install on the server only; players don't need it on their clients.
 
 ## Commands
 
@@ -29,3 +32,15 @@ Players can control an "auto-accept" whitelist which specifies who is allowed to
 
 - `/servermods help` - prints the help lists for all mods which depend on BrainageLib.
 - `/servermods config` - (operators only) prints the settings command for each mod which depends on BrainageLib (for SimpleTPA, the `/gamerule` command above).
+
+## Configuration
+
+The only setting is the `simpletpa:auto_accept` gamerule (default `true`), described under Commands.
+
+## Compatibility
+
+No known incompatibilities.
+
+## Documentation
+
+Everything is in this README.
