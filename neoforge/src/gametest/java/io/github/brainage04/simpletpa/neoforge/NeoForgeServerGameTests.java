@@ -34,6 +34,7 @@ public final class NeoForgeServerGameTests {
 		register(event, "accept_all_toggle_off", SimpleTPAGameTests::acceptAllToggleOff);
 		register(event, "accept_all_gamerule_off", SimpleTPAGameTests::acceptAllGameruleOff);
 		register(event, "accept_all_persistence", SimpleTPAGameTests::acceptAllPersistence);
+		register(event, "unreadable_whitelist_is_not_overwritten", SimpleTPAGameTests::unreadableWhitelistIsNotOverwritten);
 		register(event, "add_wildcard_rejected", SimpleTPAGameTests::addWildcardRejected);
 		register(event, "combined_server_help", SimpleTPAGameTests::combinedServerHelp);
 		register(event, "gamerule_registration", SimpleTPAGameTests::gameruleRegistration);

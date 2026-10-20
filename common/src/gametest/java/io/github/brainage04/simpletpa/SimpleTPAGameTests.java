@@ -361,6 +361,55 @@ public final class SimpleTPAGameTests {
 		});
 	}
 
+	/**
+	 * A whitelist file that failed to load (malformed or a newer schema) must not stop the server from starting,
+	 * and neither a later change nor shutdown may overwrite it. Runs in one tick and restores the file afterwards,
+	 * so other tests' entries round-trip unchanged.
+	 */
+	public static void unreadableWhitelistIsNotOverwritten(GameTestHelper helper) {
+		pair(helper, players -> {
+			var server = helper.getLevel().getServer();
+			Path file = server.getWorldPath(LevelResource.ROOT).resolve("simpletpa-instant-accept-whitelist.json");
+			try {
+				InstantTpaWhitelist.save(server);
+				byte[] original = Files.readAllBytes(file);
+				try {
+					for (String document : List.of("{\"" + players[0].getUUID() + "\": [", "{\"schemaVersion\": 2, \"owners\": {}}")) {
+						byte[] bytes = document.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+						Files.write(file, bytes);
+						InstantTpaWhitelist.load(server);
+						if (TPAutoAcceptCommand.add(players[0].createCommandSourceStack(), players[1]) != -1) {
+							helper.fail("adding to an unreadable whitelist reported success");
+							return;
+						}
+						if (!InstantTpaWhitelist.list(players[0]).equals(List.of(players[1].getScoreboardName()))) {
+							helper.fail("the unsaved whitelist change did not apply for the session");
+							return;
+						}
+						if (!received(players[0], "[SimpleTPA] " + players[1].getScoreboardName()
+								+ " can instantly teleport to you for this session, but your auto-accept whitelist could not be saved.")) {
+							helper.fail("the player was not told the change was not saved: " + texts(players[0]));
+							return;
+						}
+						InstantTpaWhitelist.clear(players[0]);
+						// What the server-stopping hook does.
+						InstantTpaWhitelist.save(server);
+						if (!java.util.Arrays.equals(Files.readAllBytes(file), bytes)) {
+							helper.fail("an unreadable whitelist was overwritten: " + document);
+							return;
+						}
+					}
+				} finally {
+					Files.write(file, original);
+					InstantTpaWhitelist.load(server);
+				}
+			} catch (IOException exception) {
+				throw new IllegalStateException(exception);
+			}
+			helper.succeed();
+		});
+	}
+
 	public static void addWildcardRejected(GameTestHelper helper) {
 		pair(helper, players -> {
 			var dispatcher = helper.getLevel().getServer().getCommands().getDispatcher();

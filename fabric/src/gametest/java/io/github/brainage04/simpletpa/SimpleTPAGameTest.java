@@ -71,6 +71,11 @@ public class SimpleTPAGameTest {
 	}
 
 	@GameTest
+	public void unreadableWhitelistIsNotOverwritten(GameTestHelper helper) {
+		SimpleTPAGameTests.unreadableWhitelistIsNotOverwritten(helper);
+	}
+
+	@GameTest
 	public void addWildcardRejected(GameTestHelper helper) {
 		SimpleTPAGameTests.addWildcardRejected(helper);
 	}

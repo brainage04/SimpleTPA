@@ -2,7 +2,9 @@ package io.github.brainage04.simpletpa.data;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
+import io.github.brainage04.simpletpa.SimpleTPA;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.LevelResource;
@@ -37,6 +39,8 @@ public final class InstantTpaWhitelist {
 	private static final Map<UUID, Map<UUID, String>> WHITELISTS = new HashMap<>();
 	private static final Set<UUID> ACCEPT_ALL = new HashSet<>();
 	private static Path filePath;
+	/** Set when the world's file could not be read; it is then never overwritten and changes last for the session. */
+	private static boolean loadFailed;
 
 	private InstantTpaWhitelist() {
 	}
@@ -45,6 +49,7 @@ public final class InstantTpaWhitelist {
 		filePath = server.getWorldPath(LevelResource.ROOT).resolve("simpletpa-instant-accept-whitelist.json");
 		WHITELISTS.clear();
 		ACCEPT_ALL.clear();
+		loadFailed = false;
 
 		if (!Files.isRegularFile(filePath)) {
 			return;
@@ -85,14 +90,27 @@ public final class InstantTpaWhitelist {
 					WHITELISTS.put(ownerId, allowedPlayers);
 				}
 			}
-		} catch (IOException exception) {
-			throw new IllegalStateException("Failed to load SimpleTPA instant accept whitelist", exception);
+		} catch (IOException | JsonParseException exception) {
+			WHITELISTS.clear();
+			ACCEPT_ALL.clear();
+			loadFailed = true;
+			SimpleTPA.LOGGER.error("Failed to load the SimpleTPA instant accept whitelist from {}; it will not be overwritten and"
+					+ " changes apply for this session only", filePath, exception);
 		}
 	}
 
-	public static synchronized void save(MinecraftServer server) {
+	/**
+	 * Writes the current settings, unless the file failed to load this session.
+	 *
+	 * @return whether the settings were written; when false they still apply until the server stops
+	 */
+	public static synchronized boolean save(MinecraftServer server) {
 		if (filePath == null) {
 			filePath = server.getWorldPath(LevelResource.ROOT).resolve("simpletpa-instant-accept-whitelist.json");
+		}
+		if (loadFailed) {
+			SimpleTPA.LOGGER.warn("Not saving the SimpleTPA instant accept whitelist to {} because it failed to load; the file is kept unchanged", filePath);
+			return false;
 		}
 
 		Map<String, List<Entry>> saved = new TreeMap<>();
@@ -118,8 +136,10 @@ public final class InstantTpaWhitelist {
 				GSON.toJson(saved, FILE_TYPE, writer);
 			}
 		} catch (IOException exception) {
-			throw new IllegalStateException("Failed to save SimpleTPA instant accept whitelist", exception);
+			SimpleTPA.LOGGER.error("Failed to save the SimpleTPA instant accept whitelist to {}", filePath, exception);
+			return false;
 		}
+		return true;
 	}
 
 	public static synchronized boolean allows(ServerPlayer owner, ServerPlayer requester) {

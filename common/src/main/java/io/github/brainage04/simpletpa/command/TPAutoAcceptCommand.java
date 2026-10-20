@@ -36,8 +36,11 @@ public class TPAutoAcceptCommand {
 
 		if (InstantTpaWhitelist.acceptsAll(owner)) {
 			InstantTpaWhitelist.setAcceptAll(owner, false);
-			InstantTpaWhitelist.save(source.getServer());
 			PENDING_ACCEPT_ALL.remove(owner.getUUID());
+			if (!InstantTpaWhitelist.save(source.getServer())) {
+				SimpleTPA.FEEDBACK.failure(source, "Accept-all is off for this session, but the change could not be saved.");
+				return -1;
+			}
 			SimpleTPA.FEEDBACK.success(owner, "Accept-all is now off. Only players on your auto-accept whitelist can teleport to you without asking.");
 			return 1;
 		}
@@ -53,14 +56,18 @@ public class TPAutoAcceptCommand {
 		}
 
 		InstantTpaWhitelist.setAcceptAll(owner, true);
-		InstantTpaWhitelist.save(source.getServer());
-		SimpleTPA.FEEDBACK.success(owner, "Accept-all is now on. Anyone on the server can teleport to you without asking. Run %s again to turn it off.", command);
+		boolean saved = InstantTpaWhitelist.save(source.getServer());
+		if (saved) {
+			SimpleTPA.FEEDBACK.success(owner, "Accept-all is now on. Anyone on the server can teleport to you without asking. Run %s again to turn it off.", command);
+		} else {
+			SimpleTPA.FEEDBACK.failure(source, "Accept-all is on for this session, but the change could not be saved. Run %s again to turn it off.", command);
+		}
 
 		if (!source.getServer().getGameRules().get(SimpleTPA.AUTO_ACCEPT)) {
 			SimpleTPA.FEEDBACK.neutral(owner, "It has no effect while the simpletpa:auto_accept gamerule is false.");
 		}
 
-		return 1;
+		return saved ? 1 : -1;
 	}
 
 	public static int list(CommandSourceStack source) {
@@ -111,9 +118,12 @@ public class TPAutoAcceptCommand {
 		}
 
 		boolean added = InstantTpaWhitelist.add(owner, requester);
-		InstantTpaWhitelist.save(source.getServer());
+		boolean saved = InstantTpaWhitelist.save(source.getServer());
 
-		if (added) {
+		if (added && !saved) {
+			SimpleTPA.FEEDBACK.failure(source, "%s can instantly teleport to you for this session, but your auto-accept whitelist could not be saved.", requester.getScoreboardName());
+			return -1;
+		} else if (added) {
 			SimpleTPA.FEEDBACK.success(owner, "%s can now instantly teleport to you when the gamerule allows it.", requester.getScoreboardName());
 		} else {
 			SimpleTPA.FEEDBACK.neutral(owner, "%s is already on your auto-accept whitelist.", requester.getScoreboardName());
@@ -133,7 +143,10 @@ public class TPAutoAcceptCommand {
 		SimpleTPA.FEEDBACK.click(owner);
 
 		if (InstantTpaWhitelist.remove(owner, requester)) {
-			InstantTpaWhitelist.save(source.getServer());
+			if (!InstantTpaWhitelist.save(source.getServer())) {
+				SimpleTPA.FEEDBACK.failure(source, "%s was removed from your auto-accept whitelist for this session, but the change could not be saved.", requester.getScoreboardName());
+				return -1;
+			}
 			SimpleTPA.FEEDBACK.success(owner, "%s was removed from your auto-accept whitelist.", requester.getScoreboardName());
 		} else {
 			SimpleTPA.FEEDBACK.failure(source, "%s is not on your auto-accept whitelist.", requester.getScoreboardName());
@@ -154,7 +167,10 @@ public class TPAutoAcceptCommand {
 		SimpleTPA.FEEDBACK.click(owner);
 
 		if (InstantTpaWhitelist.clear(owner)) {
-			InstantTpaWhitelist.save(source.getServer());
+			if (!InstantTpaWhitelist.save(source.getServer())) {
+				SimpleTPA.FEEDBACK.failure(source, "Your auto-accept whitelist has been cleared for this session, but the change could not be saved.");
+				return -1;
+			}
 			SimpleTPA.FEEDBACK.success(owner, "Your auto-accept whitelist has been cleared.");
 		} else {
 			SimpleTPA.FEEDBACK.neutral(owner, "Your auto-accept whitelist is already empty.");
