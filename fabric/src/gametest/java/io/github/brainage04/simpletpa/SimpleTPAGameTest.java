@@ -76,6 +76,11 @@ public class SimpleTPAGameTest {
 	}
 
 	@GameTest
+	public void whitelistFromPreviousVersionLoads(GameTestHelper helper) {
+		SimpleTPAGameTests.whitelistFromPreviousVersionLoads(helper);
+	}
+
+	@GameTest
 	public void addWildcardRejected(GameTestHelper helper) {
 		SimpleTPAGameTests.addWildcardRejected(helper);
 	}

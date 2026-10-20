@@ -35,7 +35,7 @@ public final class SimpleTPA {
 				InstantTpaWhitelist.save(server);
 			} finally {
 				TPRequestCommand.TP_REQUESTS.clear();
-				TPAutoAcceptCommand.PENDING_ACCEPT_ALL.clear();
+				TPAutoAcceptCommand.ACCEPT_ALL_CONFIRMATION.clear();
 			}
 		});
 		ServerModHelpRegistry.register(new ServerModHelpEntry(

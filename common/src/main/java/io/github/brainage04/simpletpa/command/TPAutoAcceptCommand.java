@@ -1,20 +1,20 @@
 package io.github.brainage04.simpletpa.command;
 
+import io.github.brainage04.brainagelib.confirmation.ConfirmationWindow;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
 import io.github.brainage04.simpletpa.SimpleTPA;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public class TPAutoAcceptCommand {
 	/** How long after the accept-all warning a second run confirms it: 30 seconds at 20 ticks per second. */
 	public static final int CONFIRM_WINDOW_TICKS = 30 * 20;
-	/** Server tick at which each player was last warned about accept-all; cleared when the server stops. */
-	public static final Map<UUID, Integer> PENDING_ACCEPT_ALL = new HashMap<>();
+	/** Accept-all requests awaiting their second run; a run exactly {@link #CONFIRM_WINDOW_TICKS} later still confirms. Cleared when the server stops. */
+	public static final ConfirmationWindow<UUID> ACCEPT_ALL_CONFIRMATION =
+			new ConfirmationWindow<>(CONFIRM_WINDOW_TICKS, ConfirmationWindow.Boundary.INCLUSIVE);
 
 	/**
 	 * Toggles accepting requests from everyone. Turning it on needs a second run within
@@ -36,7 +36,7 @@ public class TPAutoAcceptCommand {
 
 		if (InstantTpaWhitelist.acceptsAll(owner)) {
 			InstantTpaWhitelist.setAcceptAll(owner, false);
-			PENDING_ACCEPT_ALL.remove(owner.getUUID());
+			ACCEPT_ALL_CONFIRMATION.cancel(owner.getUUID());
 			if (!InstantTpaWhitelist.save(source.getServer())) {
 				SimpleTPA.FEEDBACK.failure(source, "Accept-all is off for this session, but the change could not be saved.");
 				return -1;
@@ -45,11 +45,8 @@ public class TPAutoAcceptCommand {
 			return 1;
 		}
 
-		int now = source.getServer().getTickCount();
-		Integer warnedAt = PENDING_ACCEPT_ALL.remove(owner.getUUID());
-
-		if (warnedAt == null || now - warnedAt > CONFIRM_WINDOW_TICKS) {
-			PENDING_ACCEPT_ALL.put(owner.getUUID(), now);
+		if (ACCEPT_ALL_CONFIRMATION.requestOrConfirm(owner.getUUID(), source.getServer().getTickCount())
+				== ConfirmationWindow.Outcome.REQUESTED) {
 			SimpleTPA.FEEDBACK.error(owner, "Warning: accept-all lets anyone on the server teleport to you at any time without asking.");
 			SimpleTPA.FEEDBACK.neutral(owner, "Run %s again within %d seconds to turn it on.", command, CONFIRM_WINDOW_TICKS / 20);
 			return 1;

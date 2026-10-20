@@ -2,19 +2,13 @@ package io.github.brainage04.simpletpa.data;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
+import io.github.brainage04.brainagelib.storage.JsonFile;
 import io.github.brainage04.simpletpa.SimpleTPA;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.LevelResource;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.lang.reflect.Type;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -29,73 +23,57 @@ import java.util.UUID;
  * Per-player auto-accept settings: a whitelist of requesters plus an "accept everyone" switch.
  * Both are stored in one JSON file keyed by owner UUID; accept-all is an entry whose uuid is
  * {@value #ACCEPT_ALL_MARKER}. Files written before accept-all existed load unchanged, and older
- * versions skip the marker entry because it is not a valid UUID.
+ * versions skip the marker entry because it is not a valid UUID. A file that fails to load is
+ * never overwritten; changes then apply until the server stops.
  */
 public final class InstantTpaWhitelist {
 	public static final String ACCEPT_ALL_MARKER = "*";
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-	private static final Type FILE_TYPE = new TypeToken<Map<String, List<Entry>>>() {
-	}.getType();
+	private static final TypeToken<Map<String, List<Entry>>> FILE_TYPE = new TypeToken<>() {
+	};
 	private static final Map<UUID, Map<UUID, String>> WHITELISTS = new HashMap<>();
 	private static final Set<UUID> ACCEPT_ALL = new HashSet<>();
-	private static Path filePath;
-	/** Set when the world's file could not be read; it is then never overwritten and changes last for the session. */
-	private static boolean loadFailed;
+	private static JsonFile<Map<String, List<Entry>>> file;
 
 	private InstantTpaWhitelist() {
 	}
 
 	public static synchronized void load(MinecraftServer server) {
-		filePath = server.getWorldPath(LevelResource.ROOT).resolve("simpletpa-instant-accept-whitelist.json");
+		file = whitelistFile(server);
 		WHITELISTS.clear();
 		ACCEPT_ALL.clear();
-		loadFailed = false;
 
-		if (!Files.isRegularFile(filePath)) {
+		if (!(file.load() instanceof JsonFile.LoadResult.Loaded<Map<String, List<Entry>>>(Map<String, List<Entry>> saved))) {
 			return;
 		}
 
-		try (Reader reader = Files.newBufferedReader(filePath)) {
-			Map<String, List<Entry>> saved = GSON.fromJson(reader, FILE_TYPE);
+		for (Map.Entry<String, List<Entry>> ownerEntry : saved.entrySet()) {
+			UUID ownerId = parseUuid(ownerEntry.getKey());
 
-			if (saved == null) {
-				return;
+			if (ownerId == null || ownerEntry.getValue() == null) {
+				continue;
 			}
 
-			for (Map.Entry<String, List<Entry>> ownerEntry : saved.entrySet()) {
-				UUID ownerId = parseUuid(ownerEntry.getKey());
+			Map<UUID, String> allowedPlayers = new HashMap<>();
 
-				if (ownerId == null || ownerEntry.getValue() == null) {
+			for (Entry allowedEntry : ownerEntry.getValue()) {
+				if (allowedEntry == null) {
 					continue;
 				}
-
-				Map<UUID, String> allowedPlayers = new HashMap<>();
-
-				for (Entry allowedEntry : ownerEntry.getValue()) {
-					if (allowedEntry == null) {
-						continue;
-					}
-					if (ACCEPT_ALL_MARKER.equals(allowedEntry.uuid)) {
-						ACCEPT_ALL.add(ownerId);
-						continue;
-					}
-					UUID allowedId = parseUuid(allowedEntry.uuid);
-
-					if (allowedId != null) {
-						allowedPlayers.put(allowedId, allowedEntry.name == null ? allowedId.toString() : allowedEntry.name);
-					}
+				if (ACCEPT_ALL_MARKER.equals(allowedEntry.uuid)) {
+					ACCEPT_ALL.add(ownerId);
+					continue;
 				}
+				UUID allowedId = parseUuid(allowedEntry.uuid);
 
-				if (!allowedPlayers.isEmpty()) {
-					WHITELISTS.put(ownerId, allowedPlayers);
+				if (allowedId != null) {
+					allowedPlayers.put(allowedId, allowedEntry.name == null ? allowedId.toString() : allowedEntry.name);
 				}
 			}
-		} catch (IOException | JsonParseException exception) {
-			WHITELISTS.clear();
-			ACCEPT_ALL.clear();
-			loadFailed = true;
-			SimpleTPA.LOGGER.error("Failed to load the SimpleTPA instant accept whitelist from {}; it will not be overwritten and"
-					+ " changes apply for this session only", filePath, exception);
+
+			if (!allowedPlayers.isEmpty()) {
+				WHITELISTS.put(ownerId, allowedPlayers);
+			}
 		}
 	}
 
@@ -105,12 +83,8 @@ public final class InstantTpaWhitelist {
 	 * @return whether the settings were written; when false they still apply until the server stops
 	 */
 	public static synchronized boolean save(MinecraftServer server) {
-		if (filePath == null) {
-			filePath = server.getWorldPath(LevelResource.ROOT).resolve("simpletpa-instant-accept-whitelist.json");
-		}
-		if (loadFailed) {
-			SimpleTPA.LOGGER.warn("Not saving the SimpleTPA instant accept whitelist to {} because it failed to load; the file is kept unchanged", filePath);
-			return false;
+		if (file == null) {
+			file = whitelistFile(server);
 		}
 
 		Map<String, List<Entry>> saved = new TreeMap<>();
@@ -129,17 +103,14 @@ public final class InstantTpaWhitelist {
 					.forEach(entry -> entries.add(new Entry(entry.getKey().toString(), entry.getValue())));
 		}
 
-		try {
-			Files.createDirectories(filePath.getParent());
+		return file.save(saved).saved();
+	}
 
-			try (Writer writer = Files.newBufferedWriter(filePath)) {
-				GSON.toJson(saved, FILE_TYPE, writer);
-			}
-		} catch (IOException exception) {
-			SimpleTPA.LOGGER.error("Failed to save the SimpleTPA instant accept whitelist to {}", filePath, exception);
-			return false;
-		}
-		return true;
+	private static JsonFile<Map<String, List<Entry>>> whitelistFile(MinecraftServer server) {
+		return JsonFile.builder(server.getWorldPath(LevelResource.ROOT).resolve("simpletpa-instant-accept-whitelist.json"), GSON, FILE_TYPE)
+				.description("SimpleTPA instant accept whitelist")
+				.logger(SimpleTPA.LOGGER)
+				.build();
 	}
 
 	public static synchronized boolean allows(ServerPlayer owner, ServerPlayer requester) {

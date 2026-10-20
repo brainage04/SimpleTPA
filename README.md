@@ -11,7 +11,7 @@ Players can control an "auto-accept" whitelist which specifies who is allowed to
 ## Getting started
 
 - Fabric Loader >=0.19.3 with Fabric API OR NeoForge >=26.2.0.88
-- BrainageLib >=1.0.1
+- BrainageLib >=1.1.0
 - Install on the server only; players don't need it on their clients.
 
 ## Commands
