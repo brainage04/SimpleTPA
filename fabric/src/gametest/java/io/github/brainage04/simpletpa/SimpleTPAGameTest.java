@@ -3,7 +3,6 @@ package io.github.brainage04.simpletpa;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 
-/** Runs the loader-neutral GameTests on Fabric; {@link SimpleTPATest} covers the same flows with Carpet fake players. */
 public class SimpleTPAGameTest {
 	@GameTest
 	public void acceptFlows(GameTestHelper helper) {

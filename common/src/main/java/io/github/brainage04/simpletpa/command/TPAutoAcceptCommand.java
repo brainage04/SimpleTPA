@@ -10,18 +10,10 @@ import java.util.List;
 import java.util.UUID;
 
 public class TPAutoAcceptCommand {
-	/** How long after the accept-all warning a second run confirms it: 30 seconds at 20 ticks per second. */
 	public static final int CONFIRM_WINDOW_TICKS = 30 * 20;
-	/** Accept-all requests awaiting their second run; a run exactly {@link #CONFIRM_WINDOW_TICKS} later still confirms. Cleared when the server stops. */
 	public static final ConfirmationWindow<UUID> ACCEPT_ALL_CONFIRMATION =
 			new ConfirmationWindow<>(CONFIRM_WINDOW_TICKS, ConfirmationWindow.Boundary.INCLUSIVE);
 
-	/**
-	 * Toggles accepting requests from everyone. Turning it on needs a second run within
-	 * {@link #CONFIRM_WINDOW_TICKS}; turning it off is immediate.
-	 *
-	 * @param input the command as typed, echoed back so the player can repeat it
-	 */
 	public static int acceptAll(CommandSourceStack source, String input) {
 		ServerPlayer owner = source.getPlayer();
 

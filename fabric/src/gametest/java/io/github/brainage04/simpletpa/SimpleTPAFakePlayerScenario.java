@@ -27,10 +27,6 @@ final class SimpleTPAFakePlayerScenario {
 		}
 	}
 
-	/**
-	 * Puts the player on its own scoreboard team so its name tag and chat name use {@code color}. The
-	 * team keeps vanilla player collision, so team members still push other players.
-	 */
 	static void colorName(ServerLevel level, String name, String color) {
 		String team = teamName(name);
 		executeServerCommand(level, Vec3.ZERO, "team add " + team);
@@ -62,14 +58,12 @@ final class SimpleTPAFakePlayerScenario {
 		receiver.setDeltaMovement(Vec3.ZERO);
 	}
 
-	/** Moves {@code player} to {@code position}, facing {@code yaw} and {@code pitch}. */
 	static void place(ServerPlayer player, Vec3 position, float yaw, float pitch) {
 		player.teleportTo(player.level(), position.x, position.y, position.z, Set.of(), yaw, pitch, true);
 		player.setYHeadRot(yaw);
 		player.setDeltaMovement(Vec3.ZERO);
 	}
 
-	/** Runs {@code command} as {@code player}, first showing {@code <player> /command} to every real player. */
 	static void executeCommand(ServerPlayer player, String command) {
 		Component line = Component.literal("<")
 				.append(player.getDisplayName())
@@ -83,7 +77,6 @@ final class SimpleTPAFakePlayerScenario {
 		player.connection.handleChatCommand(new ServerboundChatCommandPacket(command));
 	}
 
-	/** Asserts that a teleport put {@code mover} exactly on {@code target}'s position, facing its way. */
 	static void assertLandedOn(ServerPlayer mover, ServerPlayer target, String message) {
 		if (!mover.position().equals(target.position())
 				|| mover.getYRot() != target.getYRot()

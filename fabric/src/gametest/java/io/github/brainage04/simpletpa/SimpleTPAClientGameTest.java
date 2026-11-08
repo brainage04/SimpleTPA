@@ -25,15 +25,10 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.Properties;
 
-/**
- * Feature showcase seen through the client player's own eyes: the client types its commands into chat (or clicks them there)
- * and sees the replies and teleports as a real user would, while one Carpet fake player is the other side.
- */
 @SuppressWarnings("UnstableApiUsage")
 public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 	private static final String FRIEND_NAME = "tpaFriend";
 
-	// Showcase captions: edit the on-screen titles and descriptions here.
 	private static final Caption REQUEST = new Caption("simpletpa.request",
 			"Teleport request",
 			"You ask " + FRIEND_NAME + " if you can teleport to them");
@@ -51,7 +46,6 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 			"You whitelist " + FRIEND_NAME + ", who can now teleport to you instantly");
 
 	private static final int STAGE_Y = 64;
-	// The client stands on the diamond block facing east, the friend on the gold block facing west.
 	private static final Vec3 PLAYER_POSITION = new Vec3(-2.5D, STAGE_Y, 0.5D);
 	private static final Vec3 FRIEND_POSITION = new Vec3(2.5D, STAGE_Y, 0.5D);
 	private static final float EAST = -90.0F;
@@ -92,7 +86,6 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 			SimpleTPAFakePlayerScenario.assertLandedOn(player(minecraftServer, playerName), friend,
 					"The client player did not land on " + FRIEND_NAME + " after the request was accepted");
 		});
-		// Both players now share one spot; they stay there until the next step resets them.
 		context.waitTicks(38);
 	}
 
@@ -110,7 +103,6 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 				"The client player teleported despite the request being denied."));
 	}
 
-	/** tpaFriend asks to come over and the player clicks the [ACCEPT] button in the chat window with the mouse. */
 	private static void showClickedAccept(ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
 		show(context, CLICK_ACCEPT);
 		server.runOnServer(minecraftServer -> placeActors(player(minecraftServer, playerName), friend(minecraftServer)));
@@ -121,7 +113,6 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 		context.waitTicks(10);
 		String acceptCommand = "/tpaccept " + FRIEND_NAME;
 		double[] button = context.computeOnClient(client -> findRunCommand(client, acceptCommand));
-		// Hover first, so the button's tooltip shows before the click.
 		context.getInput().setCursorPos(button[0], button[1]);
 		context.waitTicks(25);
 		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
@@ -135,10 +126,6 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 		context.waitTicks(30);
 	}
 
-	/**
-	 * Finds the chat text whose click event runs {@code command}, the way {@link ChatScreen} looks up what was
-	 * clicked, and returns the middle of it in window pixels for {@code TestInput.setCursorPos}.
-	 */
 	private static double[] findRunCommand(Minecraft client, String command) {
 		Window window = client.getWindow();
 		ChatComponent chat = client.gui.hud.getChat();
@@ -167,7 +154,6 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 		return new double[]{(sumX / (double) hits + 0.5D) * scaleX, (sumY / (double) hits + 0.5D) * scaleY};
 	}
 
-	/** The last step: the recording ends right after it, without a closing caption card. */
 	private static void showAutoAcceptedRequest(ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
 		show(context, AUTO_ACCEPT);
 		server.runOnServer(minecraftServer -> placeActors(player(minecraftServer, playerName), friend(minecraftServer)));
@@ -184,8 +170,8 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 	}
 
 	/**
-	 * Opens chat, enters {@code command} and sends it after a pause, as a player would. The command is
-	 * entered whole: typed one character at a time, the partial command shows a parse error above it.
+	 * Typed one character at a time, the partial command shows a parse error above it, so the command is
+	 * entered whole.
 	 */
 	private static void typeCommand(ClientGameTestContext context, String command) {
 		context.setScreen(() -> new ChatScreen("", false));
@@ -198,16 +184,13 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 		ClientGameTestRecorder.showStep(context, caption.id(), caption.title(), caption.description());
 	}
 
-	/** Runs before the client joins, so none of the setup is in the recording. */
 	private static void prepareWorld(ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
 		server.runOnServer(minecraftServer -> {
 			ServerLevel level = minecraftServer.overworld();
 			buildStage(level);
-			// At noon the sun is overhead and out of view, instead of behind the friend's name tag.
 			minecraftServer.getCommands().performPrefixedCommand(
 					minecraftServer.createCommandSourceStack().withSuppressedOutput(), "time set noon");
 			minecraftServer.getGameRules().set(GameRules.ADVANCE_TIME, false, minecraftServer);
-			// A new player joins exactly on the world spawn, facing its yaw and pitch.
 			minecraftServer.getGameRules().set(GameRules.RESPAWN_RADIUS, 0, minecraftServer);
 			minecraftServer.setRespawnData(LevelData.RespawnData.of(
 					Level.OVERWORLD, BlockPos.containing(PLAYER_POSITION), EAST, PLAYER_PITCH));
@@ -223,7 +206,6 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 	}
 
 	private static void buildStage(ServerLevel level) {
-		// A plain dark floor reaching far back, with the client's diamond block and the friend's gold block.
 		for (BlockPos position : BlockPos.betweenClosed(-30, STAGE_Y - 1, -24, 30, STAGE_Y + 4, 24)) {
 			level.setBlock(position, position.getY() == STAGE_Y - 1
 					? Blocks.POLISHED_DEEPSLATE.defaultBlockState()

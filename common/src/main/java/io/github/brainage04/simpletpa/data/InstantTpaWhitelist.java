@@ -20,11 +20,9 @@ import java.util.TreeMap;
 import java.util.UUID;
 
 /**
- * Per-player auto-accept settings: a whitelist of requesters plus an "accept everyone" switch.
- * Both are stored in one JSON file keyed by owner UUID; accept-all is an entry whose uuid is
- * {@value #ACCEPT_ALL_MARKER}. Files written before accept-all existed load unchanged, and older
- * versions skip the marker entry because it is not a valid UUID. A file that fails to load is
- * never overwritten; changes then apply until the server stops.
+ * Accept-all is an entry whose uuid is {@value #ACCEPT_ALL_MARKER}. Files written before accept-all
+ * existed load unchanged, and older versions skip the marker entry because it is not a valid UUID. A
+ * file that fails to load is never overwritten; changes then apply until the server stops.
  */
 public final class InstantTpaWhitelist {
 	public static final String ACCEPT_ALL_MARKER = "*";
@@ -77,11 +75,6 @@ public final class InstantTpaWhitelist {
 		}
 	}
 
-	/**
-	 * Writes the current settings, unless the file failed to load this session.
-	 *
-	 * @return whether the settings were written; when false they still apply until the server stops
-	 */
 	public static synchronized boolean save(MinecraftServer server) {
 		if (file == null) {
 			file = whitelistFile(server);

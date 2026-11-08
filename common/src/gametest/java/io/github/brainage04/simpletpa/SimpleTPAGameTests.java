@@ -35,18 +35,10 @@ import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.gamerules.GameRule;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * Loader-neutral server GameTest bodies. Both loaders compile this source set into their GameTest
- * mods: Fabric runs them through {@code @GameTest} methods, NeoForge through registered test
- * functions and {@code test_instance} data.
- */
 public final class SimpleTPAGameTests {
-	/** Ticks the accept-all expiry test needs: the confirmation window plus a few ticks of setup and checks. */
 	public static final int ACCEPT_ALL_EXPIRY_MAX_TICKS = TPAutoAcceptCommand.CONFIRM_WINDOW_TICKS + 20;
-	/** Test environment (data/simpletpa/test_environment) that sets simpletpa:auto_accept to false for its batch. */
 	public static final String AUTO_ACCEPT_OFF_ENVIRONMENT = "simpletpa:auto_accept_off";
 	private static int playerPairCounter;
-	/** The joined players of each running test, closed when it passes or fails. */
 	private static final Map<GameTestHelper, List<GameTestPlayer>> OPEN_PLAYERS = new IdentityHashMap<>();
 
 	private SimpleTPAGameTests() {
@@ -279,7 +271,6 @@ public final class SimpleTPAGameTests {
 		});
 	}
 
-	/** Runs in {@link #AUTO_ACCEPT_OFF_ENVIRONMENT}, so the gamerule is false only for this batch. */
 	public static void acceptAllGameruleOff(GameTestHelper helper) {
 		pair(helper, players -> {
 			helper.runAtTickTime(1, () -> command(players[1], "tpauto"));
@@ -308,8 +299,7 @@ public final class SimpleTPAGameTests {
 	}
 
 	/**
-	 * Saves and reloads the auto-accept file, with a hand-written entry in the pre-accept-all format
-	 * added to it. Everything runs in one server tick, so other tests' entries round-trip unchanged.
+	 * Everything runs in one server tick, so other tests' entries round-trip unchanged.
 	 */
 	public static void acceptAllPersistence(GameTestHelper helper) {
 		pair(helper, players -> {
@@ -361,8 +351,7 @@ public final class SimpleTPAGameTests {
 	}
 
 	/**
-	 * A whitelist file exactly as the previous version wrote it (pretty-printed, owners sorted, names sorted)
-	 * loads and is written back byte for byte. Runs in one tick and restores the file afterwards.
+	 * Runs in one tick and restores the file afterwards.
 	 */
 	public static void whitelistFromPreviousVersionLoads(GameTestHelper helper) {
 		pair(helper, players -> {
@@ -407,9 +396,7 @@ public final class SimpleTPAGameTests {
 	}
 
 	/**
-	 * A whitelist file that failed to load (malformed or a newer schema) must not stop the server from starting,
-	 * and neither a later change nor shutdown may overwrite it. Runs in one tick and restores the file afterwards,
-	 * so other tests' entries round-trip unchanged.
+	 * Runs in one tick and restores the file afterwards, so other tests' entries round-trip unchanged.
 	 */
 	public static void unreadableWhitelistIsNotOverwritten(GameTestHelper helper) {
 		pair(helper, players -> {
@@ -437,7 +424,6 @@ public final class SimpleTPAGameTests {
 							return;
 						}
 						InstantTpaWhitelist.clear(players[0]);
-						// What the server-stopping hook does.
 						InstantTpaWhitelist.save(server);
 						if (!java.util.Arrays.equals(Files.readAllBytes(file), bytes)) {
 							fail(helper, "an unreadable whitelist was overwritten: " + document);
@@ -483,7 +469,6 @@ public final class SimpleTPAGameTests {
 		else fail(helper, "simpletpa:auto_accept gamerule is not registered");
 	}
 
-	/** Returns null when {@code button} is present with the given colour, run-command and hover text, else why not. */
 	private static String checkButton(Component message, String label, ChatFormatting color, String command, String hover) {
 		Component button = find(message, label);
 		if (button == null) return "no " + label + " button";
@@ -519,7 +504,6 @@ public final class SimpleTPAGameTests {
 		return player(helper, name, UUID.randomUUID());
 	}
 
-	/** Joins a spectator player that stays connected until the test calls {@link #succeed} or {@link #fail}. */
 	private static ServerPlayer player(GameTestHelper helper, String name, UUID id) {
 		GameTestPlayer fixture = GameTestPlayer.join(helper, new GameProfile(id, name)).gameMode(GameType.SPECTATOR);
 		synchronized (OPEN_PLAYERS) {
@@ -546,13 +530,11 @@ public final class SimpleTPAGameTests {
 		body.accept(new ServerPlayer[]{player(helper, "sender" + id), player(helper, "receiver" + id)});
 	}
 
-	/** Disconnects the test's players, then passes the test. */
 	private static void succeed(GameTestHelper helper) {
 		closePlayers(helper);
 		helper.succeed();
 	}
 
-	/** Disconnects the test's players, then fails the test. */
 	private static void fail(GameTestHelper helper, String message) {
 		closePlayers(helper);
 		helper.fail(message);
