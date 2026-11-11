@@ -1,6 +1,6 @@
 # SimpleTPA
 
-SimpleTPA is a server-side only Fabric and NeoForge mod for Minecraft 26.2 that adds a player-to-player teleport request system.
+SimpleTPA is a server-side only Fabric and NeoForge mod for Minecraft 26.3 that adds a player-to-player teleport request system.
 
 Requests expire after 60 seconds. Accepting a request teleports the requester to the accepting player's position, and denying it expires the request immediately.
 
@@ -10,8 +10,8 @@ Each player keeps an "auto-accept" whitelist of players who may teleport to them
 
 ## Getting started
 
-- Fabric Loader >=0.19.3 with Fabric API OR NeoForge >=26.2.0.88
-- BrainageLib >=1.1.0
+- Fabric Loader >=0.19.5 with Fabric API OR NeoForge >=26.3.0.99
+- BrainageLib >=1.3.0
 - Install on the server only; players don't need it on their clients.
 
 ## Commands

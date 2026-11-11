@@ -1,5 +1,6 @@
 package io.github.brainage04.simpletpa;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestRecorder;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestServers;
@@ -21,7 +22,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.phys.Vec3;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.Properties;
 
@@ -115,13 +115,13 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 		double[] button = context.computeOnClient(client -> findRunCommand(client, acceptCommand));
 		context.getInput().setCursorPos(button[0], button[1]);
 		context.waitTicks(25);
-		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+		context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
 		context.waitTicks(5);
 		server.runOnServer(minecraftServer -> SimpleTPAFakePlayerScenario.assertLandedOn(friend(minecraftServer), player(minecraftServer, playerName),
 				FRIEND_NAME + " did not land on the client player after [ACCEPT] was clicked"));
 		context.waitTicks(15);
 		if (context.computeOnClient(client -> client.gui.screen() instanceof ChatScreen)) {
-			context.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
+			context.getInput().pressKey(InputConstants.KEY_ESCAPE);
 		}
 		context.waitTicks(30);
 	}
@@ -177,7 +177,7 @@ public final class SimpleTPAClientGameTest implements FabricClientGameTest {
 		context.setScreen(() -> new ChatScreen("", false));
 		context.getInput().typeChars("/" + command);
 		context.waitTicks(COMMAND_VISIBLE_TICKS);
-		context.getInput().pressKey(GLFW.GLFW_KEY_ENTER);
+		context.getInput().pressKey(InputConstants.KEY_RETURN);
 	}
 
 	private static void show(ClientGameTestContext context, Caption caption) {

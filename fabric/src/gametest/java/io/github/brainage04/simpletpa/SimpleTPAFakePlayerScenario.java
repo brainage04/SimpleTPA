@@ -6,6 +6,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundChatCommandPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
 import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.world.phys.Vec3;
 
@@ -18,6 +19,10 @@ final class SimpleTPAFakePlayerScenario {
 	}
 
 	static void spawn(ServerLevel level, String name, Vec3 position) {
+		// Carpet asks the server's profile cache for the name before it spawns the player
+		// (OldUsersConverter.java:246-249). An unknown name makes 26.3 look it up over the network, which
+		// stalls or throws on a machine without Mojang access, so seed the offline identity here.
+		level.getServer().services().nameToIdCache().add(NameAndId.createOffline(name));
 		executeServerCommand(level, position, "player %s spawn in survival".formatted(name));
 	}
 
