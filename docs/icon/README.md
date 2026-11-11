@@ -1,6 +1,6 @@
 # SimpleTPA icon
 
-## What this is
+## The icon file
 
 The mod's icon: `icon.png` - 512x512 RGBA PNG, 4 573 bytes,
 sha256 `5b6882552eb49275a931d6267404fb55b7573487efc5023cf1f5dfca0ee2ff3d`.

@@ -6,7 +6,7 @@ Requests expire after 60 seconds. Accepting a request teleports the requester to
 
 ## Features
 
-Players can control an "auto-accept" whitelist which specifies who is allowed to teleport to them without their requests having to be accepted using `/tpautoaccept`. This functionality is controlled by the `simpletpa:auto_accept` gamerule, and is enabled by default.
+Each player keeps an "auto-accept" whitelist of players who may teleport to them without their request being accepted; `/tpautoaccept` edits it. The `simpletpa:auto_accept` gamerule controls the feature and is enabled by default.
 
 ## Getting started
 
@@ -26,7 +26,7 @@ Players can control an "auto-accept" whitelist which specifies who is allowed to
 - `/tpautoaccept clear` - clear your "auto-accept" whitelist.
 - `/tpautoaccept *` - auto-accept requests from everyone (if `simpletpa:auto_accept` is `true`). Run it twice within 30 seconds to turn it on, and again to turn it off. `*` can be left out.
 - `/tpauto` - short for `/tpautoaccept`, with all the same subcommands.
-- `/gamerule simpletpa:auto_accept <true|false>` - when set to `true`, allows players to be able to teleport to each other instantly, if the player they are teleporting to has them added to their "auto-accept" whitelist.
+- `/gamerule simpletpa:auto_accept <true|false>` - when `true`, a player can teleport to another player instantly if that player has them on their "auto-accept" whitelist.
 
 ### BrainageLib commands
 
