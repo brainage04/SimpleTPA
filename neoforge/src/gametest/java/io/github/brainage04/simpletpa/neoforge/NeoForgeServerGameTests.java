@@ -84,6 +84,10 @@ public final class NeoForgeServerGameTests {
         register(event, "legacy_game_rule_migrates", SimpleTPAGameTests::legacyGameRuleMigrates);
         register(
                 event,
+                "legacy_game_rule_yields_to_current_rule",
+                SimpleTPAGameTests::legacyGameRuleYieldsToCurrentRule);
+        register(
+                event,
                 "brainagelib_dependency_stops_below_next_major",
                 NeoForgeServerGameTests::brainageLibDependencyStopsBelowNextMajor);
     }

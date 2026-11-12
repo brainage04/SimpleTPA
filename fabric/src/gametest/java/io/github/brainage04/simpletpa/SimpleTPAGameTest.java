@@ -143,4 +143,9 @@ public class SimpleTPAGameTest {
     public void legacyGameRuleMigrates(GameTestHelper helper) {
         SimpleTPAGameTests.legacyGameRuleMigrates(helper);
     }
+
+    @GameTest
+    public void legacyGameRuleYieldsToCurrentRule(GameTestHelper helper) {
+        SimpleTPAGameTests.legacyGameRuleYieldsToCurrentRule(helper);
+    }
 }

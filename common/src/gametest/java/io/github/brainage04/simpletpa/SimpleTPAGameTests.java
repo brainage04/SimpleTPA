@@ -1228,13 +1228,9 @@ public final class SimpleTPAGameTests {
         Path dataFolder = null;
         try {
             dataFolder = Files.createTempDirectory("simpletpa-game-rules");
-            Path file = GameRuleMap.TYPE.id().withSuffix(".dat").resolveAgainst(dataFolder);
-            Files.createDirectories(file.getParent());
             CompoundTag rules = new CompoundTag();
             rules.putBoolean(LegacyGameRule.LEGACY_ID.toString(), false);
-            CompoundTag saved = new CompoundTag();
-            saved.put("data", rules);
-            NbtIo.writeCompressed(NbtUtils.addCurrentDataVersion(saved), file);
+            writeGameRules(dataFolder, rules);
 
             try (SavedDataStorage storage = savedData(server, dataFolder)) {
                 GameRules loaded = gameRules(server, storage);
@@ -1273,6 +1269,44 @@ public final class SimpleTPAGameTests {
             deleteTree(dataFolder);
         }
         succeed(helper);
+    }
+
+    /** A world that saved both names keeps the current rule's value. */
+    public static void legacyGameRuleYieldsToCurrentRule(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        Path dataFolder = null;
+        try {
+            dataFolder = Files.createTempDirectory("simpletpa-game-rules");
+            CompoundTag rules = new CompoundTag();
+            rules.putBoolean(LegacyGameRule.LEGACY_ID.toString(), false);
+            rules.putBoolean(
+                    BuiltInRegistries.GAME_RULE.getKey(SimpleTPA.AUTO_ACCEPT).toString(), true);
+            writeGameRules(dataFolder, rules);
+
+            try (SavedDataStorage storage = savedData(server, dataFolder)) {
+                GameRules loaded = gameRules(server, storage);
+                LegacyGameRule.migrate(storage, dataFolder, loaded);
+                if (!loaded.get(SimpleTPA.AUTO_ACCEPT)) {
+                    fail(helper, "the legacy value overrode the saved current rule");
+                    return;
+                }
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException(exception);
+        } finally {
+            deleteTree(dataFolder);
+        }
+        succeed(helper);
+    }
+
+    /** Writes {@code rules} as the game rules saved in {@code dataFolder}, as vanilla does. */
+    private static Path writeGameRules(Path dataFolder, CompoundTag rules) throws IOException {
+        Path file = GameRuleMap.TYPE.id().withSuffix(".dat").resolveAgainst(dataFolder);
+        Files.createDirectories(file.getParent());
+        CompoundTag saved = new CompoundTag();
+        saved.put("data", rules);
+        NbtIo.writeCompressed(NbtUtils.addCurrentDataVersion(saved), file);
+        return file;
     }
 
     // The server makes its own storage with this level-less constructor (MinecraftServer.java:325).
