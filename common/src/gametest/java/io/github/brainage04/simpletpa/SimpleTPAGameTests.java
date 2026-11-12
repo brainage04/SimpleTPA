@@ -413,6 +413,13 @@ public final class SimpleTPAGameTests {
                     (helper, player) -> fixture(player).gameMode(GameType.SPECTATOR));
     private static final Blocked GLIDING =
             new Blocked("gliding", (helper, player) -> player.startFallFlying());
+    private static final Blocked FLYING =
+            new Blocked(
+                    "flying",
+                    (helper, player) -> {
+                        fixture(player).gameMode(GameType.CREATIVE);
+                        player.getAbilities().flying = true;
+                    });
     private static final Blocked INSIDE_A_BLOCK =
             new Blocked(
                     "somewhere unsafe",
@@ -437,7 +444,7 @@ public final class SimpleTPAGameTests {
     public static void autoAcceptWaitsForBlockedTarget(GameTestHelper helper) {
         checkBlocked(
                 helper,
-                List.of(DEAD, IN_END_CREDITS, SPECTATOR, GLIDING, INSIDE_A_BLOCK, ON_MAGMA),
+                List.of(DEAD, IN_END_CREDITS, SPECTATOR, GLIDING, FLYING, INSIDE_A_BLOCK, ON_MAGMA),
                 (blocked, players) -> {
                     InstantTpaWhitelist.add(players[1], players[0]);
                     blocked.apply().accept(helper, players[1]);
@@ -455,7 +462,7 @@ public final class SimpleTPAGameTests {
     public static void acceptWaitsForBlockedTarget(GameTestHelper helper) {
         checkBlocked(
                 helper,
-                List.of(SPECTATOR, GLIDING, INSIDE_A_BLOCK, ON_MAGMA),
+                List.of(SPECTATOR, GLIDING, FLYING, INSIDE_A_BLOCK, ON_MAGMA),
                 (blocked, players) -> {
                     command(players[0], "tpa " + players[1].getScoreboardName());
                     blocked.apply().accept(helper, players[1]);

@@ -115,10 +115,15 @@ public class TPRequestCommand {
     /**
      * Why {@code from}, who {@link #canBeMoved can be moved}, cannot be put on {@code to} now, as
      * words that follow "is", or null when nothing stops it. A removed target is in the End credits
-     * (ServerPlayer.java:1128-1131) or between levels. The spot checks are the ones vanilla makes
-     * for a respawn spot in {@code DismountHelper.findSafeDismountLocation}
-     * (DismountHelper.java:80-111): no block collision, no block the player type finds dangerous in
-     * it or underfoot, and inside the world border.
+     * (ServerPlayer.java:1128-1131) or between levels. A gliding or flying target is in the air,
+     * and a teleport arrives with no velocity (Entity.java:3446), so the requester would fall.
+     *
+     * <p>The spot checks are a subset of the ones vanilla makes for a respawn spot in {@code
+     * DismountHelper.findSafeDismountLocation} (DismountHelper.java:80-111): no block collision, no
+     * block the player type finds dangerous in it or underfoot, and inside the world border. They
+     * leave out vanilla's floor check (:87-90) and its refusal of a spot in INVALID_SPAWN_INSIDE
+     * blocks (:105-107), which are the End portal and End gateway
+     * (VanillaBlockTagsProvider.java:1178).
      */
     public static @Nullable String blockedReason(ServerPlayer from, ServerPlayer to) {
         if (to.isRemoved()) {
@@ -132,6 +137,9 @@ public class TPRequestCommand {
         }
         if (to.isFallFlying()) {
             return "gliding";
+        }
+        if (to.getAbilities().flying) {
+            return "flying";
         }
         ServerLevel level = to.level();
         AABB arrival = from.getBoundingBox().move(to.position().subtract(from.position()));
