@@ -13,7 +13,7 @@ Each player keeps an "auto-accept" whitelist of players who may teleport to them
 ## Getting started
 
 - Fabric Loader >=0.19.5 with Fabric API OR NeoForge >=26.3.0.99
-- BrainageLib >=1.3.0
+- BrainageLib >=2.0.0 and <3.0.0
 - Install on the server only; players don't need it on their clients.
 
 ## Commands

@@ -7,8 +7,12 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.registries.RegisterEvent;
+import org.apache.maven.artifact.versioning.ArtifactVersion;
+import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
+import org.apache.maven.artifact.versioning.VersionRange;
 
 /**
  * Each function needs a matching {@code data/<mod_id>/test_instance/<name>.json} in this source
@@ -77,6 +81,37 @@ public final class NeoForgeServerGameTests {
         register(event, "combined_server_help", SimpleTPAGameTests::combinedServerHelp);
         register(event, "gamerule_registration", SimpleTPAGameTests::gameruleRegistration);
         register(event, "legacy_game_rule_migrates", SimpleTPAGameTests::legacyGameRuleMigrates);
+        register(
+                event,
+                "brainagelib_dependency_stops_below_next_major",
+                NeoForgeServerGameTests::brainageLibDependencyStopsBelowNextMajor);
+    }
+
+    private static void brainageLibDependencyStopsBelowNextMajor(GameTestHelper helper) {
+        VersionRange range =
+                ModList.get()
+                        .getModContainerById(SimpleTPA.MOD_ID)
+                        .orElseThrow()
+                        .getModInfo()
+                        .getDependencies()
+                        .stream()
+                        .filter(dependency -> dependency.getModId().equals("brainagelib"))
+                        .findFirst()
+                        .orElseThrow()
+                        .getVersionRange();
+        ArtifactVersion built =
+                ModList.get()
+                        .getModContainerById("brainagelib")
+                        .orElseThrow()
+                        .getModInfo()
+                        .getVersion();
+        if (!range.containsVersion(built)) {
+            helper.fail("the BrainageLib range " + range + " rejects the built " + built);
+        } else if (range.containsVersion(new DefaultArtifactVersion("3.0.0"))) {
+            helper.fail("the BrainageLib range " + range + " accepts 3.0.0");
+        } else {
+            helper.succeed();
+        }
     }
 
     private static void register(

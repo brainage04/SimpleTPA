@@ -1,5 +1,5 @@
 {
   "depends": {
-    "brainagelib": ">=${brainagelib_version}"
+    "brainagelib": ">=${brainagelib_version} <3.0.0"
   }
 }
