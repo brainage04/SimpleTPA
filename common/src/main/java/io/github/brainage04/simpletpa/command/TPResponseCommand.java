@@ -77,6 +77,24 @@ public final class TPResponseCommand {
             CommandSourceStack source, ServerPlayer to, ServerPlayer from, Response response) {
         for (int i = 0; i < TPRequestCommand.TP_REQUESTS.size(); i++) {
             if (TPRequestCommand.TP_REQUESTS.get(i).matches(to.getUUID(), from.getUUID())) {
+                if (response == Response.ACCEPT) {
+                    String blocked = TPRequestCommand.blockedReason(from, to);
+                    if (blocked != null) {
+                        SimpleTPA.FEEDBACK.failure(
+                                source,
+                                "%s can't teleport to you while you are %s. Their TP request is still open.",
+                                from.getScoreboardName(),
+                                blocked);
+                        return -1;
+                    }
+                    if (!TPRequestCommand.teleport(from, to)) {
+                        SimpleTPA.FEEDBACK.failure(
+                                source,
+                                "%s could not be teleported. Their TP request is still open.",
+                                from.getScoreboardName());
+                        return -1;
+                    }
+                }
                 tell(
                         to,
                         response,
@@ -90,9 +108,6 @@ public final class TPResponseCommand {
                         to.getScoreboardName(),
                         response.pastTense);
                 SimpleTPA.FEEDBACK.click(from);
-                if (response == Response.ACCEPT) {
-                    TPRequestCommand.teleport(from, to);
-                }
                 TPRequestCommand.TP_REQUESTS.remove(i);
                 return 1;
             }

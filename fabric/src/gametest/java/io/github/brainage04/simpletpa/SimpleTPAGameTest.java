@@ -40,6 +40,21 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest
+    public void autoAcceptWaitsForBlockedTarget(GameTestHelper helper) {
+        SimpleTPAGameTests.autoAcceptWaitsForBlockedTarget(helper);
+    }
+
+    @GameTest
+    public void acceptWaitsForBlockedTarget(GameTestHelper helper) {
+        SimpleTPAGameTests.acceptWaitsForBlockedTarget(helper);
+    }
+
+    @GameTest
+    public void acceptWaitsForSenderWhoCannotMove(GameTestHelper helper) {
+        SimpleTPAGameTests.acceptWaitsForSenderWhoCannotMove(helper);
+    }
+
+    @GameTest
     public void requestButtons(GameTestHelper helper) {
         SimpleTPAGameTests.requestButtons(helper);
     }

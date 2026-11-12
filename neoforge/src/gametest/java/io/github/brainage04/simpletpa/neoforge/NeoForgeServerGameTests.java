@@ -30,6 +30,18 @@ public final class NeoForgeServerGameTests {
                 "response_needs_one_online_request",
                 SimpleTPAGameTests::responseNeedsOneOnlineRequest);
         register(event, "instant_auto_accept_flow", SimpleTPAGameTests::instantAutoAcceptFlow);
+        register(
+                event,
+                "auto_accept_waits_for_blocked_target",
+                SimpleTPAGameTests::autoAcceptWaitsForBlockedTarget);
+        register(
+                event,
+                "accept_waits_for_blocked_target",
+                SimpleTPAGameTests::acceptWaitsForBlockedTarget);
+        register(
+                event,
+                "accept_waits_for_sender_who_cannot_move",
+                SimpleTPAGameTests::acceptWaitsForSenderWhoCannotMove);
         register(event, "request_buttons", SimpleTPAGameTests::requestButtons);
         register(event, "tpauto_alias", SimpleTPAGameTests::tpautoAlias);
         register(

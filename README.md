@@ -4,6 +4,8 @@ SimpleTPA is a server-side only Fabric and NeoForge mod for Minecraft 26.3 that 
 
 Requests expire after 60 seconds. Accepting a request teleports the requester to the accepting player's position, and denying it expires the request immediately.
 
+A request stays open, and an auto-accept waits for `/tpaccept`, while the accepting player is dead, in spectator mode, gliding with an elytra or watching the End credits, or while the requester could not arrive safely at their position: inside blocks, in or on a block the game counts as dangerous for players (fire, lava, lava cauldrons, magma, lit campfires, cactus, sweet berry bushes, wither roses, powder snow), or outside the world border. A request also stays open while the requester is dead or watching the End credits. The player who sent or accepted the request is told why.
+
 ## Features
 
 Each player keeps an "auto-accept" whitelist of players who may teleport to them without their request being accepted; `/tpautoaccept` edits it. The `simpletpa:auto_accept` gamerule controls the feature and is enabled by default.

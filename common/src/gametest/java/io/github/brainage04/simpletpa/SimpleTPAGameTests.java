@@ -18,7 +18,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.ChatFormatting;
@@ -32,6 +35,7 @@ import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.gamerules.GameRule;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.Vec3;
@@ -273,6 +277,142 @@ public final class SimpleTPAGameTests {
                                     succeed(helper);
                                 else fail(helper, "whitelist did not auto accept");
                             });
+                });
+    }
+
+    /** A state that stops a player from being teleported to, and the words the mod uses for it. */
+    private record Blocked(String reason, BiConsumer<GameTestHelper, ServerPlayer> apply) {}
+
+    private static final Blocked DEAD =
+            new Blocked(
+                    "dead",
+                    (helper, player) -> {
+                        fixture(player).markLoaded();
+                        player.kill(helper.getLevel());
+                    });
+    private static final Blocked IN_END_CREDITS =
+            new Blocked("not in a world", (helper, player) -> player.showEndCredits());
+    private static final Blocked SPECTATOR =
+            new Blocked(
+                    "in spectator mode",
+                    (helper, player) -> fixture(player).gameMode(GameType.SPECTATOR));
+    private static final Blocked GLIDING =
+            new Blocked("gliding", (helper, player) -> player.startFallFlying());
+    private static final Blocked INSIDE_A_BLOCK =
+            new Blocked(
+                    "somewhere unsafe",
+                    (helper, player) -> {
+                        helper.setBlock(new BlockPos(1, 1, 1), Blocks.STONE);
+                        player.setPos(
+                                Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1))));
+                    });
+    private static final Blocked ON_MAGMA =
+            new Blocked(
+                    "somewhere unsafe",
+                    (helper, player) -> {
+                        helper.setBlock(new BlockPos(5, 1, 5), Blocks.MAGMA_BLOCK);
+                        player.setPos(
+                                Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(5, 2, 5))));
+                    });
+
+    /**
+     * A whitelisted requester is not put on a receiver who cannot be teleported to; the request
+     * waits for /tpaccept instead.
+     */
+    public static void autoAcceptWaitsForBlockedTarget(GameTestHelper helper) {
+        checkBlocked(
+                helper,
+                List.of(DEAD, IN_END_CREDITS, SPECTATOR, GLIDING, INSIDE_A_BLOCK, ON_MAGMA),
+                (blocked, players) -> {
+                    InstantTpaWhitelist.add(players[1], players[0]);
+                    blocked.apply().accept(helper, players[1]);
+                    command(players[0], "tpa " + players[1].getScoreboardName());
+                },
+                (blocked, players) ->
+                        players[1].getScoreboardName()
+                                + " is "
+                                + blocked.reason()
+                                + ", so your TP request was not accepted automatically.",
+                players -> players[0]);
+    }
+
+    /** /tpaccept leaves the request open while the receiver cannot be teleported to. */
+    public static void acceptWaitsForBlockedTarget(GameTestHelper helper) {
+        checkBlocked(
+                helper,
+                List.of(SPECTATOR, GLIDING, INSIDE_A_BLOCK, ON_MAGMA),
+                (blocked, players) -> {
+                    command(players[0], "tpa " + players[1].getScoreboardName());
+                    blocked.apply().accept(helper, players[1]);
+                    command(players[1], "tpaccept");
+                },
+                (blocked, players) ->
+                        players[0].getScoreboardName()
+                                + " can't teleport to you while you are "
+                                + blocked.reason()
+                                + ". Their TP request is still open.",
+                players -> players[1]);
+    }
+
+    /** /tpaccept leaves the request open while the requester cannot be moved. */
+    public static void acceptWaitsForSenderWhoCannotMove(GameTestHelper helper) {
+        checkBlocked(
+                helper,
+                List.of(DEAD, IN_END_CREDITS),
+                (blocked, players) -> {
+                    command(players[0], "tpa " + players[1].getScoreboardName());
+                    blocked.apply().accept(helper, players[0]);
+                    command(players[1], "tpaccept");
+                },
+                (blocked, players) ->
+                        players[0].getScoreboardName()
+                                + " could not be teleported. Their TP request is still open.",
+                players -> players[1]);
+    }
+
+    /**
+     * One sender-receiver pair per state. {@code act} runs in tick 1; a tick later the sender must
+     * not have moved, the request must still be open and {@code toldWho} must have been sent {@code
+     * message}.
+     */
+    private static void checkBlocked(
+            GameTestHelper helper,
+            List<Blocked> states,
+            BiConsumer<Blocked, ServerPlayer[]> act,
+            BiFunction<Blocked, ServerPlayer[], String> message,
+            Function<ServerPlayer[], ServerPlayer> toldWho) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        states.forEach(ignored -> pair(helper, pairs::add));
+        List<Vec3> starts = pairs.stream().map(players -> players[0].position()).toList();
+        helper.runAtTickTime(
+                1,
+                () -> {
+                    for (int i = 0; i < states.size(); i++) {
+                        act.accept(states.get(i), pairs.get(i));
+                    }
+                });
+        helper.runAtTickTime(
+                2,
+                () -> {
+                    for (int i = 0; i < states.size(); i++) {
+                        Blocked blocked = states.get(i);
+                        ServerPlayer[] players = pairs.get(i);
+                        String expected = "[SimpleTPA] " + message.apply(blocked, players);
+                        ServerPlayer told = toldWho.apply(players);
+                        if (!players[0].position().equals(starts.get(i))) {
+                            fail(helper, "teleported while " + blocked.reason());
+                            return;
+                        }
+                        if (!pending(players[1], players[0])) {
+                            fail(helper, "the request closed while " + blocked.reason());
+                            return;
+                        }
+                        if (!received(told, expected)) {
+                            fail(helper, "not told \"" + expected + "\", got " + texts(told));
+                            return;
+                        }
+                    }
+                    succeed(helper);
                 });
     }
 
@@ -938,7 +1078,7 @@ public final class SimpleTPAGameTests {
 
     private static ServerPlayer player(GameTestHelper helper, String name, UUID id) {
         GameTestPlayer fixture =
-                GameTestPlayer.join(helper, new GameProfile(id, name)).gameMode(GameType.SPECTATOR);
+                GameTestPlayer.join(helper, new GameProfile(id, name)).gameMode(GameType.SURVIVAL);
         synchronized (OPEN_PLAYERS) {
             OPEN_PLAYERS.computeIfAbsent(helper, ignored -> new ArrayList<>()).add(fixture);
         }

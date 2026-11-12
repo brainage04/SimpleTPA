@@ -12,7 +12,10 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.AABB;
+import org.jspecify.annotations.Nullable;
 
 public class TPRequestCommand {
     public static final List<TPRequest> TP_REQUESTS = new ArrayList<>();
@@ -42,12 +45,27 @@ public class TPRequestCommand {
 
         if (source.getServer().getGameRules().get(SimpleTPA.AUTO_ACCEPT)
                 && InstantTpaWhitelist.allows(to, from)) {
-            teleport(from, to);
-            SimpleTPA.FEEDBACK.success(
-                    from, "%s has automatically accepted your TP request.", to.getScoreboardName());
-            SimpleTPA.FEEDBACK.success(to, "%s has teleported to you.", from.getScoreboardName());
-            SimpleTPA.FEEDBACK.click(to);
-            return 1;
+            String blocked = blockedReason(from, to);
+            if (blocked == null) {
+                if (!teleport(from, to)) {
+                    SimpleTPA.FEEDBACK.failure(
+                            source, "You could not be teleported to %s.", to.getScoreboardName());
+                    return -1;
+                }
+                SimpleTPA.FEEDBACK.success(
+                        from,
+                        "%s has automatically accepted your TP request.",
+                        to.getScoreboardName());
+                SimpleTPA.FEEDBACK.success(
+                        to, "%s has teleported to you.", from.getScoreboardName());
+                SimpleTPA.FEEDBACK.click(to);
+                return 1;
+            }
+            SimpleTPA.FEEDBACK.neutral(
+                    from,
+                    "%s is %s, so your TP request was not accepted automatically.",
+                    to.getScoreboardName(),
+                    blocked);
         }
 
         TP_REQUESTS.add(request);
@@ -88,16 +106,49 @@ public class TPRequestCommand {
                                                 new HoverEvent.ShowText(Component.literal(hover))));
     }
 
-    public static void teleport(ServerPlayer from, ServerPlayer to) {
-        from.teleportTo(
-                to.level(),
-                to.getX(),
-                to.getY(),
-                to.getZ(),
-                Set.of(),
-                to.getYRot(),
-                to.getXRot(),
-                true);
+    /**
+     * Why {@code from} cannot be put on {@code to} now, as words that follow "is", or null when
+     * nothing stops it. A removed target is in the End credits (ServerPlayer.java:1128-1131) or
+     * between levels. The spot checks are the ones vanilla makes for a respawn spot in {@code
+     * DismountHelper.findSafeDismountLocation} (DismountHelper.java:80-111): no block collision, no
+     * block the player type finds dangerous in it or underfoot, and inside the world border.
+     */
+    public static @Nullable String blockedReason(ServerPlayer from, ServerPlayer to) {
+        if (to.isRemoved()) {
+            return "not in a world";
+        }
+        if (to.isDeadOrDying()) {
+            return "dead";
+        }
+        if (to.isSpectator()) {
+            return "in spectator mode";
+        }
+        if (to.isFallFlying()) {
+            return "gliding";
+        }
+        ServerLevel level = to.level();
+        AABB arrival = from.getBoundingBox().move(to.position().subtract(from.position()));
+        if (!level.noBlockCollision(from, arrival)
+                || level.getBlockStates(arrival).anyMatch(from.getType()::isBlockDangerous)
+                || from.getType().isBlockDangerous(level.getBlockState(to.getOnPos()))
+                || !level.getWorldBorder().isWithinBounds(arrival)) {
+            return "somewhere unsafe";
+        }
+        return null;
+    }
+
+    /** Puts {@code from} on {@code to}; false when {@code from} is dead or not in a level. */
+    public static boolean teleport(ServerPlayer from, ServerPlayer to) {
+        return !from.isDeadOrDying()
+                && from.teleportTo(
+                        to.level(),
+                        to.getX(),
+                        to.getY(),
+                        to.getZ(),
+                        Set.of(),
+                        to.getYRot(),
+                        to.getXRot(),
+                        true);
     }
 
     public record TPRequest(UUID toId, String toName, UUID fromId, String fromName, long created) {
