@@ -280,6 +280,38 @@ public final class SimpleTPAGameTests {
                 });
     }
 
+    /** A request sent before the receiver whitelisted its sender does not block auto-accept. */
+    public static void autoAcceptAnswersPendingRequest(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    players[0].setPos(new Vec3(0, 0, 0));
+                    players[1].setPos(new Vec3(10, 10, 10));
+                    helper.runAtTickTime(
+                            1, () -> command(players[0], "tpa " + players[1].getScoreboardName()));
+                    helper.runAtTickTime(
+                            2,
+                            () ->
+                                    command(
+                                            players[1],
+                                            "tpautoaccept add " + players[0].getScoreboardName()));
+                    helper.runAtTickTime(
+                            3, () -> command(players[0], "tpa " + players[1].getScoreboardName()));
+                    helper.runAtTickTime(
+                            4,
+                            () -> {
+                                if (!players[0].position().equals(players[1].position()))
+                                    fail(
+                                            helper,
+                                            "a pending request blocked auto-accept, got "
+                                                    + texts(players[0]));
+                                else if (pending(players[1], players[0]))
+                                    fail(helper, "auto-accept left the earlier request open");
+                                else succeed(helper);
+                            });
+                });
+    }
+
     /** A state that stops a player from being teleported to, and the words the mod uses for it. */
     private record Blocked(String reason, BiConsumer<GameTestHelper, ServerPlayer> apply) {}
 

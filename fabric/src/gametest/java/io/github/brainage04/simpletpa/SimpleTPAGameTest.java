@@ -40,6 +40,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest
+    public void autoAcceptAnswersPendingRequest(GameTestHelper helper) {
+        SimpleTPAGameTests.autoAcceptAnswersPendingRequest(helper);
+    }
+
+    @GameTest
     public void autoAcceptWaitsForBlockedTarget(GameTestHelper helper) {
         SimpleTPAGameTests.autoAcceptWaitsForBlockedTarget(helper);
     }

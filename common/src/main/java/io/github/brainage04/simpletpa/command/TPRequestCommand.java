@@ -33,16 +33,6 @@ public class TPRequestCommand {
 
         TPRequest request = TPRequest.create(to, from, source.getLevel().getGameTime());
 
-        for (TPRequest prevRequest : TP_REQUESTS) {
-            if (prevRequest.matches(request.toId(), request.fromId())) {
-                SimpleTPA.FEEDBACK.failure(
-                        source,
-                        "You have already sent a TP request to %s!",
-                        to.getScoreboardName());
-                return -1;
-            }
-        }
-
         if (source.getServer().getGameRules().get(SimpleTPA.AUTO_ACCEPT)
                 && InstantTpaWhitelist.allows(to, from)) {
             String blocked = blockedReason(from, to);
@@ -59,6 +49,7 @@ public class TPRequestCommand {
                 SimpleTPA.FEEDBACK.success(
                         to, "%s has teleported to you.", from.getScoreboardName());
                 SimpleTPA.FEEDBACK.click(to);
+                TP_REQUESTS.removeIf(pending -> pending.matches(to.getUUID(), from.getUUID()));
                 return 1;
             }
             SimpleTPA.FEEDBACK.neutral(
@@ -66,6 +57,16 @@ public class TPRequestCommand {
                     "%s is %s, so your TP request was not accepted automatically.",
                     to.getScoreboardName(),
                     blocked);
+        }
+
+        for (TPRequest prevRequest : TP_REQUESTS) {
+            if (prevRequest.matches(request.toId(), request.fromId())) {
+                SimpleTPA.FEEDBACK.failure(
+                        source,
+                        "You have already sent a TP request to %s!",
+                        to.getScoreboardName());
+                return -1;
+            }
         }
 
         TP_REQUESTS.add(request);

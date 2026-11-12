@@ -32,6 +32,10 @@ public final class NeoForgeServerGameTests {
         register(event, "instant_auto_accept_flow", SimpleTPAGameTests::instantAutoAcceptFlow);
         register(
                 event,
+                "auto_accept_answers_pending_request",
+                SimpleTPAGameTests::autoAcceptAnswersPendingRequest);
+        register(
+                event,
                 "auto_accept_waits_for_blocked_target",
                 SimpleTPAGameTests::autoAcceptWaitsForBlockedTarget);
         register(
