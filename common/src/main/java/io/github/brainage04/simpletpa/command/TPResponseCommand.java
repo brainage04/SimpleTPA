@@ -99,7 +99,12 @@ public final class TPResponseCommand {
         }
 
         if (response == Response.ACCEPT) {
-            String blocked = TPRequestCommand.blockedReason(from, to);
+            // A requester who cannot move is checked first: for a dead one the spot check answered
+            // "somewhere unsafe" in a GameTest, blaming the accepting player's position.
+            String blocked =
+                    TPRequestCommand.canBeMoved(from)
+                            ? TPRequestCommand.blockedReason(from, to)
+                            : null;
             if (blocked != null) {
                 SimpleTPA.FEEDBACK.failure(
                         source,

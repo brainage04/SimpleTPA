@@ -35,7 +35,7 @@ public class TPRequestCommand {
 
         if (source.getServer().getGameRules().get(SimpleTPA.AUTO_ACCEPT)
                 && InstantTpaWhitelist.allows(to, from)) {
-            String blocked = blockedReason(from, to);
+            String blocked = canBeMoved(from) ? blockedReason(from, to) : null;
             if (blocked == null) {
                 if (!teleport(from, to)) {
                     SimpleTPA.FEEDBACK.failure(
@@ -113,11 +113,12 @@ public class TPRequestCommand {
     }
 
     /**
-     * Why {@code from} cannot be put on {@code to} now, as words that follow "is", or null when
-     * nothing stops it. A removed target is in the End credits (ServerPlayer.java:1128-1131) or
-     * between levels. The spot checks are the ones vanilla makes for a respawn spot in {@code
-     * DismountHelper.findSafeDismountLocation} (DismountHelper.java:80-111): no block collision, no
-     * block the player type finds dangerous in it or underfoot, and inside the world border.
+     * Why {@code from}, who {@link #canBeMoved can be moved}, cannot be put on {@code to} now, as
+     * words that follow "is", or null when nothing stops it. A removed target is in the End credits
+     * (ServerPlayer.java:1128-1131) or between levels. The spot checks are the ones vanilla makes
+     * for a respawn spot in {@code DismountHelper.findSafeDismountLocation}
+     * (DismountHelper.java:80-111): no block collision, no block the player type finds dangerous in
+     * it or underfoot, and inside the world border.
      */
     public static @Nullable String blockedReason(ServerPlayer from, ServerPlayer to) {
         if (to.isRemoved()) {
@@ -143,9 +144,14 @@ public class TPRequestCommand {
         return null;
     }
 
-    /** Puts {@code from} on {@code to}; false when {@code from} is dead or not in a level. */
+    /** Whether {@code from} can be moved at all: alive and in a level. */
+    public static boolean canBeMoved(ServerPlayer from) {
+        return !from.isDeadOrDying() && !from.isRemoved();
+    }
+
+    /** Puts {@code from} on {@code to}; false when {@code from} cannot be moved. */
     public static boolean teleport(ServerPlayer from, ServerPlayer to) {
-        return !from.isDeadOrDying()
+        return canBeMoved(from)
                 && from.teleportTo(
                         to.level(),
                         to.getX(),
