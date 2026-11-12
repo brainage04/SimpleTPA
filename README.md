@@ -22,9 +22,9 @@ Each player keeps an "auto-accept" whitelist of players who may teleport to them
 - `/tpa <player>`, `/tprequest <player>` – request to teleport to a player.
 - `/tpaccept [player]` – accept a pending request from a player, by name or UUID (`[player]` can be left blank if only one request is pending).
 - `/tpdeny [player]` – deny a pending request from a player, by name or UUID (`[player]` can be left blank if only one request is pending).
-- `/tpautoaccept list` – prints your "auto-accept" whitelist of players who can automatically teleport to you without their requests having to be accepted.
+- `/tpautoaccept list` – prints your "auto-accept" whitelist of players who can automatically teleport to you without their requests having to be accepted. A name that two entries share is followed by each player's UUID.
 - `/tpautoaccept add <player>` – allow a specific player to be able to teleport to you immediately (if `simpletpa:auto_accept` is `true`)
-- `/tpautoaccept remove <player>` – remove a player from your "auto-accept" whitelist, whether they are online or not. `<player>` is a name from `/tpautoaccept list` or the player's UUID.
+- `/tpautoaccept remove <player>` – remove a player from your "auto-accept" whitelist, whether they are online or not. `<player>` is an online player's name, a name from `/tpautoaccept list` or the player's UUID. A name that two offline entries share removes neither of them, so remove them by UUID.
 - `/tpautoaccept clear` – clear your "auto-accept" whitelist.
 - `/tpautoaccept *` – auto-accept requests from everyone (if `simpletpa:auto_accept` is `true`). Run it twice within 30 seconds to turn it on, and again to turn it off. `*` can be left out.
 - `/tpauto` – short for `/tpautoaccept`, with all the same subcommands.

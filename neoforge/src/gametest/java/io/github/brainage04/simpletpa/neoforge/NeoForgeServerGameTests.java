@@ -66,6 +66,10 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::removePrefersOnlinePlayer);
         register(
                 event,
+                "ambiguous_name_is_not_removed",
+                SimpleTPAGameTests::ambiguousNameIsNotRemoved);
+        register(
+                event,
                 "accept_all_needs_confirmation",
                 SimpleTPAGameTests::acceptAllNeedsConfirmation);
         register(

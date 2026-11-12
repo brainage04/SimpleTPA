@@ -96,7 +96,7 @@ public final class ModCommands {
 
     private static List<String> whitelistedNames(CommandSourceStack source) {
         ServerPlayer owner = source.getPlayer();
-        return owner == null ? List.of() : InstantTpaWhitelist.list(owner);
+        return owner == null ? List.of() : InstantTpaWhitelist.removalArguments(owner);
     }
 
     /**

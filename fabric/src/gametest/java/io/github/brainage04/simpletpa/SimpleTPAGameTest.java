@@ -95,6 +95,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest
+    public void ambiguousNameIsNotRemoved(GameTestHelper helper) {
+        SimpleTPAGameTests.ambiguousNameIsNotRemoved(helper);
+    }
+
+    @GameTest
     public void acceptAllNeedsConfirmation(GameTestHelper helper) {
         SimpleTPAGameTests.acceptAllNeedsConfirmation(helper);
     }

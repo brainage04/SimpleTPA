@@ -5,6 +5,7 @@ import io.github.brainage04.simpletpa.SimpleTPA;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -141,7 +142,8 @@ public class TPAutoAcceptCommand {
     /**
      * {@code player} is the name of an online player, or a name or UUID on the owner's whitelist,
      * so offline players can be removed. An online player is matched first: after renames, an
-     * offline player's entry can still be stored under the name an online player has now.
+     * offline player's entry can still be stored under the name an online player has now. A stored
+     * name that two entries share removes neither, and the reply names their UUIDs.
      */
     public static int remove(CommandSourceStack source, String player) {
         ServerPlayer owner = SimpleTPA.FEEDBACK.requirePlayer(source);
@@ -151,11 +153,20 @@ public class TPAutoAcceptCommand {
 
         ServerPlayer online = source.getServer().getPlayerList().getPlayerByName(player);
         String removed =
-                online == null
-                        ? null
-                        : InstantTpaWhitelist.remove(owner, online.getUUID().toString());
+                online == null ? null : InstantTpaWhitelist.remove(owner, online.getUUID());
         if (removed == null) {
-            removed = InstantTpaWhitelist.remove(owner, player);
+            List<UUID> matches = InstantTpaWhitelist.find(owner, player);
+            if (matches.size() > 1) {
+                SimpleTPA.FEEDBACK.failure(
+                        source,
+                        "%s matches more than one player on your auto-accept whitelist: %s. Remove one by UUID.",
+                        player,
+                        matches.stream().map(UUID::toString).collect(Collectors.joining(", ")));
+                return -1;
+            }
+            if (matches.size() == 1) {
+                removed = InstantTpaWhitelist.remove(owner, matches.getFirst());
+            }
         }
 
         if (removed == null) {

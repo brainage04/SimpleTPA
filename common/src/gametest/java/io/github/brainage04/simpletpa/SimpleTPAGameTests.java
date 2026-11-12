@@ -848,6 +848,52 @@ public final class SimpleTPAGameTests {
                 });
     }
 
+    /**
+     * Two offline players stored under one name: {@code remove <name>} takes neither and names both
+     * UUIDs, and {@code list} and the suggestions tell the two apart.
+     */
+    public static void ambiguousNameIsNotRemoved(GameTestHelper helper) {
+        int id = ++playerPairCounter;
+        String bob = "bob" + id;
+        ServerPlayer owner = player(helper, "owner" + id);
+        UUID firstId = UUID.randomUUID();
+        UUID secondId = UUID.randomUUID();
+        ServerPlayer first = player(helper, bob, firstId);
+        ServerPlayer second = player(helper, "carl" + id, secondId);
+        InstantTpaWhitelist.add(owner, first);
+        InstantTpaWhitelist.add(owner, second);
+        fixture(first).close();
+        fixture(second).close();
+        fixture(player(helper, bob, secondId)).close();
+        List<String> ids =
+                Stream.of(firstId, secondId)
+                        .map(UUID::toString)
+                        .sorted(String.CASE_INSENSITIVE_ORDER)
+                        .toList();
+        at(helper, 1, () -> command(owner, "tpautoaccept remove " + bob));
+        at(
+                helper,
+                2,
+                () -> {
+                    List<String> listed = InstantTpaWhitelist.list(owner);
+                    List<String> offered = suggestions(owner, "tpautoaccept remove ");
+                    if (listed.size() != 2)
+                        fail(helper, "remove took an entry of an ambiguous name: " + listed);
+                    else if (!listed.equals(
+                            ids.stream().map(uuid -> bob + " (" + uuid + ")").toList()))
+                        fail(helper, "list does not tell the two apart: " + listed);
+                    else if (!offered.equals(ids)) fail(helper, "remove suggested " + offered);
+                    else if (texts(owner).stream()
+                            .noneMatch(
+                                    text ->
+                                            text.contains("more than one")
+                                                    && text.contains(ids.get(0))
+                                                    && text.contains(ids.get(1))))
+                        fail(helper, "owner was not given the UUIDs, got " + texts(owner));
+                    else succeed(helper);
+                });
+    }
+
     public static void acceptAllNeedsConfirmation(GameTestHelper helper) {
         pair(
                 helper,

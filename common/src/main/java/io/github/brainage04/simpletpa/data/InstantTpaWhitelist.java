@@ -9,12 +9,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.LevelResource;
@@ -174,38 +176,63 @@ public final class InstantTpaWhitelist {
     }
 
     /**
-     * Removes the entry of {@code owner}'s whitelist whose stored name or UUID is {@code player},
-     * ignoring case, and returns its stored name; null when there is none.
+     * The UUIDs on {@code owner}'s whitelist whose stored name or UUID is {@code player}, ignoring
+     * case, in UUID order.
      */
-    public static synchronized @Nullable String remove(ServerPlayer owner, String player) {
-        Map<UUID, String> allowedPlayers = WHITELISTS.get(owner.getUUID());
+    public static synchronized List<UUID> find(ServerPlayer owner, String player) {
+        return WHITELISTS.getOrDefault(owner.getUUID(), Map.of()).entrySet().stream()
+                .filter(
+                        entry ->
+                                entry.getValue().equalsIgnoreCase(player)
+                                        || entry.getKey().toString().equalsIgnoreCase(player))
+                .map(Map.Entry::getKey)
+                .sorted(Comparator.comparing(UUID::toString))
+                .toList();
+    }
 
+    /** Removes {@code player} from {@code owner}'s whitelist and returns their stored name. */
+    public static synchronized @Nullable String remove(ServerPlayer owner, UUID player) {
+        Map<UUID, String> allowedPlayers = WHITELISTS.get(owner.getUUID());
         if (allowedPlayers == null) {
             return null;
         }
 
-        for (Iterator<Map.Entry<UUID, String>> entries = allowedPlayers.entrySet().iterator();
-                entries.hasNext(); ) {
-            Map.Entry<UUID, String> entry = entries.next();
-            if (entry.getValue().equalsIgnoreCase(player)
-                    || entry.getKey().toString().equalsIgnoreCase(player)) {
-                entries.remove();
-                if (allowedPlayers.isEmpty()) {
-                    WHITELISTS.remove(owner.getUUID());
-                }
-                return entry.getValue();
-            }
+        String removed = allowedPlayers.remove(player);
+        if (allowedPlayers.isEmpty()) {
+            WHITELISTS.remove(owner.getUUID());
         }
-
-        return null;
+        return removed;
     }
 
     public static synchronized boolean clear(ServerPlayer owner) {
         return WHITELISTS.remove(owner.getUUID()) != null;
     }
 
+    /** The stored names, sorted; a name stored more than once is followed by the UUID. */
     public static synchronized List<String> list(ServerPlayer owner) {
-        return WHITELISTS.getOrDefault(owner.getUUID(), Map.of()).values().stream()
+        return entries(owner, (id, name) -> name + " (" + id + ")");
+    }
+
+    /** For each entry, what {@code remove} takes: the stored name, or the UUID if it repeats. */
+    public static synchronized List<String> removalArguments(ServerPlayer owner) {
+        return entries(owner, (id, name) -> id.toString());
+    }
+
+    private static List<String> entries(
+            ServerPlayer owner, BiFunction<UUID, String, String> repeatedName) {
+        Map<UUID, String> allowedPlayers = WHITELISTS.getOrDefault(owner.getUUID(), Map.of());
+        Map<String, Long> uses =
+                allowedPlayers.values().stream()
+                        .collect(
+                                Collectors.groupingBy(
+                                        name -> name.toLowerCase(Locale.ROOT),
+                                        Collectors.counting()));
+        return allowedPlayers.entrySet().stream()
+                .map(
+                        entry ->
+                                uses.get(entry.getValue().toLowerCase(Locale.ROOT)) > 1
+                                        ? repeatedName.apply(entry.getKey(), entry.getValue())
+                                        : entry.getValue())
                 .sorted(String.CASE_INSENSITIVE_ORDER)
                 .toList();
     }
