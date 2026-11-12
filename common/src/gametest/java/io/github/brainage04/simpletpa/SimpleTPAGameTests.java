@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -58,6 +59,8 @@ public final class SimpleTPAGameTests {
     private static int playerPairCounter;
     private static final Map<GameTestHelper, List<GameTestPlayer>> OPEN_PLAYERS =
             new IdentityHashMap<>();
+    private static final Set<GameTestHelper> FINISHED =
+            Collections.newSetFromMap(new IdentityHashMap<>());
 
     private SimpleTPAGameTests() {}
 
@@ -71,7 +74,8 @@ public final class SimpleTPAGameTests {
                     players[1].setXRot(20.0F);
                     command(players[0], "tprequest " + players[1].getScoreboardName());
                     command(players[1], "tpaccept");
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             2,
                             () -> {
                                 ServerPlayer mover = players[0];
@@ -100,7 +104,8 @@ public final class SimpleTPAGameTests {
                     players[1].setPos(new Vec3(10, 10, 10));
                     command(players[0], "tpa " + players[1].getScoreboardName());
                     command(players[1], "tpaccept");
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             2,
                             () -> {
                                 if (players[0].blockPosition().equals(players[1].blockPosition()))
@@ -151,7 +156,8 @@ public final class SimpleTPAGameTests {
         command(young[0], "tpa " + young[1].getScoreboardName());
         backdate(old, ModTickEvents.REQUEST_LIFETIME_TICKS);
         backdate(young, ModTickEvents.REQUEST_LIFETIME_TICKS - 5);
-        helper.runAtTickTime(
+        at(
+                helper,
                 2,
                 () -> {
                     if (pending(old[1], old[0]))
@@ -195,7 +201,8 @@ public final class SimpleTPAGameTests {
                     players[1].setPos(new Vec3(10, 10, 10));
                     command(players[0], "tprequest " + players[1].getScoreboardName());
                     command(players[1], "tpdeny");
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             2,
                             () -> {
                                 if (players[0].blockPosition().equals(new BlockPos(0, 0, 0)))
@@ -213,7 +220,8 @@ public final class SimpleTPAGameTests {
                     players[1].setPos(new Vec3(10, 10, 10));
                     command(players[0], "tpa " + players[1].getScoreboardName());
                     command(players[1], "tpdeny " + players[0].getScoreboardName());
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             2,
                             () -> {
                                 if (!players[0].blockPosition().equals(new BlockPos(0, 0, 0))) {
@@ -246,28 +254,32 @@ public final class SimpleTPAGameTests {
                     ServerPlayer secondSender = player(helper, "second" + playerPairCounter);
                     ServerPlayer bystander = player(helper, "bystander" + playerPairCounter);
                     String receiverName = receiver.getScoreboardName();
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             1,
                             () -> {
                                 command(receiver, "tpaccept");
                                 command(bystander, "tpdeny " + receiverName);
                             });
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             2,
                             () -> {
                                 command(sender, "tpa " + receiverName);
                                 command(secondSender, "tpa " + receiverName);
                             });
-                    helper.runAtTickTime(3, () -> command(receiver, "tpaccept"));
-                    helper.runAtTickTime(4, () -> command(receiver, "tpdeny"));
-                    helper.runAtTickTime(
+                    at(helper, 3, () -> command(receiver, "tpaccept"));
+                    at(helper, 4, () -> command(receiver, "tpdeny"));
+                    at(
+                            helper,
                             5,
                             () -> {
                                 fixture(secondSender).close();
                                 command(receiver, "tpdeny " + sender.getScoreboardName());
                             });
-                    helper.runAtTickTime(6, () -> command(receiver, "tpaccept"));
-                    helper.runAtTickTime(
+                    at(helper, 6, () -> command(receiver, "tpaccept"));
+                    at(
+                            helper,
                             8,
                             () -> {
                                 String secondName = secondSender.getScoreboardName();
@@ -313,25 +325,29 @@ public final class SimpleTPAGameTests {
         pair(
                 helper,
                 players -> {
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             1,
                             () ->
                                     command(
                                             players[1],
                                             "tpautoaccept add " + players[0].getScoreboardName()));
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             2,
                             () -> {
                                 players[0].setPos(new Vec3(0, 0, 0));
                                 players[1].setPos(new Vec3(10, 10, 10));
                             });
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             3,
                             () ->
                                     command(
                                             players[0],
                                             "tprequest " + players[1].getScoreboardName()));
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             4,
                             () -> {
                                 if (players[0].blockPosition().equals(players[1].blockPosition()))
@@ -348,17 +364,23 @@ public final class SimpleTPAGameTests {
                 players -> {
                     players[0].setPos(new Vec3(0, 0, 0));
                     players[1].setPos(new Vec3(10, 10, 10));
-                    helper.runAtTickTime(
-                            1, () -> command(players[0], "tpa " + players[1].getScoreboardName()));
-                    helper.runAtTickTime(
+                    at(
+                            helper,
+                            1,
+                            () -> command(players[0], "tpa " + players[1].getScoreboardName()));
+                    at(
+                            helper,
                             2,
                             () ->
                                     command(
                                             players[1],
                                             "tpautoaccept add " + players[0].getScoreboardName()));
-                    helper.runAtTickTime(
-                            3, () -> command(players[0], "tpa " + players[1].getScoreboardName()));
-                    helper.runAtTickTime(
+                    at(
+                            helper,
+                            3,
+                            () -> command(players[0], "tpa " + players[1].getScoreboardName()));
+                    at(
+                            helper,
                             4,
                             () -> {
                                 if (!players[0].position().equals(players[1].position()))
@@ -477,14 +499,16 @@ public final class SimpleTPAGameTests {
         List<ServerPlayer[]> pairs = new ArrayList<>();
         states.forEach(ignored -> pair(helper, pairs::add));
         List<Vec3> starts = pairs.stream().map(players -> players[0].position()).toList();
-        helper.runAtTickTime(
+        at(
+                helper,
                 1,
                 () -> {
                     for (int i = 0; i < states.size(); i++) {
                         act.accept(states.get(i), pairs.get(i));
                     }
                 });
-        helper.runAtTickTime(
+        at(
+                helper,
                 2,
                 () -> {
                     for (int i = 0; i < states.size(); i++) {
@@ -518,7 +542,8 @@ public final class SimpleTPAGameTests {
                     players[0].setPos(new Vec3(0, 0, 0));
                     players[1].setPos(new Vec3(10, 10, 10));
                     command(players[0], "tpa " + players[1].getScoreboardName());
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             2,
                             () -> {
                                 Component notice =
@@ -569,7 +594,8 @@ public final class SimpleTPAGameTests {
                                 // slash like the client does.
                                 command(players[1], "tpaccept " + senderId);
                             });
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             4,
                             () -> {
                                 if (players[0].blockPosition().equals(players[1].blockPosition()))
@@ -621,20 +647,23 @@ public final class SimpleTPAGameTests {
                                 "/tpauto add did not suggest " + players[0].getScoreboardName());
                         return;
                     }
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             1,
                             () ->
                                     command(
                                             players[1],
                                             "tpauto add " + players[0].getScoreboardName()));
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             2,
                             () -> {
                                 players[0].setPos(new Vec3(0, 0, 0));
                                 players[1].setPos(new Vec3(10, 10, 10));
                                 command(players[0], "tpa " + players[1].getScoreboardName());
                             });
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             4,
                             () -> {
                                 if (!InstantTpaWhitelist.list(players[1])
@@ -657,9 +686,9 @@ public final class SimpleTPAGameTests {
                 helper,
                 players -> {
                     String friend = players[0].getScoreboardName();
-                    helper.runAtTickTime(
-                            1, () -> command(players[1], "tpautoaccept add " + friend));
-                    helper.runAtTickTime(
+                    at(helper, 1, () -> command(players[1], "tpautoaccept add " + friend));
+                    at(
+                            helper,
                             2,
                             () -> {
                                 fixture(players[0]).close();
@@ -673,7 +702,8 @@ public final class SimpleTPAGameTests {
                                         players[1],
                                         "tpautoaccept remove " + friend.toUpperCase(Locale.ROOT));
                             });
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             3,
                             () -> {
                                 if (!InstantTpaWhitelist.list(players[1]).isEmpty())
@@ -704,7 +734,8 @@ public final class SimpleTPAGameTests {
                                 players[1].setPos(new Vec3(10, 10, 10));
                                 command(players[0], "tpa " + players[1].getScoreboardName());
                             });
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             4,
                             () -> {
                                 if (InstantTpaWhitelist.acceptsAll(players[1])) {
@@ -732,14 +763,16 @@ public final class SimpleTPAGameTests {
                 helper,
                 players -> {
                     int secondRun = 2 + TPAutoAcceptCommand.CONFIRM_WINDOW_TICKS + 2;
-                    helper.runAtTickTime(2, () -> command(players[1], "tpautoaccept *"));
-                    helper.runAtTickTime(
+                    at(helper, 2, () -> command(players[1], "tpautoaccept *"));
+                    at(
+                            helper,
                             secondRun,
                             () -> {
                                 fixture(players[1]).clearMessages();
                                 command(players[1], "tpautoaccept *");
                             });
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             secondRun + 2,
                             () -> {
                                 if (InstantTpaWhitelist.acceptsAll(players[1]))
@@ -760,16 +793,18 @@ public final class SimpleTPAGameTests {
         pair(
                 helper,
                 players -> {
-                    helper.runAtTickTime(1, () -> command(players[1], "tpautoaccept"));
-                    helper.runAtTickTime(2, () -> command(players[1], "tpautoaccept"));
-                    helper.runAtTickTime(
+                    at(helper, 1, () -> command(players[1], "tpautoaccept"));
+                    at(helper, 2, () -> command(players[1], "tpautoaccept"));
+                    at(
+                            helper,
                             3,
                             () -> {
                                 players[0].setPos(new Vec3(0, 0, 0));
                                 players[1].setPos(new Vec3(10, 10, 10));
                                 command(players[0], "tpa " + players[1].getScoreboardName());
                             });
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             5,
                             () -> {
                                 if (!received(
@@ -797,17 +832,19 @@ public final class SimpleTPAGameTests {
         pair(
                 helper,
                 players -> {
-                    helper.runAtTickTime(1, () -> command(players[1], "tpauto *"));
-                    helper.runAtTickTime(2, () -> command(players[1], "tpauto *"));
-                    helper.runAtTickTime(3, () -> command(players[1], "tpauto *"));
-                    helper.runAtTickTime(
+                    at(helper, 1, () -> command(players[1], "tpauto *"));
+                    at(helper, 2, () -> command(players[1], "tpauto *"));
+                    at(helper, 3, () -> command(players[1], "tpauto *"));
+                    at(
+                            helper,
                             4,
                             () -> {
                                 players[0].setPos(new Vec3(0, 0, 0));
                                 players[1].setPos(new Vec3(10, 10, 10));
                                 command(players[0], "tpa " + players[1].getScoreboardName());
                             });
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             6,
                             () -> {
                                 if (InstantTpaWhitelist.acceptsAll(players[1])) {
@@ -835,16 +872,18 @@ public final class SimpleTPAGameTests {
         pair(
                 helper,
                 players -> {
-                    helper.runAtTickTime(1, () -> command(players[1], "tpauto"));
-                    helper.runAtTickTime(2, () -> command(players[1], "tpauto"));
-                    helper.runAtTickTime(
+                    at(helper, 1, () -> command(players[1], "tpauto"));
+                    at(helper, 2, () -> command(players[1], "tpauto"));
+                    at(
+                            helper,
                             3,
                             () -> {
                                 players[0].setPos(new Vec3(0, 0, 0));
                                 players[1].setPos(new Vec3(10, 10, 10));
                                 command(players[0], "tpa " + players[1].getScoreboardName());
                             });
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             5,
                             () -> {
                                 if (helper.getLevel()
@@ -875,7 +914,8 @@ public final class SimpleTPAGameTests {
         pair(
                 helper,
                 players -> {
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             1,
                             () -> {
                                 command(players[1], "tpautoaccept");
@@ -884,7 +924,8 @@ public final class SimpleTPAGameTests {
                                         players[0],
                                         "tpautoaccept add " + players[1].getScoreboardName());
                             });
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             3,
                             () -> {
                                 var server = helper.getLevel().getServer();
@@ -1141,7 +1182,8 @@ public final class SimpleTPAGameTests {
                     }
                     command(players[1], "tpautoaccept add *");
                     command(players[1], "tpauto add *");
-                    helper.runAtTickTime(
+                    at(
+                            helper,
                             2,
                             () -> {
                                 if (InstantTpaWhitelist.acceptsAll(players[1])
@@ -1347,19 +1389,43 @@ public final class SimpleTPAGameTests {
                 });
     }
 
+    /**
+     * Runs {@code step} at {@code tick} unless the test has already ended. Vanilla still runs a
+     * failed test's later steps (GameTestInfo.java:93-104,122-135), and an error they throw would
+     * replace the first failure's message.
+     */
+    private static void at(GameTestHelper helper, int tick, Runnable step) {
+        helper.runAtTickTime(
+                tick,
+                () -> {
+                    synchronized (OPEN_PLAYERS) {
+                        if (FINISHED.contains(helper)) {
+                            return;
+                        }
+                    }
+                    try {
+                        step.run();
+                    } catch (RuntimeException exception) {
+                        finish(helper);
+                        throw exception;
+                    }
+                });
+    }
+
     private static void succeed(GameTestHelper helper) {
-        closePlayers(helper);
+        finish(helper);
         helper.succeed();
     }
 
     private static void fail(GameTestHelper helper, String message) {
-        closePlayers(helper);
+        finish(helper);
         helper.fail(message);
     }
 
-    private static void closePlayers(GameTestHelper helper) {
+    private static void finish(GameTestHelper helper) {
         List<GameTestPlayer> players;
         synchronized (OPEN_PLAYERS) {
+            FINISHED.add(helper);
             players = OPEN_PLAYERS.remove(helper);
         }
         if (players != null) {
