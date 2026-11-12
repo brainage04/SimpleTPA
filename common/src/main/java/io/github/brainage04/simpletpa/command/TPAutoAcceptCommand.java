@@ -14,14 +14,10 @@ public class TPAutoAcceptCommand {
             new ConfirmationWindow<>(CONFIRM_WINDOW_TICKS, ConfirmationWindow.Boundary.INCLUSIVE);
 
     public static int acceptAll(CommandSourceStack source, String input) {
-        ServerPlayer owner = source.getPlayer();
-
+        ServerPlayer owner = SimpleTPA.FEEDBACK.requirePlayer(source);
         if (owner == null) {
-            SimpleTPA.FEEDBACK.failure(source, "This command can only be used by players!");
             return -1;
         }
-
-        SimpleTPA.FEEDBACK.click(owner);
 
         String command = input.startsWith("/") ? input.strip() : "/" + input.strip();
 
@@ -77,14 +73,10 @@ public class TPAutoAcceptCommand {
     }
 
     public static int list(CommandSourceStack source) {
-        ServerPlayer player = source.getPlayer();
-
+        ServerPlayer player = SimpleTPA.FEEDBACK.requirePlayer(source);
         if (player == null) {
-            SimpleTPA.FEEDBACK.failure(source, "This command can only be used by players!");
             return -1;
         }
-
-        SimpleTPA.FEEDBACK.click(player);
 
         if (InstantTpaWhitelist.acceptsAll(player)) {
             SimpleTPA.FEEDBACK.neutral(
@@ -111,14 +103,10 @@ public class TPAutoAcceptCommand {
     }
 
     public static int add(CommandSourceStack source, ServerPlayer requester) {
-        ServerPlayer owner = source.getPlayer();
-
+        ServerPlayer owner = SimpleTPA.FEEDBACK.requirePlayer(source);
         if (owner == null) {
-            SimpleTPA.FEEDBACK.failure(source, "This command can only be used by players!");
             return -1;
         }
-
-        SimpleTPA.FEEDBACK.click(owner);
 
         if (owner.equals(requester)) {
             SimpleTPA.FEEDBACK.failure(
@@ -151,14 +139,10 @@ public class TPAutoAcceptCommand {
     }
 
     public static int remove(CommandSourceStack source, ServerPlayer requester) {
-        ServerPlayer owner = source.getPlayer();
-
+        ServerPlayer owner = SimpleTPA.FEEDBACK.requirePlayer(source);
         if (owner == null) {
-            SimpleTPA.FEEDBACK.failure(source, "This command can only be used by players!");
             return -1;
         }
-
-        SimpleTPA.FEEDBACK.click(owner);
 
         if (InstantTpaWhitelist.remove(owner, requester)) {
             if (!InstantTpaWhitelist.save(source.getServer())) {
@@ -184,14 +168,10 @@ public class TPAutoAcceptCommand {
     }
 
     public static int clear(CommandSourceStack source) {
-        ServerPlayer owner = source.getPlayer();
-
+        ServerPlayer owner = SimpleTPA.FEEDBACK.requirePlayer(source);
         if (owner == null) {
-            SimpleTPA.FEEDBACK.failure(source, "This command can only be used by players!");
             return -1;
         }
-
-        SimpleTPA.FEEDBACK.click(owner);
 
         if (InstantTpaWhitelist.clear(owner)) {
             if (!InstantTpaWhitelist.save(source.getServer())) {

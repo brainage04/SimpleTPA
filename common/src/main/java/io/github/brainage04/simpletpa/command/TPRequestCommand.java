@@ -18,14 +18,10 @@ public class TPRequestCommand {
     public static final List<TPRequest> TP_REQUESTS = new ArrayList<>();
 
     public static int execute(CommandSourceStack source, ServerPlayer to) {
-        ServerPlayer from = source.getPlayer();
-
+        ServerPlayer from = SimpleTPA.FEEDBACK.requirePlayer(source);
         if (from == null) {
-            SimpleTPA.FEEDBACK.failure(source, "This command can only be used by players!");
             return -1;
         }
-
-        SimpleTPA.FEEDBACK.click(from);
 
         if (from.equals(to)) {
             SimpleTPA.FEEDBACK.failure(source, "You cannot send a TP request to yourself!");
