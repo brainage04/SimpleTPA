@@ -5,6 +5,7 @@ import static net.minecraft.commands.Commands.literal;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.github.brainage04.brainagelib.help.HelpPage;
@@ -13,8 +14,11 @@ import io.github.brainage04.simpletpa.command.TPAutoAcceptCommand;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.command.TPResponseCommand;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
+import java.util.List;
+import java.util.function.Function;
 import java.util.function.ToIntBiFunction;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.selector.EntitySelector;
 import net.minecraft.server.level.ServerPlayer;
@@ -60,7 +64,12 @@ public final class ModCommands {
                                                                 TPAutoAcceptCommand.list(
                                                                         context.getSource())))
                                 .then(literal("add").then(player(TPAutoAcceptCommand::add)))
-                                .then(literal("remove").then(player(TPAutoAcceptCommand::remove)))
+                                .then(
+                                        literal("remove")
+                                                .then(
+                                                        name(
+                                                                ModCommands::whitelistedNames,
+                                                                TPAutoAcceptCommand::remove)))
                                 .then(
                                         literal("clear")
                                                 .executes(
@@ -82,6 +91,30 @@ public final class ModCommands {
                 .line(
                         "/tpautoaccept [*] - accept requests from everyone (run twice to confirm, again to turn off)")
                 .register(dispatcher);
+    }
+
+    private static List<String> whitelistedNames(CommandSourceStack source) {
+        ServerPlayer owner = source.getPlayer();
+        return owner == null ? List.of() : InstantTpaWhitelist.list(owner);
+    }
+
+    /**
+     * A player name or UUID read as plain text: unlike an entity selector it can name an offline
+     * player, and it reads a name such as {@code @r} as that name.
+     */
+    private static RequiredArgumentBuilder<CommandSourceStack, String> name(
+            Function<CommandSourceStack, List<String>> suggestions,
+            ToIntBiFunction<CommandSourceStack, String> command) {
+        return argument("name", StringArgumentType.greedyString())
+                .suggests(
+                        (context, builder) ->
+                                SharedSuggestionProvider.suggest(
+                                        suggestions.apply(context.getSource()), builder))
+                .executes(
+                        context ->
+                                command.applyAsInt(
+                                        context.getSource(),
+                                        StringArgumentType.getString(context, "name")));
     }
 
     private static RequiredArgumentBuilder<CommandSourceStack, EntitySelector> player(

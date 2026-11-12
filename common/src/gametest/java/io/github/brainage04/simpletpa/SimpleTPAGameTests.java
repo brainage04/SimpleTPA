@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -584,6 +585,47 @@ public final class SimpleTPAGameTests {
                 });
     }
 
+    /** A whitelisted player who went offline can be removed by name, in any case. */
+    public static void removeOfflinePlayer(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    String friend = players[0].getScoreboardName();
+                    helper.runAtTickTime(
+                            1, () -> command(players[1], "tpautoaccept add " + friend));
+                    helper.runAtTickTime(
+                            2,
+                            () -> {
+                                fixture(players[0]).close();
+                                List<String> offered =
+                                        suggestions(players[1], "tpautoaccept remove ");
+                                if (!offered.equals(List.of(friend))) {
+                                    fail(helper, "/tpautoaccept remove suggested " + offered);
+                                    return;
+                                }
+                                command(
+                                        players[1],
+                                        "tpautoaccept remove " + friend.toUpperCase(Locale.ROOT));
+                            });
+                    helper.runAtTickTime(
+                            3,
+                            () -> {
+                                if (!InstantTpaWhitelist.list(players[1]).isEmpty())
+                                    fail(
+                                            helper,
+                                            "an offline player was not removed, got "
+                                                    + texts(players[1]));
+                                else if (!received(
+                                        players[1],
+                                        "[SimpleTPA] "
+                                                + friend
+                                                + " was removed from your auto-accept whitelist."))
+                                    fail(helper, "owner was not told, got " + texts(players[1]));
+                                else succeed(helper);
+                            });
+                });
+    }
+
     public static void acceptAllNeedsConfirmation(GameTestHelper helper) {
         pair(
                 helper,
@@ -1102,6 +1144,19 @@ public final class SimpleTPAGameTests {
 
     private static List<String> texts(ServerPlayer player) {
         return fixture(player).messageTexts();
+    }
+
+    /** What the server suggests to {@code player} at the end of {@code input}. */
+    private static List<String> suggestions(ServerPlayer player, String input) {
+        var dispatcher = player.level().getServer().getCommands().getDispatcher();
+        return dispatcher
+                .getCompletionSuggestions(
+                        dispatcher.parse(input, player.createCommandSourceStack()))
+                .join()
+                .getList()
+                .stream()
+                .map(suggestion -> suggestion.getText())
+                .toList();
     }
 
     private static ServerPlayer player(GameTestHelper helper, String name) {

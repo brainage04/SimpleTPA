@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -17,6 +18,7 @@ import java.util.UUID;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.LevelResource;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Accept-all is an entry whose uuid is {@value #ACCEPT_ALL_MARKER}. Files written before accept-all
@@ -155,20 +157,31 @@ public final class InstantTpaWhitelist {
                 == null;
     }
 
-    public static synchronized boolean remove(ServerPlayer owner, ServerPlayer requester) {
+    /**
+     * Removes the entry of {@code owner}'s whitelist whose stored name or UUID is {@code player},
+     * ignoring case, and returns its stored name; null when there is none.
+     */
+    public static synchronized @Nullable String remove(ServerPlayer owner, String player) {
         Map<UUID, String> allowedPlayers = WHITELISTS.get(owner.getUUID());
 
         if (allowedPlayers == null) {
-            return false;
+            return null;
         }
 
-        boolean removed = allowedPlayers.remove(requester.getUUID()) != null;
-
-        if (allowedPlayers.isEmpty()) {
-            WHITELISTS.remove(owner.getUUID());
+        for (Iterator<Map.Entry<UUID, String>> entries = allowedPlayers.entrySet().iterator();
+                entries.hasNext(); ) {
+            Map.Entry<UUID, String> entry = entries.next();
+            if (entry.getValue().equalsIgnoreCase(player)
+                    || entry.getKey().toString().equalsIgnoreCase(player)) {
+                entries.remove();
+                if (allowedPlayers.isEmpty()) {
+                    WHITELISTS.remove(owner.getUUID());
+                }
+                return entry.getValue();
+            }
         }
 
-        return removed;
+        return null;
     }
 
     public static synchronized boolean clear(ServerPlayer owner) {

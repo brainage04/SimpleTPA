@@ -24,7 +24,7 @@ Each player keeps an "auto-accept" whitelist of players who may teleport to them
 - `/tpdeny [player]` - deny a specific player's request (`[player]` can be left blank if only one request is pending)
 - `/tpautoaccept list` - prints your "auto-accept" whitelist of players who can automatically teleport to you without their requests having to be accepted.
 - `/tpautoaccept add <player>` - allow a specific player to be able to teleport to you immediately (if `simpletpa:auto_accept` is `true`)
-- `/tpautoaccept remove <player>` - remove a player from your "auto-accept" whitelist.
+- `/tpautoaccept remove <player>` - remove a player from your "auto-accept" whitelist, whether they are online or not. `<player>` is a name from `/tpautoaccept list` or the player's UUID.
 - `/tpautoaccept clear` - clear your "auto-accept" whitelist.
 - `/tpautoaccept *` - auto-accept requests from everyone (if `simpletpa:auto_accept` is `true`). Run it twice within 30 seconds to turn it on, and again to turn it off. `*` can be left out.
 - `/tpauto` - short for `/tpautoaccept`, with all the same subcommands.

@@ -138,32 +138,36 @@ public class TPAutoAcceptCommand {
         return 1;
     }
 
-    public static int remove(CommandSourceStack source, ServerPlayer requester) {
+    /**
+     * {@code player} is a name or UUID on the owner's whitelist, so offline players can be removed,
+     * or the name of an online player whose stored name is out of date.
+     */
+    public static int remove(CommandSourceStack source, String player) {
         ServerPlayer owner = SimpleTPA.FEEDBACK.requirePlayer(source);
         if (owner == null) {
             return -1;
         }
 
-        if (InstantTpaWhitelist.remove(owner, requester)) {
-            if (!InstantTpaWhitelist.save()) {
-                SimpleTPA.FEEDBACK.failure(
-                        source,
-                        "%s was removed from your auto-accept whitelist for this session, but the change could not be saved.",
-                        requester.getScoreboardName());
-                return -1;
-            }
-            SimpleTPA.FEEDBACK.success(
-                    owner,
-                    "%s was removed from your auto-accept whitelist.",
-                    requester.getScoreboardName());
-        } else {
-            SimpleTPA.FEEDBACK.failure(
-                    source,
-                    "%s is not on your auto-accept whitelist.",
-                    requester.getScoreboardName());
+        String removed = InstantTpaWhitelist.remove(owner, player);
+        ServerPlayer online = source.getServer().getPlayerList().getPlayerByName(player);
+        if (removed == null && online != null) {
+            removed = InstantTpaWhitelist.remove(owner, online.getUUID().toString());
+        }
+
+        if (removed == null) {
+            SimpleTPA.FEEDBACK.failure(source, "%s is not on your auto-accept whitelist.", player);
             return -1;
         }
 
+        if (!InstantTpaWhitelist.save()) {
+            SimpleTPA.FEEDBACK.failure(
+                    source,
+                    "%s was removed from your auto-accept whitelist for this session, but the change could not be saved.",
+                    removed);
+            return -1;
+        }
+        SimpleTPA.FEEDBACK.success(
+                owner, "%s was removed from your auto-accept whitelist.", removed);
         return 1;
     }
 

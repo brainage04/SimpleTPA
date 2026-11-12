@@ -70,6 +70,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest
+    public void removeOfflinePlayer(GameTestHelper helper) {
+        SimpleTPAGameTests.removeOfflinePlayer(helper);
+    }
+
+    @GameTest
     public void acceptAllNeedsConfirmation(GameTestHelper helper) {
         SimpleTPAGameTests.acceptAllNeedsConfirmation(helper);
     }
