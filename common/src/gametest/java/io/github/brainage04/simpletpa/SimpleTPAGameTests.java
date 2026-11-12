@@ -820,7 +820,9 @@ public final class SimpleTPAGameTests {
 
     /**
      * After two renames, {@code remove <name>} takes the online player with that name, not the
-     * offline player whose entry was stored under it.
+     * offline player whose entry was stored under it. The join hook gives both entries the name
+     * {@code bob} before the removal, so a remove that tried stored names first would meet an
+     * ambiguous name and fail this test whatever order the whitelist keeps its entries in.
      */
     public static void removePrefersOnlinePlayer(GameTestHelper helper) {
         int id = ++playerPairCounter;
@@ -841,9 +843,15 @@ public final class SimpleTPAGameTests {
                 () -> {
                     List<String> listed = InstantTpaWhitelist.list(owner);
                     if (InstantTpaWhitelist.allows(owner, nowBob))
-                        fail(helper, "the online " + bob + " is still whitelisted: " + listed);
+                        fail(
+                                helper,
+                                "the online " + bob + " is still whitelisted: " + texts(owner));
                     else if (listed.size() != 1)
                         fail(helper, "remove did not take exactly one entry: " + listed);
+                    else if (!received(
+                            owner,
+                            "[SimpleTPA] " + bob + " was removed from your auto-accept whitelist."))
+                        fail(helper, "owner was not told, got " + texts(owner));
                     else succeed(helper);
                 });
     }
