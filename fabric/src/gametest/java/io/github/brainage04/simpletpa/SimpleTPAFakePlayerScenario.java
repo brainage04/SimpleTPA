@@ -25,12 +25,6 @@ final class SimpleTPAFakePlayerScenario {
         executeServerCommand(level, position, "player %s spawn in survival".formatted(name));
     }
 
-    static void kill(ServerLevel level, String name) {
-        if (player(level, name) != null) {
-            executeServerCommand(level, Vec3.ZERO, "player %s kill".formatted(name));
-        }
-    }
-
     static void colorName(ServerLevel level, String name, String color) {
         String team = teamName(name);
         executeServerCommand(level, Vec3.ZERO, "team add " + team);
@@ -55,17 +49,6 @@ final class SimpleTPAFakePlayerScenario {
                     "Expected " + name + " to use Carpet's fake-player implementation.");
         }
         return player;
-    }
-
-    static void setPositions(
-            ServerPlayer sender,
-            Vec3 senderPosition,
-            ServerPlayer receiver,
-            Vec3 receiverPosition) {
-        sender.teleportTo(senderPosition.x, senderPosition.y, senderPosition.z);
-        sender.setDeltaMovement(Vec3.ZERO);
-        receiver.teleportTo(receiverPosition.x, receiverPosition.y, receiverPosition.z);
-        receiver.setDeltaMovement(Vec3.ZERO);
     }
 
     static void place(ServerPlayer player, Vec3 position, float yaw, float pitch) {

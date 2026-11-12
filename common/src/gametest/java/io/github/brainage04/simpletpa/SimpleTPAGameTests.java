@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -50,15 +51,28 @@ public final class SimpleTPAGameTests {
                 helper,
                 players -> {
                     players[0].setPos(new Vec3(0, 0, 0));
-                    players[1].setPos(new Vec3(10, 10, 10));
+                    players[1].setPos(new Vec3(10.25, 10, 10.75));
+                    players[1].setYRot(135.0F);
+                    players[1].setXRot(20.0F);
                     command(players[0], "tprequest " + players[1].getScoreboardName());
                     command(players[1], "tpaccept");
                     helper.runAtTickTime(
                             2,
                             () -> {
-                                if (players[0].blockPosition().equals(players[1].blockPosition()))
-                                    succeed(helper);
-                                else fail(helper, "accepted request did not teleport");
+                                ServerPlayer mover = players[0];
+                                ServerPlayer target = players[1];
+                                if (mover.position().equals(target.position())
+                                        && mover.getYRot() == target.getYRot()
+                                        && mover.getXRot() == target.getXRot()) succeed(helper);
+                                else
+                                    fail(
+                                            helper,
+                                            "accepted request did not put the sender on the receiver, facing their way: "
+                                                    + mover.position()
+                                                    + " "
+                                                    + mover.getYRot()
+                                                    + "/"
+                                                    + mover.getXRot());
                             });
                 });
     }
@@ -122,6 +136,110 @@ public final class SimpleTPAGameTests {
                                 if (players[0].blockPosition().equals(new BlockPos(0, 0, 0)))
                                     succeed(helper);
                                 else fail(helper, "denied request teleported");
+                            });
+                });
+    }
+
+    public static void namedDenyFlow(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    players[0].setPos(new Vec3(0, 0, 0));
+                    players[1].setPos(new Vec3(10, 10, 10));
+                    command(players[0], "tpa " + players[1].getScoreboardName());
+                    command(players[1], "tpdeny " + players[0].getScoreboardName());
+                    helper.runAtTickTime(
+                            2,
+                            () -> {
+                                if (!players[0].blockPosition().equals(new BlockPos(0, 0, 0))) {
+                                    fail(helper, "/tpdeny <name> teleported");
+                                } else if (pending(players[1], players[0])) {
+                                    fail(helper, "/tpdeny <name> left the request pending");
+                                } else if (!received(
+                                        players[0],
+                                        "[SimpleTPA] "
+                                                + players[1].getScoreboardName()
+                                                + " denied your TP request.")) {
+                                    fail(helper, "sender was not told, got " + texts(players[0]));
+                                } else {
+                                    succeed(helper);
+                                }
+                            });
+                });
+    }
+
+    /**
+     * What /tpaccept and /tpdeny answer without exactly one online request to answer; each names
+     * its own command.
+     */
+    public static void responseNeedsOneOnlineRequest(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer sender = players[0];
+                    ServerPlayer receiver = players[1];
+                    ServerPlayer secondSender = player(helper, "second" + playerPairCounter);
+                    ServerPlayer bystander = player(helper, "bystander" + playerPairCounter);
+                    String receiverName = receiver.getScoreboardName();
+                    helper.runAtTickTime(
+                            1,
+                            () -> {
+                                command(receiver, "tpaccept");
+                                command(bystander, "tpdeny " + receiverName);
+                            });
+                    helper.runAtTickTime(
+                            2,
+                            () -> {
+                                command(sender, "tpa " + receiverName);
+                                command(secondSender, "tpa " + receiverName);
+                            });
+                    helper.runAtTickTime(3, () -> command(receiver, "tpaccept"));
+                    helper.runAtTickTime(4, () -> command(receiver, "tpdeny"));
+                    helper.runAtTickTime(
+                            5,
+                            () -> {
+                                fixture(secondSender).close();
+                                command(receiver, "tpdeny " + sender.getScoreboardName());
+                            });
+                    helper.runAtTickTime(6, () -> command(receiver, "tpaccept"));
+                    helper.runAtTickTime(
+                            8,
+                            () -> {
+                                String secondName = secondSender.getScoreboardName();
+                                List<String> missing =
+                                        Stream.of(
+                                                        "[SimpleTPA] You have no incoming TP requests!",
+                                                        "[SimpleTPA] You have more than 1 incoming TP request, specifically from:",
+                                                        "[SimpleTPA] - "
+                                                                + sender.getScoreboardName(),
+                                                        "[SimpleTPA] - " + secondName,
+                                                        "[SimpleTPA] Please specify which one you wish to accept using /tpaccept <name>.",
+                                                        "[SimpleTPA] Please specify which one you wish to deny using /tpdeny <name>.",
+                                                        "[SimpleTPA] "
+                                                                + secondName
+                                                                + " is not online!")
+                                                .filter(text -> !received(receiver, text))
+                                                .toList();
+                                if (!missing.isEmpty()) {
+                                    fail(
+                                            helper,
+                                            "receiver was not told "
+                                                    + missing
+                                                    + ", got "
+                                                    + texts(receiver));
+                                } else if (!received(
+                                        bystander,
+                                        "[SimpleTPA] You do not have a TP request from "
+                                                + receiverName
+                                                + "!")) {
+                                    fail(helper, "bystander was not told, got " + texts(bystander));
+                                } else if (pending(receiver, sender)) {
+                                    fail(helper, "/tpdeny <name> left the request pending");
+                                } else if (!pending(receiver, secondSender)) {
+                                    fail(helper, "a request was answered without its sender");
+                                } else {
+                                    succeed(helper);
+                                }
                             });
                 });
     }
@@ -449,13 +567,6 @@ public final class SimpleTPAGameTests {
                     helper.runAtTickTime(
                             5,
                             () -> {
-                                boolean pending =
-                                        TPRequestCommand.TP_REQUESTS.stream()
-                                                .anyMatch(
-                                                        request ->
-                                                                request.matches(
-                                                                        players[1].getUUID(),
-                                                                        players[0].getUUID()));
                                 if (helper.getLevel()
                                         .getServer()
                                         .getGameRules()
@@ -470,7 +581,7 @@ public final class SimpleTPAGameTests {
                                         "[SimpleTPA] It has no effect while the simpletpa:auto_accept gamerule is false.")) {
                                     fail(helper, "no gamerule note, got " + texts(players[1]));
                                 } else if (!players[0].blockPosition().equals(new BlockPos(0, 0, 0))
-                                        || !pending) {
+                                        || !pending(players[1], players[0])) {
                                     fail(helper, "accept-all bypassed simpletpa:auto_accept false");
                                 } else {
                                     succeed(helper);
@@ -769,6 +880,11 @@ public final class SimpleTPAGameTests {
 
     private static boolean received(ServerPlayer player, String text) {
         return fixture(player).received(text);
+    }
+
+    private static boolean pending(ServerPlayer receiver, ServerPlayer sender) {
+        return TPRequestCommand.TP_REQUESTS.stream()
+                .anyMatch(request -> request.matches(receiver.getUUID(), sender.getUUID()));
     }
 
     private static List<String> texts(ServerPlayer player) {

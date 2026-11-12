@@ -25,6 +25,16 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest
+    public void namedDenyFlow(GameTestHelper helper) {
+        SimpleTPAGameTests.namedDenyFlow(helper);
+    }
+
+    @GameTest
+    public void responseNeedsOneOnlineRequest(GameTestHelper helper) {
+        SimpleTPAGameTests.responseNeedsOneOnlineRequest(helper);
+    }
+
+    @GameTest
     public void instantAutoAcceptFlow(GameTestHelper helper) {
         SimpleTPAGameTests.instantAutoAcceptFlow(helper);
     }
