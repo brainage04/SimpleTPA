@@ -22,6 +22,10 @@ import net.minecraft.world.level.storage.LevelResource;
  * Accept-all is an entry whose uuid is {@value #ACCEPT_ALL_MARKER}. Files written before accept-all
  * existed load unchanged, and older versions skip the marker entry because it is not a valid UUID.
  * A file that fails to load is never overwritten; changes then apply until the server stops.
+ *
+ * <p>Nothing is saved unless {@link #load} ran in this server run. Fabric fires SERVER_STOPPING at
+ * the head of {@code stopServer}, which vanilla also calls when the start failed
+ * (MinecraftServer.java:700-703,772-775), so a save there would write empty lists over the file.
  */
 public final class InstantTpaWhitelist {
     public static final String ACCEPT_ALL_MARKER = "*";
@@ -77,9 +81,9 @@ public final class InstantTpaWhitelist {
         }
     }
 
-    public static synchronized boolean save(MinecraftServer server) {
+    public static synchronized boolean save() {
         if (file == null) {
-            file = whitelistFile(server);
+            return false;
         }
 
         Map<String, List<Entry>> saved = new TreeMap<>();
@@ -105,6 +109,13 @@ public final class InstantTpaWhitelist {
         }
 
         return file.save(saved).saved();
+    }
+
+    /** Forgets the loaded file and lists, so nothing is saved until the next {@link #load}. */
+    public static synchronized void unload() {
+        file = null;
+        WHITELISTS.clear();
+        ACCEPT_ALL.clear();
     }
 
     private static JsonFile<Map<String, List<Entry>>> whitelistFile(MinecraftServer server) {

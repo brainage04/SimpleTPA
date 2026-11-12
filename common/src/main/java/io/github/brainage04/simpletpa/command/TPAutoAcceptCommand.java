@@ -24,7 +24,7 @@ public class TPAutoAcceptCommand {
         if (InstantTpaWhitelist.acceptsAll(owner)) {
             InstantTpaWhitelist.setAcceptAll(owner, false);
             ACCEPT_ALL_CONFIRMATION.cancel(owner.getUUID());
-            if (!InstantTpaWhitelist.save(source.getServer())) {
+            if (!InstantTpaWhitelist.save()) {
                 SimpleTPA.FEEDBACK.failure(
                         source,
                         "Accept-all is off for this session, but the change could not be saved.");
@@ -51,7 +51,7 @@ public class TPAutoAcceptCommand {
         }
 
         InstantTpaWhitelist.setAcceptAll(owner, true);
-        boolean saved = InstantTpaWhitelist.save(source.getServer());
+        boolean saved = InstantTpaWhitelist.save();
         if (saved) {
             SimpleTPA.FEEDBACK.success(
                     owner,
@@ -115,7 +115,7 @@ public class TPAutoAcceptCommand {
         }
 
         boolean added = InstantTpaWhitelist.add(owner, requester);
-        boolean saved = InstantTpaWhitelist.save(source.getServer());
+        boolean saved = InstantTpaWhitelist.save();
 
         if (added && !saved) {
             SimpleTPA.FEEDBACK.failure(
@@ -145,7 +145,7 @@ public class TPAutoAcceptCommand {
         }
 
         if (InstantTpaWhitelist.remove(owner, requester)) {
-            if (!InstantTpaWhitelist.save(source.getServer())) {
+            if (!InstantTpaWhitelist.save()) {
                 SimpleTPA.FEEDBACK.failure(
                         source,
                         "%s was removed from your auto-accept whitelist for this session, but the change could not be saved.",
@@ -174,7 +174,7 @@ public class TPAutoAcceptCommand {
         }
 
         if (InstantTpaWhitelist.clear(owner)) {
-            if (!InstantTpaWhitelist.save(source.getServer())) {
+            if (!InstantTpaWhitelist.save()) {
                 SimpleTPA.FEEDBACK.failure(
                         source,
                         "Your auto-accept whitelist has been cleared for this session, but the change could not be saved.");

@@ -52,6 +52,10 @@ public final class NeoForgeServerGameTests {
                 event,
                 "whitelist_from_previous_version_loads",
                 SimpleTPAGameTests::whitelistFromPreviousVersionLoads);
+        register(
+                event,
+                "whitelist_not_saved_before_load",
+                SimpleTPAGameTests::whitelistNotSavedBeforeLoad);
         register(event, "add_wildcard_rejected", SimpleTPAGameTests::addWildcardRejected);
         register(event, "combined_server_help", SimpleTPAGameTests::combinedServerHelp);
         register(event, "gamerule_registration", SimpleTPAGameTests::gameruleRegistration);

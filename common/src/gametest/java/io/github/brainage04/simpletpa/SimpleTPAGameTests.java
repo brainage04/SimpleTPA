@@ -615,7 +615,7 @@ public final class SimpleTPAGameTests {
                                 UUID legacyAllowed = UUID.randomUUID();
                                 JsonObject saved;
                                 try {
-                                    InstantTpaWhitelist.save(server);
+                                    InstantTpaWhitelist.save();
                                     saved =
                                             JsonParser.parseString(Files.readString(file))
                                                     .getAsJsonObject();
@@ -647,7 +647,7 @@ public final class SimpleTPAGameTests {
                                 InstantTpaWhitelist.setAcceptAll(players[1], false);
                                 InstantTpaWhitelist.clear(players[0]);
                                 InstantTpaWhitelist.load(server);
-                                InstantTpaWhitelist.save(server);
+                                InstantTpaWhitelist.save();
 
                                 ServerPlayer legacyPlayer =
                                         player(
@@ -700,7 +700,7 @@ public final class SimpleTPAGameTests {
                                             : acceptAllEntry + ",\n  " + whitelistEntry)
                                     + "\n}";
                     try {
-                        InstantTpaWhitelist.save(server);
+                        InstantTpaWhitelist.save();
                         byte[] original = Files.readAllBytes(file);
                         try {
                             Files.writeString(file, previous);
@@ -717,7 +717,7 @@ public final class SimpleTPAGameTests {
                                 fail(helper, "the previous version's accept-all did not load");
                                 return;
                             }
-                            InstantTpaWhitelist.save(server);
+                            InstantTpaWhitelist.save();
                             if (!Files.readString(file).equals(previous)) {
                                 fail(
                                         helper,
@@ -749,7 +749,7 @@ public final class SimpleTPAGameTests {
                             server.getWorldPath(LevelResource.ROOT)
                                     .resolve("simpletpa-instant-accept-whitelist.json");
                     try {
-                        InstantTpaWhitelist.save(server);
+                        InstantTpaWhitelist.save();
                         byte[] original = Files.readAllBytes(file);
                         try {
                             for (String document :
@@ -787,7 +787,7 @@ public final class SimpleTPAGameTests {
                                     return;
                                 }
                                 InstantTpaWhitelist.clear(players[0]);
-                                InstantTpaWhitelist.save(server);
+                                InstantTpaWhitelist.save();
                                 if (!java.util.Arrays.equals(Files.readAllBytes(file), bytes)) {
                                     fail(
                                             helper,
@@ -798,6 +798,47 @@ public final class SimpleTPAGameTests {
                         } finally {
                             Files.write(file, original);
                             InstantTpaWhitelist.load(server);
+                        }
+                    } catch (IOException exception) {
+                        throw new IllegalStateException(exception);
+                    }
+                    succeed(helper);
+                });
+    }
+
+    /**
+     * A Fabric server whose start failed still fires SERVER_STOPPING, without having loaded the
+     * whitelist. Runs in one tick and loads the file again afterwards.
+     */
+    public static void whitelistNotSavedBeforeLoad(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    var server = helper.getLevel().getServer();
+                    Path file =
+                            server.getWorldPath(LevelResource.ROOT)
+                                    .resolve("simpletpa-instant-accept-whitelist.json");
+                    try {
+                        InstantTpaWhitelist.add(players[0], players[1]);
+                        InstantTpaWhitelist.save();
+                        byte[] saved = Files.readAllBytes(file);
+                        InstantTpaWhitelist.unload();
+                        try {
+                            if (InstantTpaWhitelist.save()) {
+                                fail(helper, "a whitelist that was never loaded was saved");
+                                return;
+                            }
+                            if (!java.util.Arrays.equals(Files.readAllBytes(file), saved)) {
+                                fail(
+                                        helper,
+                                        "a save before load changed the file to "
+                                                + Files.readString(file));
+                                return;
+                            }
+                        } finally {
+                            InstantTpaWhitelist.load(server);
+                            InstantTpaWhitelist.clear(players[0]);
+                            InstantTpaWhitelist.save();
                         }
                     } catch (IOException exception) {
                         throw new IllegalStateException(exception);

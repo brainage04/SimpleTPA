@@ -90,6 +90,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest
+    public void whitelistNotSavedBeforeLoad(GameTestHelper helper) {
+        SimpleTPAGameTests.whitelistNotSavedBeforeLoad(helper);
+    }
+
+    @GameTest
     public void addWildcardRejected(GameTestHelper helper) {
         SimpleTPAGameTests.addWildcardRejected(helper);
     }

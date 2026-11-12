@@ -31,8 +31,9 @@ public final class SimpleTPA {
         platform.registerServerStopping(
                 server -> {
                     try {
-                        InstantTpaWhitelist.save(server);
+                        InstantTpaWhitelist.save();
                     } finally {
+                        InstantTpaWhitelist.unload();
                         TPRequestCommand.TP_REQUESTS.clear();
                         TPAutoAcceptCommand.ACCEPT_ALL_CONFIRMATION.clear();
                     }
