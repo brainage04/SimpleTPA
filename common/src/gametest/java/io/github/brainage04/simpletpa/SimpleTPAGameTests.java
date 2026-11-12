@@ -454,6 +454,7 @@ public final class SimpleTPAGameTests {
                 helper,
                 players -> {
                     String sender = players[0].getScoreboardName();
+                    UUID senderId = players[0].getUUID();
                     players[0].setPos(new Vec3(0, 0, 0));
                     players[1].setPos(new Vec3(10, 10, 10));
                     command(players[0], "tpa " + players[1].getScoreboardName());
@@ -486,22 +487,27 @@ public final class SimpleTPAGameTests {
                                                 notice,
                                                 "[ACCEPT]",
                                                 ChatFormatting.GREEN,
-                                                "/tpaccept " + sender,
+                                                "/tpaccept " + senderId,
                                                 "Click to accept " + sender + "'s TP request");
                                 String deny =
                                         checkButton(
                                                 notice,
                                                 "[DENY]",
                                                 ChatFormatting.RED,
-                                                "/tpdeny " + sender,
+                                                "/tpdeny " + senderId,
                                                 "Click to deny " + sender + "'s TP request");
                                 if (accept != null || deny != null) {
                                     fail(helper, accept != null ? accept : deny);
                                     return;
                                 }
+                                List<String> offered = suggestions(players[1], "tpaccept ");
+                                if (!offered.equals(List.of(sender))) {
+                                    fail(helper, "/tpaccept suggested " + offered);
+                                    return;
+                                }
                                 // Run what the [ACCEPT] button would send, without the leading
                                 // slash like the client does.
-                                command(players[1], "tpaccept " + sender);
+                                command(players[1], "tpaccept " + senderId);
                             });
                     helper.runAtTickTime(
                             4,

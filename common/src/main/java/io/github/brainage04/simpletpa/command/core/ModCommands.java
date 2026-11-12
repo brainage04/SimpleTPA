@@ -35,10 +35,11 @@ public final class ModCommands {
                                             TPResponseCommand.respond(
                                                     context.getSource(), response))
                             .then(
-                                    player(
-                                            (source, from) ->
+                                    name(
+                                            TPResponseCommand::senderNames,
+                                            (source, player) ->
                                                     TPResponseCommand.respond(
-                                                            source, from, response))));
+                                                            source, player, response))));
         }
 
         LiteralCommandNode<CommandSourceStack> tpa =

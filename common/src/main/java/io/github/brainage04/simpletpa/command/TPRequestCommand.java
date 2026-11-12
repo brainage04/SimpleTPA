@@ -71,13 +71,18 @@ public class TPRequestCommand {
 
         TP_REQUESTS.add(request);
 
-        SimpleTPA.FEEDBACK.neutral(to, incomingRequestMessage(from.getScoreboardName()));
+        SimpleTPA.FEEDBACK.neutral(to, incomingRequestMessage(from));
         SimpleTPA.FEEDBACK.neutral(from, "You have sent %s a TP request.", to.getScoreboardName());
         SimpleTPA.FEEDBACK.click(to);
         return 1;
     }
 
-    public static MutableComponent incomingRequestMessage(String fromName) {
+    /**
+     * The buttons name the sender by UUID: an offline-mode name may be up to 16 printable
+     * characters without spaces (StringUtil.java:66-68), such as {@code @r}.
+     */
+    public static MutableComponent incomingRequestMessage(ServerPlayer from) {
+        String fromName = from.getScoreboardName();
         return Component.literal(
                         "%s has sent you a TP request. Use /tpaccept to accept, or /tpdeny to deny. "
                                 .formatted(fromName))
@@ -85,14 +90,14 @@ public class TPRequestCommand {
                         button(
                                 "[ACCEPT]",
                                 ChatFormatting.GREEN,
-                                "/tpaccept " + fromName,
+                                "/tpaccept " + from.getUUID(),
                                 "Click to accept %s's TP request".formatted(fromName)))
                 .append(" ")
                 .append(
                         button(
                                 "[DENY]",
                                 ChatFormatting.RED,
-                                "/tpdeny " + fromName,
+                                "/tpdeny " + from.getUUID(),
                                 "Click to deny %s's TP request".formatted(fromName)));
     }
 

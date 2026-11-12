@@ -31,10 +31,7 @@ public final class TPResponseCommand {
             return -1;
         }
 
-        List<TPRequestCommand.TPRequest> incoming =
-                TPRequestCommand.TP_REQUESTS.stream()
-                        .filter(request -> request.toId().equals(to.getUUID()))
-                        .toList();
+        List<TPRequestCommand.TPRequest> incoming = incoming(to);
 
         if (incoming.isEmpty()) {
             SimpleTPA.FEEDBACK.failure(source, "You have no incoming TP requests!");
@@ -55,67 +52,75 @@ public final class TPResponseCommand {
             return -1;
         }
 
-        ServerPlayer from =
-                source.getServer().getPlayerList().getPlayer(incoming.getFirst().fromId());
-        if (from == null) {
-            SimpleTPA.FEEDBACK.failure(source, "%s is not online!", incoming.getFirst().fromName());
-            return -1;
-        }
-
-        return resolve(source, to, from, response);
+        return resolve(source, to, incoming.getFirst(), response);
     }
 
-    public static int respond(CommandSourceStack source, ServerPlayer from, Response response) {
+    /** {@code player} is the name or UUID of a player with a request to the source, any case. */
+    public static int respond(CommandSourceStack source, String player, Response response) {
         ServerPlayer to = SimpleTPA.FEEDBACK.requirePlayer(source);
         if (to == null) {
             return -1;
         }
-        return resolve(source, to, from, response);
-    }
 
-    private static int resolve(
-            CommandSourceStack source, ServerPlayer to, ServerPlayer from, Response response) {
-        for (int i = 0; i < TPRequestCommand.TP_REQUESTS.size(); i++) {
-            if (TPRequestCommand.TP_REQUESTS.get(i).matches(to.getUUID(), from.getUUID())) {
-                if (response == Response.ACCEPT) {
-                    String blocked = TPRequestCommand.blockedReason(from, to);
-                    if (blocked != null) {
-                        SimpleTPA.FEEDBACK.failure(
-                                source,
-                                "%s can't teleport to you while you are %s. Their TP request is still open.",
-                                from.getScoreboardName(),
-                                blocked);
-                        return -1;
-                    }
-                    if (!TPRequestCommand.teleport(from, to)) {
-                        SimpleTPA.FEEDBACK.failure(
-                                source,
-                                "%s could not be teleported. Their TP request is still open.",
-                                from.getScoreboardName());
-                        return -1;
-                    }
-                }
-                tell(
-                        to,
-                        response,
-                        "You %s %s's TP request.",
-                        response.pastTense,
-                        from.getScoreboardName());
-                tell(
-                        from,
-                        response,
-                        "%s %s your TP request.",
-                        to.getScoreboardName(),
-                        response.pastTense);
-                SimpleTPA.FEEDBACK.click(from);
-                TPRequestCommand.TP_REQUESTS.remove(i);
-                return 1;
+        for (TPRequestCommand.TPRequest request : incoming(to)) {
+            if (request.fromName().equalsIgnoreCase(player)
+                    || request.fromId().toString().equalsIgnoreCase(player)) {
+                return resolve(source, to, request, response);
             }
         }
 
-        SimpleTPA.FEEDBACK.failure(
-                source, "You do not have a TP request from %s!", from.getScoreboardName());
+        SimpleTPA.FEEDBACK.failure(source, "You do not have a TP request from %s!", player);
         return -1;
+    }
+
+    /** The names of the players with a request to the source. */
+    public static List<String> senderNames(CommandSourceStack source) {
+        ServerPlayer to = source.getPlayer();
+        return to == null
+                ? List.of()
+                : incoming(to).stream().map(TPRequestCommand.TPRequest::fromName).toList();
+    }
+
+    private static List<TPRequestCommand.TPRequest> incoming(ServerPlayer to) {
+        return TPRequestCommand.TP_REQUESTS.stream()
+                .filter(request -> request.toId().equals(to.getUUID()))
+                .toList();
+    }
+
+    private static int resolve(
+            CommandSourceStack source,
+            ServerPlayer to,
+            TPRequestCommand.TPRequest request,
+            Response response) {
+        ServerPlayer from = source.getServer().getPlayerList().getPlayer(request.fromId());
+        if (from == null) {
+            SimpleTPA.FEEDBACK.failure(source, "%s is not online!", request.fromName());
+            return -1;
+        }
+
+        if (response == Response.ACCEPT) {
+            String blocked = TPRequestCommand.blockedReason(from, to);
+            if (blocked != null) {
+                SimpleTPA.FEEDBACK.failure(
+                        source,
+                        "%s can't teleport to you while you are %s. Their TP request is still open.",
+                        from.getScoreboardName(),
+                        blocked);
+                return -1;
+            }
+            if (!TPRequestCommand.teleport(from, to)) {
+                SimpleTPA.FEEDBACK.failure(
+                        source,
+                        "%s could not be teleported. Their TP request is still open.",
+                        from.getScoreboardName());
+                return -1;
+            }
+        }
+        tell(to, response, "You %s %s's TP request.", response.pastTense, from.getScoreboardName());
+        tell(from, response, "%s %s your TP request.", to.getScoreboardName(), response.pastTense);
+        SimpleTPA.FEEDBACK.click(from);
+        TPRequestCommand.TP_REQUESTS.remove(request);
+        return 1;
     }
 
     private static void tell(

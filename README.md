@@ -20,8 +20,8 @@ Each player keeps an "auto-accept" whitelist of players who may teleport to them
 
 - `/simpletpa help` - prints this list.
 - `/tpa <player>`, `/tprequest <player>` - request to teleport to a player.
-- `/tpaccept [player]` - accept a specific player's request (`[player]` can be left blank if only one request is pending)
-- `/tpdeny [player]` - deny a specific player's request (`[player]` can be left blank if only one request is pending)
+- `/tpaccept [player]` – accept a pending request from a player, by name or UUID (`[player]` can be left blank if only one request is pending).
+- `/tpdeny [player]` – deny a pending request from a player, by name or UUID (`[player]` can be left blank if only one request is pending).
 - `/tpautoaccept list` - prints your "auto-accept" whitelist of players who can automatically teleport to you without their requests having to be accepted.
 - `/tpautoaccept add <player>` - allow a specific player to be able to teleport to you immediately (if `simpletpa:auto_accept` is `true`)
 - `/tpautoaccept remove <player>` - remove a player from your "auto-accept" whitelist, whether they are online or not. `<player>` is a name from `/tpautoaccept list` or the player's UUID.

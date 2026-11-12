@@ -134,7 +134,8 @@ public final class SimpleTPAFilm {
         context.waitTicks(25);
         context.setScreen(() -> new ChatScreen("", false));
         context.waitTicks(10);
-        String acceptCommand = "/tpaccept " + FRIEND_NAME;
+        String acceptCommand =
+                "/tpaccept " + server.computeOnServer(minecraftServer -> friend(minecraftServer).getUUID());
         double[] button = context.computeOnClient(client -> findRunCommand(client, acceptCommand));
         context.getInput().setCursorPos(button[0], button[1]);
         context.waitTicks(25);
