@@ -19,8 +19,7 @@ final class SimpleTPAFakePlayerScenario {
     static void spawn(ServerLevel level, String name, Vec3 position) {
         // Carpet asks the server's profile cache for the name before it spawns the player
         // (OldUsersConverter.java:246-249). An unknown name makes 26.3 look it up over the network,
-        // which
-        // stalls or throws on a machine without Mojang access, so seed the offline identity here.
+        // which stalls or throws on a machine without Mojang access, so seed the offline identity.
         level.getServer().services().nameToIdCache().add(NameAndId.createOffline(name));
         executeServerCommand(level, position, "player %s spawn in survival".formatted(name));
     }
@@ -70,31 +69,6 @@ final class SimpleTPAFakePlayerScenario {
             }
         }
         player.connection.handleChatCommand(new ServerboundChatCommandPacket(command));
-    }
-
-    static void assertLandedOn(ServerPlayer mover, ServerPlayer target, String message) {
-        if (!mover.position().equals(target.position())
-                || mover.getYRot() != target.getYRot()
-                || mover.getXRot() != target.getXRot()) {
-            throw new AssertionError(
-                    "%s: %s at %s facing %.1f/%.1f, %s at %s facing %.1f/%.1f."
-                            .formatted(
-                                    message,
-                                    mover.getScoreboardName(),
-                                    mover.position(),
-                                    mover.getYRot(),
-                                    mover.getXRot(),
-                                    target.getScoreboardName(),
-                                    target.position(),
-                                    target.getYRot(),
-                                    target.getXRot()));
-        }
-    }
-
-    static void assertPlayersApart(ServerPlayer sender, ServerPlayer receiver, String message) {
-        if (sender.blockPosition().equals(receiver.blockPosition())) {
-            throw new AssertionError(message);
-        }
     }
 
     private static ServerPlayer player(ServerLevel level, String name) {
