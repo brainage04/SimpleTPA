@@ -2,9 +2,11 @@ package io.github.brainage04.simpletpa;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
+import io.github.brainage04.brainagelib.gametest.GameTestPlayer;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestRecorder;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestServers;
 import java.util.Properties;
+import java.util.function.BiConsumer;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext;
 import net.minecraft.client.Minecraft;
@@ -24,8 +26,9 @@ import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The showcase film: one real client and a Carpet fake player ({@value #FRIEND_NAME}) on a
- * dedicated server. The server GameTests in {@code SimpleTPAGameTests} check what it shows.
+ * The showcase film: one real client and a second, joined player ({@value #FRIEND_NAME}) on a
+ * dedicated server. The server GameTests in {@code SimpleTPAGameTests} check what it shows; the
+ * client GameTest checks the [ACCEPT] click, the one step only a real client takes.
  */
 @SuppressWarnings("UnstableApiUsage")
 public final class SimpleTPAFilm {
@@ -67,24 +70,36 @@ public final class SimpleTPAFilm {
 
     private SimpleTPAFilm() {}
 
-    public static void run(ClientGameTestContext context) {
+    /**
+     * {@code afterClickedAccept} runs on the server once the client has clicked [ACCEPT] in chat,
+     * with the friend and the client's player.
+     */
+    public static void run(
+            ClientGameTestContext context,
+            BiConsumer<ServerPlayer, ServerPlayer> afterClickedAccept) {
         String playerName = context.computeOnClient(client -> client.getUser().getName());
         // Command suggestions would cover the chat while a command sits in the chat box.
         context.runOnClient(client -> client.options.autoSuggestions().set(false));
         Properties serverProperties = ClientGameTestServers.flatServerProperties();
-        // The Carpet player joins first and takes a slot, so the client needs a second one.
+        // The friend joins first and takes a slot, so the client needs a second one.
         serverProperties.setProperty("max-players", "2");
+        GameTestPlayer[] friend = new GameTestPlayer[1];
         ClientGameTestServers.withDedicatedServer(
                 context,
                 serverProperties,
                 "SimpleTPA recording GameTest",
-                server -> prepareWorld(context, server, playerName),
+                server -> friend[0] = prepareWorld(server, playerName),
                 server -> {
-                    context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
-                    showAcceptedRequest(context, server, playerName);
-                    showDeniedRequest(context, server, playerName);
-                    showClickedAccept(context, server, playerName);
-                    showAutoAcceptedRequest(context, server, playerName);
+                    try {
+                        context.runOnClient(
+                                client -> client.gui.hud.getChat().clearMessages(false));
+                        showAcceptedRequest(context, server, playerName);
+                        showDeniedRequest(context, server, playerName);
+                        showClickedAccept(context, server, playerName, afterClickedAccept);
+                        showAutoAcceptedRequest(context, server, playerName);
+                    } finally {
+                        server.runOnServer(minecraftServer -> friend[0].close());
+                    }
                 });
     }
 
@@ -121,7 +136,10 @@ public final class SimpleTPAFilm {
     }
 
     private static void showClickedAccept(
-            ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+            ClientGameTestContext context,
+            TestDedicatedServerContext server,
+            String playerName,
+            BiConsumer<ServerPlayer, ServerPlayer> afterClickedAccept) {
         show(context, CLICK_ACCEPT);
         server.runOnServer(
                 minecraftServer ->
@@ -135,12 +153,19 @@ public final class SimpleTPAFilm {
         context.setScreen(() -> new ChatScreen("", false));
         context.waitTicks(10);
         String acceptCommand =
-                "/tpaccept " + server.computeOnServer(minecraftServer -> friend(minecraftServer).getUUID());
+                "/tpaccept "
+                        + server.computeOnServer(
+                                minecraftServer -> friend(minecraftServer).getUUID());
         double[] button = context.computeOnClient(client -> findRunCommand(client, acceptCommand));
         context.getInput().setCursorPos(button[0], button[1]);
         context.waitTicks(25);
         context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
-        context.waitTicks(20);
+        context.waitTicks(5);
+        server.runOnServer(
+                minecraftServer ->
+                        afterClickedAccept.accept(
+                                friend(minecraftServer), player(minecraftServer, playerName)));
+        context.waitTicks(15);
         if (context.computeOnClient(client -> client.gui.screen() instanceof ChatScreen)) {
             context.getInput().pressKey(InputConstants.KEY_ESCAPE);
         }
@@ -216,9 +241,9 @@ public final class SimpleTPAFilm {
                 context, caption.id(), caption.title(), caption.description());
     }
 
-    private static void prepareWorld(
-            ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
-        server.runOnServer(
+    private static GameTestPlayer prepareWorld(
+            TestDedicatedServerContext server, String playerName) {
+        return server.computeOnServer(
                 minecraftServer -> {
                     ServerLevel level = minecraftServer.overworld();
                     buildStage(level);
@@ -241,15 +266,11 @@ public final class SimpleTPAFilm {
                                     BlockPos.containing(PLAYER_POSITION),
                                     EAST,
                                     PLAYER_PITCH));
-                    SimpleTPAFakePlayerScenario.spawn(level, FRIEND_NAME, FRIEND_POSITION);
-                });
-        waitForFriend(context, server);
-        server.runOnServer(
-                minecraftServer -> {
-                    ServerLevel level = minecraftServer.overworld();
-                    placeFriend(friend(minecraftServer));
+                    GameTestPlayer friend = SimpleTPAFakePlayerScenario.join(level, FRIEND_NAME);
+                    placeFriend(friend.player());
                     SimpleTPAFakePlayerScenario.colorName(level, playerName, "aqua");
                     SimpleTPAFakePlayerScenario.colorName(level, FRIEND_NAME, "gold");
+                    return friend;
                 });
     }
 
@@ -273,20 +294,6 @@ public final class SimpleTPAFilm {
                 3);
     }
 
-    private static void waitForFriend(
-            ClientGameTestContext context, TestDedicatedServerContext server) {
-        for (int tick = 0; tick < 100; tick++) {
-            if (server.computeOnServer(
-                    minecraftServer ->
-                            SimpleTPAFakePlayerScenario.isReady(
-                                    minecraftServer.overworld(), FRIEND_NAME))) {
-                return;
-            }
-            context.waitTick();
-        }
-        throw new AssertionError("Timed out waiting for the SimpleTPA Carpet player.");
-    }
-
     private static void placeActors(ServerPlayer player, ServerPlayer friend) {
         SimpleTPAFakePlayerScenario.place(player, PLAYER_POSITION, EAST, PLAYER_PITCH);
         placeFriend(friend);
@@ -297,14 +304,13 @@ public final class SimpleTPAFilm {
     }
 
     private static ServerPlayer friend(MinecraftServer server) {
-        return SimpleTPAFakePlayerScenario.requirePlayer(server.overworld(), FRIEND_NAME);
+        return player(server, FRIEND_NAME);
     }
 
-    private static ServerPlayer player(MinecraftServer server, String playerName) {
-        ServerPlayer player = server.getPlayerList().getPlayerByName(playerName);
+    private static ServerPlayer player(MinecraftServer server, String name) {
+        ServerPlayer player = server.getPlayerList().getPlayerByName(name);
         if (player == null) {
-            throw new AssertionError(
-                    "Expected the client player " + playerName + " to remain connected.");
+            throw new AssertionError("Expected " + name + " to remain connected.");
         }
         return player;
     }

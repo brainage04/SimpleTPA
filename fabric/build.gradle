@@ -1,10 +1,3 @@
-repositories {
-	exclusiveContent {
-		forRepository { maven { url = "https://api.modrinth.com/maven" } }
-		filter { includeGroup "maven.modrinth" }
-	}
-}
-
 workspaceDependencies {
 	siblingMaven('BrainageLib') {
 		coordinate.set("io.github.brainage04:brainagelib:${rootProject.brainagelib_version}")
@@ -16,15 +9,10 @@ workspaceDependencies {
 	}
 }
 
-productionGameTests {
-	runtimeModDependencies.add("maven.modrinth:carpet:${project.carpet_version}")
-}
-
 dependencies {
 	implementation "io.github.brainage04:brainagelib:${project.brainagelib_version}"
 	productionRuntimeMods "io.github.brainage04:brainagelib:${project.brainagelib_version}"
 	// Test-only GameTest fixtures; productionRuntimeMods feeds the production GameTest runs, not the release JAR.
 	gametestImplementation "io.github.brainage04:brainagelib-gametest:${project.brainagelib_version}"
 	productionRuntimeMods "io.github.brainage04:brainagelib-gametest:${project.brainagelib_version}"
-	runtimeOnly "maven.modrinth:carpet:${project.carpet_version}"
 }

@@ -2,7 +2,7 @@
 
 ## Showcase from both players' perspectives (two real clients, side by side)
 
-The showcase (`fabric/src/recording/.../SimpleTPAFilm.java`) records one real client while a Carpet fake player (`tpaFriend`) plays the other side. A future attempt could record two real Fabric clients and show both views side by side. Rough cost: about a day plus several test recordings; keeping the two clients in step is the main risk.
+The showcase (`fabric/src/recording/.../SimpleTPAFilm.java`) records one real client while a second player joined without a client (`tpaFriend`, BrainageLib's `GameTestPlayer`) plays the other side. A future attempt could record two real Fabric clients and show both views side by side. Rough cost: about a day plus several test recordings. Keeping the two clients in step is the main risk.
 
 What it needs, mostly in MinecraftModConventions so other mods can use it too:
 
