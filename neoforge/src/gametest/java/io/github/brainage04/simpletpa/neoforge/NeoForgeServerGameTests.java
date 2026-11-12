@@ -88,6 +88,10 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::legacyGameRuleYieldsToCurrentRule);
         register(
                 event,
+                "legacy_game_rule_survives_corrupt_file",
+                SimpleTPAGameTests::legacyGameRuleSurvivesCorruptFile);
+        register(
+                event,
                 "brainagelib_dependency_stops_below_next_major",
                 NeoForgeServerGameTests::brainageLibDependencyStopsBelowNextMajor);
     }

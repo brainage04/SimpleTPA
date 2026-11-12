@@ -148,4 +148,9 @@ public class SimpleTPAGameTest {
     public void legacyGameRuleYieldsToCurrentRule(GameTestHelper helper) {
         SimpleTPAGameTests.legacyGameRuleYieldsToCurrentRule(helper);
     }
+
+    @GameTest
+    public void legacyGameRuleSurvivesCorruptFile(GameTestHelper helper) {
+        SimpleTPAGameTests.legacyGameRuleSurvivesCorruptFile(helper);
+    }
 }

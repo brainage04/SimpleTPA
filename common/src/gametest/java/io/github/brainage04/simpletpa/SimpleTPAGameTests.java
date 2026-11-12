@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
@@ -1288,6 +1289,46 @@ public final class SimpleTPAGameTests {
                 LegacyGameRule.migrate(storage, dataFolder, loaded);
                 if (!loaded.get(SimpleTPA.AUTO_ACCEPT)) {
                     fail(helper, "the legacy value overrode the saved current rule");
+                    return;
+                }
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException(exception);
+        } finally {
+            deleteTree(dataFolder);
+        }
+        succeed(helper);
+    }
+
+    /**
+     * A game_rules.dat cut short in the middle of its gzip stream, as a crash during a save can
+     * leave it, starts the world with default rules in vanilla, and the migration must not stop
+     * that start.
+     */
+    public static void legacyGameRuleSurvivesCorruptFile(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        Path dataFolder = null;
+        try {
+            dataFolder = Files.createTempDirectory("simpletpa-game-rules");
+            CompoundTag rules = new CompoundTag();
+            rules.putBoolean(LegacyGameRule.LEGACY_ID.toString(), false);
+            for (int i = 0; i < 200; i++) {
+                rules.putString("simpletpa:filler_" + i, UUID.randomUUID().toString());
+            }
+            Path file = writeGameRules(dataFolder, rules);
+            byte[] whole = Files.readAllBytes(file);
+            Files.write(file, Arrays.copyOf(whole, whole.length / 2));
+
+            try (SavedDataStorage storage = savedData(server, dataFolder)) {
+                GameRules loaded = gameRules(server, storage);
+                try {
+                    LegacyGameRule.migrate(storage, dataFolder, loaded);
+                } catch (RuntimeException exception) {
+                    fail(helper, "the migration threw " + exception);
+                    return;
+                }
+                if (!loaded.get(SimpleTPA.AUTO_ACCEPT)) {
+                    fail(helper, "a corrupt file changed auto-accept");
                     return;
                 }
             }

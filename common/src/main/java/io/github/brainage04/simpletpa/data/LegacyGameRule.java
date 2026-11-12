@@ -57,7 +57,9 @@ public final class LegacyGameRule {
                             file,
                             GameRuleMap.TYPE.dataFixType(),
                             SharedConstants.getCurrentVersion().dataVersion().version());
-        } catch (IOException exception) {
+        } catch (IOException | RuntimeException exception) {
+            // A truncated file throws ReportedNbtException (NbtIo.java:180-188). Vanilla logs that
+            // and starts with default rules (SavedDataStorage.java:97), so the start must go on.
             SimpleTPA.LOGGER.error("Could not read {} to look for {}", file, LEGACY_ID, exception);
             return;
         }
