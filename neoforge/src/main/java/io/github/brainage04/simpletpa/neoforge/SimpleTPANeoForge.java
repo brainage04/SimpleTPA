@@ -6,6 +6,7 @@ import io.github.brainage04.simpletpa.platform.ServerPlatform;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.level.gamerules.GameRule;
 import net.minecraft.world.level.gamerules.GameRuleCategory;
@@ -14,6 +15,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
@@ -83,5 +85,15 @@ public final class SimpleTPANeoForge implements ServerPlatform {
     public void registerServerStopping(java.util.function.Consumer<MinecraftServer> callback) {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (ServerStoppingEvent event) -> callback.accept(event.getServer()));
+    }
+
+    @Override
+    public void registerPlayerJoin(java.util.function.Consumer<ServerPlayer> callback) {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (PlayerEvent.PlayerLoggedInEvent event) -> {
+                    if (event.getEntity() instanceof ServerPlayer player) {
+                        callback.accept(player);
+                    }
+                });
     }
 }

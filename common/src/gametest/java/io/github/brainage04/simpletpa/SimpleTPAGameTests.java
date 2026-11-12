@@ -730,12 +730,63 @@ public final class SimpleTPAGameTests {
                 });
     }
 
+    /** A whitelisted player who joins under a new name is listed under that name. */
+    public static void whitelistNamesFollowRenames(GameTestHelper helper) {
+        int id = ++playerPairCounter;
+        ServerPlayer owner = player(helper, "owner" + id);
+        UUID friendId = UUID.randomUUID();
+        ServerPlayer friend = player(helper, "carl" + id, friendId);
+        InstantTpaWhitelist.add(owner, friend);
+        fixture(friend).close();
+        player(helper, "bob" + id, friendId);
+        at(
+                helper,
+                1,
+                () -> {
+                    List<String> listed = InstantTpaWhitelist.list(owner);
+                    if (!listed.equals(List.of("bob" + id)))
+                        fail(helper, "the whitelist still lists " + listed);
+                    else succeed(helper);
+                });
+    }
+
+    /**
+     * After two renames, {@code remove <name>} takes the online player with that name, not the
+     * offline player whose entry was stored under it.
+     */
+    public static void removePrefersOnlinePlayer(GameTestHelper helper) {
+        int id = ++playerPairCounter;
+        String bob = "bob" + id;
+        ServerPlayer owner = player(helper, "owner" + id);
+        ServerPlayer formerBob = player(helper, bob);
+        UUID nowBobId = UUID.randomUUID();
+        ServerPlayer carl = player(helper, "carl" + id, nowBobId);
+        InstantTpaWhitelist.add(owner, formerBob);
+        InstantTpaWhitelist.add(owner, carl);
+        fixture(formerBob).close();
+        fixture(carl).close();
+        ServerPlayer nowBob = player(helper, bob, nowBobId);
+        at(helper, 1, () -> command(owner, "tpautoaccept remove " + bob));
+        at(
+                helper,
+                2,
+                () -> {
+                    List<String> listed = InstantTpaWhitelist.list(owner);
+                    if (InstantTpaWhitelist.allows(owner, nowBob))
+                        fail(helper, "the online " + bob + " is still whitelisted: " + listed);
+                    else if (listed.size() != 1)
+                        fail(helper, "remove did not take exactly one entry: " + listed);
+                    else succeed(helper);
+                });
+    }
+
     public static void acceptAllNeedsConfirmation(GameTestHelper helper) {
         pair(
                 helper,
                 players -> {
-                    helper.runAtTickTime(1, () -> command(players[1], "tpauto"));
-                    helper.runAtTickTime(
+                    at(helper, 1, () -> command(players[1], "tpauto"));
+                    at(
+                            helper,
                             2,
                             () -> {
                                 players[0].setPos(new Vec3(0, 0, 0));

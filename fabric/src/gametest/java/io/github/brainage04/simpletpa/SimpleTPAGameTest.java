@@ -80,6 +80,16 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest
+    public void whitelistNamesFollowRenames(GameTestHelper helper) {
+        SimpleTPAGameTests.whitelistNamesFollowRenames(helper);
+    }
+
+    @GameTest
+    public void removePrefersOnlinePlayer(GameTestHelper helper) {
+        SimpleTPAGameTests.removePrefersOnlinePlayer(helper);
+    }
+
+    @GameTest
     public void acceptAllNeedsConfirmation(GameTestHelper helper) {
         SimpleTPAGameTests.acceptAllNeedsConfirmation(helper);
     }

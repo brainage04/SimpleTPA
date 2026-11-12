@@ -139,8 +139,9 @@ public class TPAutoAcceptCommand {
     }
 
     /**
-     * {@code player} is a name or UUID on the owner's whitelist, so offline players can be removed,
-     * or the name of an online player whose stored name is out of date.
+     * {@code player} is the name of an online player, or a name or UUID on the owner's whitelist,
+     * so offline players can be removed. An online player is matched first: after renames, an
+     * offline player's entry can still be stored under the name an online player has now.
      */
     public static int remove(CommandSourceStack source, String player) {
         ServerPlayer owner = SimpleTPA.FEEDBACK.requirePlayer(source);
@@ -148,10 +149,13 @@ public class TPAutoAcceptCommand {
             return -1;
         }
 
-        String removed = InstantTpaWhitelist.remove(owner, player);
         ServerPlayer online = source.getServer().getPlayerList().getPlayerByName(player);
-        if (removed == null && online != null) {
-            removed = InstantTpaWhitelist.remove(owner, online.getUUID().toString());
+        String removed =
+                online == null
+                        ? null
+                        : InstantTpaWhitelist.remove(owner, online.getUUID().toString());
+        if (removed == null) {
+            removed = InstantTpaWhitelist.remove(owner, player);
         }
 
         if (removed == null) {

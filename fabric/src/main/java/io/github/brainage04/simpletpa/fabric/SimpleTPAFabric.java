@@ -8,9 +8,11 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.gamerule.v1.GameRuleBuilder;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.gamerules.GameRule;
 import net.minecraft.world.level.gamerules.GameRuleCategory;
 
@@ -57,5 +59,11 @@ public final class SimpleTPAFabric implements ModInitializer, ServerPlatform {
     @Override
     public void registerServerStopping(java.util.function.Consumer<MinecraftServer> callback) {
         ServerLifecycleEvents.SERVER_STOPPING.register(callback::accept);
+    }
+
+    @Override
+    public void registerPlayerJoin(java.util.function.Consumer<ServerPlayer> callback) {
+        ServerPlayConnectionEvents.JOIN.register(
+                (handler, sender, server) -> callback.accept(handler.getPlayer()));
     }
 }

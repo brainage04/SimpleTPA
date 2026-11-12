@@ -157,6 +157,22 @@ public final class InstantTpaWhitelist {
                 == null;
     }
 
+    /** Updates {@code player}'s stored name in every whitelist that has them, and saves. */
+    public static synchronized void refreshName(ServerPlayer player) {
+        String name = player.getScoreboardName();
+        boolean changed = false;
+        for (Map<UUID, String> allowedPlayers : WHITELISTS.values()) {
+            String stored = allowedPlayers.get(player.getUUID());
+            if (stored != null && !stored.equals(name)) {
+                allowedPlayers.put(player.getUUID(), name);
+                changed = true;
+            }
+        }
+        if (changed) {
+            save();
+        }
+    }
+
     /**
      * Removes the entry of {@code owner}'s whitelist whose stored name or UUID is {@code player},
      * ignoring case, and returns its stored name; null when there is none.

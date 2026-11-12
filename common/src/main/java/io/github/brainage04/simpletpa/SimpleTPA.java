@@ -30,6 +30,7 @@ public final class SimpleTPA {
         platform.registerEndServerTick(ModTickEvents::onEndServerTick);
         platform.registerServerStarting(LegacyGameRule::migrate);
         platform.registerServerStarted(InstantTpaWhitelist::load);
+        platform.registerPlayerJoin(InstantTpaWhitelist::refreshName);
         platform.registerServerStopping(
                 server -> {
                     try {

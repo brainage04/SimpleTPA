@@ -56,6 +56,14 @@ public final class NeoForgeServerGameTests {
         register(event, "remove_offline_player", SimpleTPAGameTests::removeOfflinePlayer);
         register(
                 event,
+                "whitelist_names_follow_renames",
+                SimpleTPAGameTests::whitelistNamesFollowRenames);
+        register(
+                event,
+                "remove_prefers_online_player",
+                SimpleTPAGameTests::removePrefersOnlinePlayer);
+        register(
+                event,
                 "accept_all_needs_confirmation",
                 SimpleTPAGameTests::acceptAllNeedsConfirmation);
         register(

@@ -3,6 +3,7 @@ package io.github.brainage04.simpletpa.platform;
 import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.gamerules.GameRule;
 
 public interface ServerPlatform {
@@ -24,4 +25,6 @@ public interface ServerPlatform {
     void registerServerStarted(java.util.function.Consumer<MinecraftServer> callback);
 
     void registerServerStopping(java.util.function.Consumer<MinecraftServer> callback);
+
+    void registerPlayerJoin(java.util.function.Consumer<ServerPlayer> callback);
 }
