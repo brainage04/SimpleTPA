@@ -116,7 +116,9 @@ public class TPRequestCommand {
      * Why {@code from}, who {@link #canBeMoved can be moved}, cannot be put on {@code to} now, as
      * words that follow "is", or null when nothing stops it. A removed target is in the End credits
      * (ServerPlayer.java:1128-1131) or between levels. A gliding or flying target is in the air,
-     * and a teleport arrives with no velocity (Entity.java:3446), so the requester would fall.
+     * and a teleport arrives with no velocity (Entity.java:3446), so a requester who cannot fly
+     * would fall. One who can fly takes no fall damage (Player.java:1438-1441). Like vanilla's own
+     * flight checks (Player.java:451,1958), a target counts as flying only while riding nothing.
      *
      * <p>The spot checks are a subset of the ones vanilla makes for a respawn spot in {@code
      * DismountHelper.findSafeDismountLocation} (DismountHelper.java:80-111): no block collision, no
@@ -135,11 +137,13 @@ public class TPRequestCommand {
         if (to.isSpectator()) {
             return "in spectator mode";
         }
-        if (to.isFallFlying()) {
-            return "gliding";
-        }
-        if (to.getAbilities().flying) {
-            return "flying";
+        if (!from.getAbilities().mayfly) {
+            if (to.isFallFlying()) {
+                return "gliding";
+            }
+            if (to.getAbilities().flying && !to.isPassenger()) {
+                return "flying";
+            }
         }
         ServerLevel level = to.level();
         AABB arrival = from.getBoundingBox().move(to.position().subtract(from.position()));

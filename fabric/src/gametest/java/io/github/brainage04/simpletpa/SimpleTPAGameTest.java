@@ -65,6 +65,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest
+    public void teleportsWhenNobodyFalls(GameTestHelper helper) {
+        SimpleTPAGameTests.teleportsWhenNobodyFalls(helper);
+    }
+
+    @GameTest
     public void requestButtons(GameTestHelper helper) {
         SimpleTPAGameTests.requestButtons(helper);
     }

@@ -51,6 +51,8 @@ public final class NeoForgeServerGameTests {
                 event,
                 "accept_waits_for_sender_who_cannot_move",
                 SimpleTPAGameTests::acceptWaitsForSenderWhoCannotMove);
+        register(
+                event, "teleports_when_nobody_falls", SimpleTPAGameTests::teleportsWhenNobodyFalls);
         register(event, "request_buttons", SimpleTPAGameTests::requestButtons);
         register(event, "tpauto_alias", SimpleTPAGameTests::tpautoAlias);
         register(event, "remove_offline_player", SimpleTPAGameTests::removeOfflinePlayer);

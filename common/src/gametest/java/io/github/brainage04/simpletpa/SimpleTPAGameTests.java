@@ -44,6 +44,7 @@ import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.gamerules.GameRule;
@@ -491,6 +492,73 @@ public final class SimpleTPAGameTests {
                         players[0].getScoreboardName()
                                 + " could not be teleported. Their TP request is still open.",
                 players -> players[1]);
+    }
+
+    /** What a requester and target are doing, in a case where the requester takes no fall. */
+    private record NoFall(String name, BiConsumer<ServerPlayer, ServerPlayer> setUp) {}
+
+    /**
+     * A target in the air does not stop a requester who can fly, and a flying flag still set while
+     * the target rides something is not flying. The whitelisted requester is moved at once. Joined
+     * players start on one spot, so each target is moved away first; otherwise a refused teleport
+     * would leave the requester on the target too.
+     */
+    public static void teleportsWhenNobodyFalls(GameTestHelper helper) {
+        List<NoFall> cases =
+                List.of(
+                        new NoFall(
+                                "a creative requester to a flying target",
+                                (from, to) -> {
+                                    fixture(from).gameMode(GameType.CREATIVE);
+                                    FLYING.apply().accept(helper, to);
+                                    to.setPos(
+                                            Vec3.atBottomCenterOf(
+                                                    helper.absolutePos(new BlockPos(1, 5, 1))));
+                                }),
+                        new NoFall(
+                                "a creative requester to a gliding target",
+                                (from, to) -> {
+                                    fixture(from).gameMode(GameType.CREATIVE);
+                                    GLIDING.apply().accept(helper, to);
+                                    to.setPos(
+                                            Vec3.atBottomCenterOf(
+                                                    helper.absolutePos(new BlockPos(5, 5, 5))));
+                                }),
+                        new NoFall(
+                                "a survival requester to a target riding with flight on",
+                                (from, to) -> {
+                                    FLYING.apply().accept(helper, to);
+                                    to.startRiding(
+                                            helper.spawn(
+                                                    EntityTypes.MINECART, new BlockPos(3, 2, 3)),
+                                            true,
+                                            false);
+                                }));
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        cases.forEach(ignored -> pair(helper, pairs::add));
+        at(
+                helper,
+                1,
+                () -> {
+                    for (int i = 0; i < cases.size(); i++) {
+                        ServerPlayer from = pairs.get(i)[0];
+                        ServerPlayer to = pairs.get(i)[1];
+                        cases.get(i).setUp().accept(from, to);
+                        if (from.position().equals(to.position())) {
+                            fail(helper, cases.get(i).name() + " started on the target");
+                            return;
+                        }
+                        InstantTpaWhitelist.add(to, from);
+                        command(from, "tpa " + to.getScoreboardName());
+                        if (!from.position().equals(to.position())) {
+                            fail(
+                                    helper,
+                                    cases.get(i).name() + " was not moved, got " + texts(from));
+                            return;
+                        }
+                    }
+                    succeed(helper);
+                });
     }
 
     /**
