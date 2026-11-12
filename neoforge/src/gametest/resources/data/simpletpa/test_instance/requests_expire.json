@@ -1,0 +1,1 @@
+{"environment":"minecraft:default","structure":"minecraftmodconventions:empty","max_ticks":20,"type":"minecraft:function","function":"simpletpa:requests_expire"}

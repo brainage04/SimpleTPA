@@ -10,6 +10,7 @@ import io.github.brainage04.simpletpa.command.TPAutoAcceptCommand;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
 import io.github.brainage04.simpletpa.data.LegacyGameRule;
+import io.github.brainage04.simpletpa.event.ModTickEvents;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -134,6 +135,56 @@ public final class SimpleTPAGameTests {
                     }
                     succeed(helper);
                 });
+    }
+
+    /**
+     * A request older than the lifetime expires and both players are told; a younger one stays. The
+     * requests are backdated instead of waiting a minute.
+     */
+    public static void requestsExpire(GameTestHelper helper) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        pair(helper, pairs::add);
+        pair(helper, pairs::add);
+        ServerPlayer[] old = pairs.get(0);
+        ServerPlayer[] young = pairs.get(1);
+        command(old[0], "tpa " + old[1].getScoreboardName());
+        command(young[0], "tpa " + young[1].getScoreboardName());
+        backdate(old, ModTickEvents.REQUEST_LIFETIME_TICKS);
+        backdate(young, ModTickEvents.REQUEST_LIFETIME_TICKS - 5);
+        helper.runAtTickTime(
+                2,
+                () -> {
+                    if (pending(old[1], old[0]))
+                        fail(helper, "a request older than its lifetime is still open");
+                    else if (!pending(young[1], young[0]))
+                        fail(helper, "a request expired before its lifetime");
+                    else if (!received(
+                            old[1],
+                            "[SimpleTPA] The TP request that "
+                                    + old[0].getScoreboardName()
+                                    + " sent you has expired."))
+                        fail(helper, "receiver was not told, got " + texts(old[1]));
+                    else if (!received(
+                            old[0],
+                            "[SimpleTPA] The TP request that you sent to "
+                                    + old[1].getScoreboardName()
+                                    + " has expired."))
+                        fail(helper, "sender was not told, got " + texts(old[0]));
+                    else succeed(helper);
+                });
+    }
+
+    private static void backdate(ServerPlayer[] players, int ticks) {
+        TPRequestCommand.TP_REQUESTS.replaceAll(
+                request ->
+                        request.matches(players[1].getUUID(), players[0].getUUID())
+                                ? new TPRequestCommand.TPRequest(
+                                        request.toId(),
+                                        request.toName(),
+                                        request.fromId(),
+                                        request.fromName(),
+                                        request.created() - ticks)
+                                : request);
     }
 
     public static void denyFlows(GameTestHelper helper) {

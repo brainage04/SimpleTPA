@@ -28,6 +28,7 @@ public final class NeoForgeServerGameTests {
         register(event, "tpa_alias_accept_flow", SimpleTPAGameTests::tpaAliasAcceptFlow);
         register(event, "tpa_tab_completion", SimpleTPAGameTests::tpaTabCompletion);
         register(event, "deny_flows", SimpleTPAGameTests::denyFlows);
+        register(event, "requests_expire", SimpleTPAGameTests::requestsExpire);
         register(event, "named_deny_flow", SimpleTPAGameTests::namedDenyFlow);
         register(
                 event,

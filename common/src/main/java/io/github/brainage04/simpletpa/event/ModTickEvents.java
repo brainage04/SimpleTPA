@@ -6,12 +6,14 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 public class ModTickEvents {
+    public static final int REQUEST_LIFETIME_TICKS = 60 * 20;
+
     public static void onEndServerTick(MinecraftServer server) {
         long time = server.overworld().getGameTime();
 
         TPRequestCommand.TP_REQUESTS.removeIf(
                 tpRequest -> {
-                    if (time - tpRequest.created() < 1200) {
+                    if (time - tpRequest.created() < REQUEST_LIFETIME_TICKS) {
                         return false;
                     }
 

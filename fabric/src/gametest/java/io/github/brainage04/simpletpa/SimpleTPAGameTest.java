@@ -20,6 +20,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest
+    public void requestsExpire(GameTestHelper helper) {
+        SimpleTPAGameTests.requestsExpire(helper);
+    }
+
+    @GameTest
     public void denyFlows(GameTestHelper helper) {
         SimpleTPAGameTests.denyFlows(helper);
     }
