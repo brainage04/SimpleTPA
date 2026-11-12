@@ -37,7 +37,7 @@ Each player keeps an "auto-accept" whitelist of players who may teleport to them
 
 ## Configuration
 
-The only setting is the `simpletpa:auto_accept` gamerule (default `true`), described under Commands.
+The only setting is the `simpletpa:auto_accept` gamerule (default `true`), described under Commands. SimpleTPA 1.1.0 and earlier called it `simpletpa:allow_instant_tpa_accepting`; a world that set the old name keeps its value the first time it starts with a later version.
 
 ## Compatibility
 

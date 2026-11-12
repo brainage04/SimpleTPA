@@ -14,6 +14,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -64,6 +65,12 @@ public final class SimpleTPANeoForge implements ServerPlatform {
     public void registerEndServerTick(java.util.function.Consumer<MinecraftServer> callback) {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (ServerTickEvent.Post event) -> callback.accept(event.getServer()));
+    }
+
+    @Override
+    public void registerServerStarting(java.util.function.Consumer<MinecraftServer> callback) {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (ServerAboutToStartEvent event) -> callback.accept(event.getServer()));
     }
 
     @Override

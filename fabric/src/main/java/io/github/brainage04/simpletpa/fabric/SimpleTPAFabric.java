@@ -45,6 +45,11 @@ public final class SimpleTPAFabric implements ModInitializer, ServerPlatform {
     }
 
     @Override
+    public void registerServerStarting(java.util.function.Consumer<MinecraftServer> callback) {
+        ServerLifecycleEvents.SERVER_STARTING.register(callback::accept);
+    }
+
+    @Override
     public void registerServerStarted(java.util.function.Consumer<MinecraftServer> callback) {
         ServerLifecycleEvents.SERVER_STARTED.register(callback::accept);
     }

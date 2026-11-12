@@ -76,6 +76,7 @@ public final class NeoForgeServerGameTests {
         register(event, "add_wildcard_rejected", SimpleTPAGameTests::addWildcardRejected);
         register(event, "combined_server_help", SimpleTPAGameTests::combinedServerHelp);
         register(event, "gamerule_registration", SimpleTPAGameTests::gameruleRegistration);
+        register(event, "legacy_game_rule_migrates", SimpleTPAGameTests::legacyGameRuleMigrates);
     }
 
     private static void register(

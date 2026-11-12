@@ -9,10 +9,12 @@ import io.github.brainage04.brainagelib.help.ServerModHelpRegistry;
 import io.github.brainage04.simpletpa.command.TPAutoAcceptCommand;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
+import io.github.brainage04.simpletpa.data.LegacyGameRule;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -29,16 +31,23 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.gamerules.GameRule;
+import net.minecraft.world.level.gamerules.GameRuleMap;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelResource;
+import net.minecraft.world.level.storage.SavedDataStorage;
 import net.minecraft.world.phys.Vec3;
 
 public final class SimpleTPAGameTests {
@@ -1108,6 +1117,89 @@ public final class SimpleTPAGameTests {
                         Identifier.fromNamespaceAndPath(SimpleTPA.MOD_ID, "auto_accept"));
         if (SimpleTPA.AUTO_ACCEPT != null && registered == SimpleTPA.AUTO_ACCEPT) succeed(helper);
         else fail(helper, "simpletpa:auto_accept gamerule is not registered");
+    }
+
+    /**
+     * A world saved by v1.1.0 with {@code simpletpa:allow_instant_tpa_accepting} false keeps
+     * auto-accept off, once: after the start's save, the current rule decides.
+     */
+    public static void legacyGameRuleMigrates(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        Path dataFolder = null;
+        try {
+            dataFolder = Files.createTempDirectory("simpletpa-game-rules");
+            Path file = GameRuleMap.TYPE.id().withSuffix(".dat").resolveAgainst(dataFolder);
+            Files.createDirectories(file.getParent());
+            CompoundTag rules = new CompoundTag();
+            rules.putBoolean(LegacyGameRule.LEGACY_ID.toString(), false);
+            CompoundTag saved = new CompoundTag();
+            saved.put("data", rules);
+            NbtIo.writeCompressed(NbtUtils.addCurrentDataVersion(saved), file);
+
+            try (SavedDataStorage storage = savedData(server, dataFolder)) {
+                GameRules loaded = gameRules(server, storage);
+                if (!loaded.get(SimpleTPA.AUTO_ACCEPT)) {
+                    fail(helper, "the game kept the legacy value without the migration");
+                    return;
+                }
+                LegacyGameRule.migrate(storage, dataFolder, loaded);
+                if (loaded.get(SimpleTPA.AUTO_ACCEPT)) {
+                    fail(helper, "a world with the legacy rule false loaded with auto-accept on");
+                    return;
+                }
+                storage.saveAndJoin();
+            }
+            try (SavedDataStorage storage = savedData(server, dataFolder)) {
+                GameRules reloaded = gameRules(server, storage);
+                LegacyGameRule.migrate(storage, dataFolder, reloaded);
+                if (reloaded.get(SimpleTPA.AUTO_ACCEPT)) {
+                    fail(helper, "the migrated value was not saved");
+                    return;
+                }
+                reloaded.set(SimpleTPA.AUTO_ACCEPT, true, null);
+                storage.saveAndJoin();
+            }
+            try (SavedDataStorage storage = savedData(server, dataFolder)) {
+                GameRules reloaded = gameRules(server, storage);
+                LegacyGameRule.migrate(storage, dataFolder, reloaded);
+                if (!reloaded.get(SimpleTPA.AUTO_ACCEPT)) {
+                    fail(helper, "the legacy value overrode auto-accept after the migration");
+                    return;
+                }
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException(exception);
+        } finally {
+            deleteTree(dataFolder);
+        }
+        succeed(helper);
+    }
+
+    // The server makes its own storage with this level-less constructor (MinecraftServer.java:325).
+    // It is the only one Fabric and vanilla have, and the common source set compiles against both.
+    // deprecated-api: only NeoForge deprecates it, for one taking a level (SavedDataStorage patch)
+    @SuppressWarnings("deprecation")
+    private static SavedDataStorage savedData(MinecraftServer server, Path dataFolder) {
+        return new SavedDataStorage(dataFolder, server.getFixerUpper(), server.registryAccess());
+    }
+
+    /** Opens the game rules as the server's constructor does (MinecraftServer.java:340). */
+    private static GameRules gameRules(MinecraftServer server, SavedDataStorage storage) {
+        return new GameRules(
+                server.getWorldData().enabledFeatures(), storage.computeIfAbsent(GameRuleMap.TYPE));
+    }
+
+    private static void deleteTree(Path root) {
+        if (root == null) {
+            return;
+        }
+        try (Stream<Path> paths = Files.walk(root)) {
+            for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+                Files.delete(path);
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException(exception);
+        }
     }
 
     private static String checkButton(

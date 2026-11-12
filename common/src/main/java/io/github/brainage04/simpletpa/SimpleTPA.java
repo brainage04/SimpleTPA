@@ -7,6 +7,7 @@ import io.github.brainage04.simpletpa.command.TPAutoAcceptCommand;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.command.core.ModCommands;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
+import io.github.brainage04.simpletpa.data.LegacyGameRule;
 import io.github.brainage04.simpletpa.event.ModTickEvents;
 import io.github.brainage04.simpletpa.platform.ServerPlatform;
 import net.minecraft.world.level.gamerules.GameRule;
@@ -27,6 +28,7 @@ public final class SimpleTPA {
         AUTO_ACCEPT = platform.registerAutoAcceptGameRule();
         platform.registerCommands(ModCommands::register);
         platform.registerEndServerTick(ModTickEvents::onEndServerTick);
+        platform.registerServerStarting(LegacyGameRule::migrate);
         platform.registerServerStarted(InstantTpaWhitelist::load);
         platform.registerServerStopping(
                 server -> {
