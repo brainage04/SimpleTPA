@@ -175,9 +175,13 @@ public final class SimpleTPAFilm {
         show(context, ACCEPT);
         context.waitTicks(10);
         server.runOnServer(
-                minecraftServer ->
-                        SimpleTPAFakePlayerScenario.executeCommand(
-                                friend(minecraftServer), "tpaccept"));
+                minecraftServer -> {
+                    // The arrival takes the target's facing, so the friend turns to the open stage
+                    // and the camera does not land nose to nose with the stage's gate.
+                    SimpleTPAFakePlayerScenario.place(
+                            friend(minecraftServer), FRIEND_POSITION, EAST, 0.0F);
+                    SimpleTPAFakePlayerScenario.executeCommand(friend(minecraftServer), "tpaccept");
+                });
         context.waitTicks(8);
         server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
         context.waitTicks(30);
