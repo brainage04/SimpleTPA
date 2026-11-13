@@ -58,7 +58,7 @@ public final class Landing {
 
     /**
      * Whether the drop below {@code arrival} would hurt {@code from}, judged by the game's fall
-     * damage rule (LivingEntity.java:1851-1861) for their own attributes. The fall stops at the
+     * damage rule (LivingEntity.java:1851-1858) for their own attributes. The fall stops at the
      * first block or standable entity below, and water or a block the game tags as resetting fall
      * damage on the way down (Entity.java:770-780,1684-1689) takes the damage away, as does the
      * landing block's own reduction (Block.java:486-489).
