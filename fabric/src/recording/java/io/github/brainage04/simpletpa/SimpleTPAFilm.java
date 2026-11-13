@@ -353,6 +353,11 @@ public final class SimpleTPAFilm {
                     target.setShiftKeyDown(true);
                     SimpleTPAFakePlayerScenario.place(target, STEP_POSITION, WEST, 20.0F);
                     look(player, PLAYER_POSITION, STEP_POSITION);
+                    // The check is on again here, so the short drop passes on its length.
+                    minecraftServer
+                            .getCommands()
+                            .performPrefixedCommand(
+                                    player.createCommandSourceStack(), "tpasafety on");
                 });
         context.waitTicks(10);
         typeCommand(context, "tpa " + FRIEND_NAME);
