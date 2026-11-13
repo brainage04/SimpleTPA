@@ -58,12 +58,16 @@ public final class Landing {
 
     /**
      * Whether the drop below {@code arrival} would hurt {@code from}, judged by the game's fall
-     * damage rule (LivingEntity.java:1851-1862) for their own attributes. The fall stops at the
+     * damage rule (LivingEntity.java:1851-1861) for their own attributes. The fall stops at the
      * first block or standable entity below, and water or a block the game tags as resetting fall
      * damage on the way down (Entity.java:770-780,1684-1689) takes the damage away, as does the
      * landing block's own reduction (Block.java:486-489).
+     *
+     * <p>{@code level} holds {@code arrival}: a cross-dimension request arrives in the target's
+     * level, not the requester's, and reading the requester's level would judge the drop against
+     * another world's blocks.
      */
-    public static boolean dropHurts(ServerPlayer from, AABB arrival) {
+    public static boolean dropHurts(ServerLevel level, ServerPlayer from, AABB arrival) {
         if (from.is(EntityTypeTags.FALL_DAMAGE_IMMUNE)) {
             return false;
         }
@@ -74,7 +78,6 @@ public final class Landing {
 
         double safeDistance = from.getAttributeValue(Attributes.SAFE_FALL_DISTANCE);
         double reach = Math.min(MAX_SCAN, Math.ceil(safeDistance + 1.0 / multiplier) + 1.0);
-        ServerLevel level = from.level();
         AABB column = arrival.setMinY(arrival.minY - reach).setMaxY(arrival.minY);
         List<VoxelShape> colliders = Entity.collectAllColliders(from, level, column);
         double drop = -Shapes.collide(Direction.Axis.Y, arrival, colliders, -reach);
@@ -101,6 +104,8 @@ public final class Landing {
         BlockState landing = level.getBlockState(landingPos);
         double distance =
                 (arrival.minY - support) * (1.0F - landing.getBlock().getFallDistanceReduction());
-        return Math.floor(distance + 1.0E-6 - safeDistance) * multiplier > 0.0;
+        // The game floors the damage after applying the multiplier, not the distance before it
+        // (LivingEntity.java:1857).
+        return Math.floor((distance + 1.0E-6 - safeDistance) * multiplier) > 0.0;
     }
 }

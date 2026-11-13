@@ -44,14 +44,18 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.happyghast.HappyGhast;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.gamerules.GameRule;
 import net.minecraft.world.level.gamerules.GameRuleMap;
@@ -625,7 +629,7 @@ public final class SimpleTPAGameTests {
                                 AABB seat =
                                         from.getBoundingBox()
                                                 .move(to.position().subtract(from.position()));
-                                if (!Landing.dropHurts(from, seat)) {
+                                if (!Landing.dropHurts(to.level(), from, seat)) {
                                     fail(helper, "the drop from the rider's seat was too short");
                                     return;
                                 }
@@ -761,6 +765,97 @@ public final class SimpleTPAGameTests {
                         }
                     }
                     succeed(helper);
+                });
+    }
+
+    /**
+     * A request that crosses dimensions judges the drop against the target's level. The target
+     * stands on a stone block in the Nether with nothing but air below it in the Overworld at the
+     * same coordinates, so reading the requester's level would refuse the request as a long drop.
+     */
+    public static void teleportsBetweenDimensions(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    ServerPlayer to = players[1];
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                ServerLevel nether =
+                                        helper.getLevel().getServer().getLevel(Level.NETHER);
+                                if (nether == null) {
+                                    fail(helper, "the test server has no Nether");
+                                    return;
+                                }
+                                BlockPos spot = helper.absolutePos(new BlockPos(1, 6, 1));
+                                Vec3 seat = Vec3.atBottomCenterOf(spot);
+                                // Nothing within the check's reach below the same coordinates in
+                                // the requester's level, so only the target's level can say the
+                                // drop is short.
+                                for (int below = 1; below <= 5; below++) {
+                                    helper.setBlock(new BlockPos(1, 6 - below, 1), Blocks.AIR);
+                                }
+                                if (!to.teleportTo(
+                                        nether, seat.x, seat.y, seat.z, Set.of(), 0.0F, 0.0F,
+                                        false)) {
+                                    fail(helper, "the target could not be put in the Nether");
+                                    return;
+                                }
+                                nether.setBlockAndUpdate(
+                                        spot.below(), Blocks.STONE.defaultBlockState());
+                                InstantTpaWhitelist.add(to, from);
+                                command(from, "tpa " + to.getScoreboardName());
+                                if (!from.position().equals(to.position())) {
+                                    fail(
+                                            helper,
+                                            "a drop in the target's own level was refused, got "
+                                                    + texts(from));
+                                    return;
+                                }
+                                succeed(helper);
+                            });
+                });
+    }
+
+    /**
+     * The drop check floors the damage after the fall damage multiplier, as the game does
+     * (LivingEntity.java:1856-1857): at a multiplier of 0.5 a four block drop deals floor((4 + 1e-6
+     * - 3) * 0.5) = 0 damage, while flooring first would read 1 * 0.5 and refuse.
+     */
+    public static void smallFallMultiplierAcceptsAHurtlessDrop(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    ServerPlayer to = players[1];
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                AttributeInstance multiplier =
+                                        from.getAttribute(Attributes.FALL_DAMAGE_MULTIPLIER);
+                                if (multiplier == null) {
+                                    fail(helper, "the requester has no fall damage multiplier");
+                                    return;
+                                }
+                                multiplier.setBaseValue(0.5);
+                                floorBelow(helper, 1);
+                                to.setPos(
+                                        Vec3.atBottomCenterOf(
+                                                helper.absolutePos(new BlockPos(1, 6, 1))));
+                                InstantTpaWhitelist.add(to, from);
+                                command(from, "tpa " + to.getScoreboardName());
+                                if (!from.position().equals(to.position())) {
+                                    fail(
+                                            helper,
+                                            "a drop that deals no damage was refused, got "
+                                                    + texts(from));
+                                    return;
+                                }
+                                succeed(helper);
+                            });
                 });
     }
 

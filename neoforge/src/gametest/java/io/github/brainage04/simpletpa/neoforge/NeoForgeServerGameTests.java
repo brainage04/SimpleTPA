@@ -58,6 +58,14 @@ public final class NeoForgeServerGameTests {
         register(event, "accepts_short_drop", SimpleTPAGameTests::acceptsShortDrop);
         register(
                 event,
+                "teleports_between_dimensions",
+                SimpleTPAGameTests::teleportsBetweenDimensions);
+        register(
+                event,
+                "small_fall_multiplier_accepts_a_hurtless_drop",
+                SimpleTPAGameTests::smallFallMultiplierAcceptsAHurtlessDrop);
+        register(
+                event,
                 "creative_skips_landing_checks",
                 SimpleTPAGameTests::creativeSkipsLandingChecks);
         register(

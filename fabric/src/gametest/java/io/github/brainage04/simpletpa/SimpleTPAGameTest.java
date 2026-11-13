@@ -85,6 +85,16 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void teleportsBetweenDimensions(GameTestHelper helper) {
+        SimpleTPAGameTests.teleportsBetweenDimensions(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void smallFallMultiplierAcceptsAHurtlessDrop(GameTestHelper helper) {
+        SimpleTPAGameTests.smallFallMultiplierAcceptsAHurtlessDrop(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void creativeSkipsLandingChecks(GameTestHelper helper) {
         SimpleTPAGameTests.creativeSkipsLandingChecks(helper);
     }
