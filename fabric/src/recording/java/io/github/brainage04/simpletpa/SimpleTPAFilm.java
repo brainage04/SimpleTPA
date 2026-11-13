@@ -4,8 +4,8 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import io.github.brainage04.brainagelib.gametest.GameTestPlayer;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestRecorder;
-import io.github.brainage04.minecraftmodconventions.ClientGameTestStages;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestServers;
+import io.github.brainage04.minecraftmodconventions.ClientGameTestStages;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
 import java.util.Properties;
@@ -109,11 +109,13 @@ public final class SimpleTPAFilm {
     private static final float WEST = 90.0F;
     private static final float PLAYER_PITCH = 6.0F;
     private static final int COMMAND_VISIBLE_TICKS = 20;
+
     /** Frames a stage keeps after its end marker, so a cut never lands on the next scene. */
     private static final int STAGE_HOLD_TICKS = 6;
 
     /** The stage on screen, for {@link #show}. */
     private static String stage;
+
     private static final Vec3 LOOKOUT_POSITION = new Vec3(-11.5D, STAGE_Y, 0.5D);
     private static final Vec3 HIGH_POSITION = new Vec3(2.5D, 78.0D, -5.5D);
     private static final Vec3 GHAST_POSITION = new Vec3(2.5D, 70.0D, 0.5D);
@@ -146,6 +148,8 @@ public final class SimpleTPAFilm {
                     try {
                         context.runOnClient(
                                 client -> client.gui.hud.getChat().clearMessages(false));
+                        // The first frame before the world draws has no terrain yet.
+                        context.waitTicks(10);
                         showAcceptedRequest(context, server, playerName);
                         showDeniedRequest(context, server, playerName);
                         showClickedAccept(context, server, playerName, afterClickedAccept);
@@ -447,7 +451,7 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Moves the friend two blocks the way they face, out of the camera of a player who has just
+     * Moves the friend three blocks the way they face, out of the camera of a player who has just
      * arrived on them, so the shot shows both of them instead of the inside of the friend's head.
      */
     private static void stepAside(ServerPlayer friend) {
@@ -458,7 +462,7 @@ public final class SimpleTPAFilm {
                         Math.cos(Math.toRadians(friend.getYRot())));
         SimpleTPAFakePlayerScenario.place(
                 friend,
-                friend.position().add(facing.scale(2.0D)),
+                friend.position().add(facing.scale(3.0D)),
                 friend.getYRot(),
                 friend.getXRot());
     }
