@@ -13,6 +13,7 @@ import io.github.brainage04.simpletpa.SimpleTPA;
 import io.github.brainage04.simpletpa.command.TPAutoAcceptCommand;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.command.TPResponseCommand;
+import io.github.brainage04.simpletpa.command.TPSafetyCommand;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
 import java.util.List;
 import java.util.function.Function;
@@ -82,6 +83,22 @@ public final class ModCommands {
         // bare /tpauto form gets its own executes; everything after it goes through /tpautoaccept.
         dispatcher.register(literal("tpauto").executes(acceptAll).redirect(tpautoaccept));
 
+        dispatcher.register(
+                literal("tpasafety")
+                        .executes(context -> TPSafetyCommand.show(context.getSource()))
+                        .then(
+                                literal("on")
+                                        .executes(
+                                                context ->
+                                                        TPSafetyCommand.set(
+                                                                context.getSource(), true)))
+                        .then(
+                                literal("off")
+                                        .executes(
+                                                context ->
+                                                        TPSafetyCommand.set(
+                                                                context.getSource(), false))));
+
         HelpPage.create(SimpleTPA.FEEDBACK, "simpletpa")
                 .line(
                         "/tpa <player> - request to teleport to another player (/tprequest also works)")
@@ -91,6 +108,8 @@ public final class ModCommands {
                         "/tpautoaccept <list|add|remove|clear> - manage automatic approvals (/tpauto also works)")
                 .line(
                         "/tpautoaccept [*] - accept requests from everyone (run twice to confirm, again to turn off)")
+                .line(
+                        "/tpasafety [on|off] - show or change whether your TP requests wait while the player you teleport to is in the air above a long drop")
                 .register(dispatcher);
     }
 

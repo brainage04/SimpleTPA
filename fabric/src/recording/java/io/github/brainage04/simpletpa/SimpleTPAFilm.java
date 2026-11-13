@@ -5,6 +5,8 @@ import com.mojang.blaze3d.platform.Window;
 import io.github.brainage04.brainagelib.gametest.GameTestPlayer;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestRecorder;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestServers;
+import io.github.brainage04.simpletpa.command.TPRequestCommand;
+import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
 import java.util.Properties;
 import java.util.function.BiConsumer;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -19,6 +21,14 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.animal.happyghast.HappyGhast;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.gamerules.GameRules;
@@ -60,6 +70,39 @@ public final class SimpleTPAFilm {
                     "Auto-accept",
                     "You whitelist " + FRIEND_NAME + ", who can now teleport to you instantly");
 
+    private static final Caption NOTHING_TO_LAND_ON =
+            new Caption(
+                    "simpletpa.nolanding",
+                    "No landing spot",
+                    FRIEND_NAME
+                            + " hovers in the air with nothing under them, so your request waits");
+    private static final Caption HAPPY_GHAST =
+            new Caption(
+                    "simpletpa.happyghast",
+                    "Flying happy ghast",
+                    "You arrive on top of the happy ghast " + FRIEND_NAME + " rides");
+    private static final Caption LANDING_CHECK_OFF =
+            new Caption(
+                    "simpletpa.landingoff",
+                    "Landing check off",
+                    "With /tpasafety off, you arrive above the drop and fall");
+    private static final Caption SHORT_DROP =
+            new Caption(
+                    "simpletpa.shortdrop",
+                    "Short drop",
+                    FRIEND_NAME
+                            + " sneaks at the edge of a step, two blocks above the floor, and you arrive beside them");
+    private static final Caption ON_MAGMA =
+            new Caption(
+                    "simpletpa.magma",
+                    "Dangerous block",
+                    FRIEND_NAME + " stands on magma, so a survival request waits");
+    private static final Caption CREATIVE =
+            new Caption(
+                    "simpletpa.creative",
+                    "Creative mode",
+                    "In creative mode the same request goes through");
+
     private static final int STAGE_Y = 64;
     private static final Vec3 PLAYER_POSITION = new Vec3(-2.5D, STAGE_Y, 0.5D);
     private static final Vec3 FRIEND_POSITION = new Vec3(2.5D, STAGE_Y, 0.5D);
@@ -67,6 +110,12 @@ public final class SimpleTPAFilm {
     private static final float WEST = 90.0F;
     private static final float PLAYER_PITCH = 6.0F;
     private static final int COMMAND_VISIBLE_TICKS = 20;
+    private static final Vec3 LOOKOUT_POSITION = new Vec3(-11.5D, STAGE_Y, 0.5D);
+    private static final Vec3 HIGH_POSITION = new Vec3(2.5D, 78.0D, 0.5D);
+    private static final Vec3 GHAST_POSITION = new Vec3(2.5D, 70.0D, 0.5D);
+    private static final Vec3 STEP_POSITION = new Vec3(2.2D, STAGE_Y + 2, 0.5D);
+    private static final Vec3 STEP_BLOCK = new Vec3(1.0D, STAGE_Y + 1, 0.0D);
+    private static final Vec3 MAGMA_POSITION = new Vec3(2.5D, STAGE_Y, 4.5D);
 
     private SimpleTPAFilm() {}
 
@@ -97,6 +146,7 @@ public final class SimpleTPAFilm {
                         showDeniedRequest(context, server, playerName);
                         showClickedAccept(context, server, playerName, afterClickedAccept);
                         showAutoAcceptedRequest(context, server, playerName);
+                        showLandingChecks(context, server, playerName, friend[0]);
                     } finally {
                         server.runOnServer(minecraftServer -> friend[0].close());
                     }
@@ -226,6 +276,182 @@ public final class SimpleTPAFilm {
     }
 
     /**
+     * The landing checks, one scenario at a time: a request that waits, then a request that goes
+     * through. The friend's whitelist entry from the auto-accept scenario answers each request at
+     * once, so the reason a request waits is the message the player sees.
+     */
+    private static void showLandingChecks(
+            ClientGameTestContext context,
+            TestDedicatedServerContext server,
+            String playerName,
+            GameTestPlayer friend) {
+        show(context, NOTHING_TO_LAND_ON);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    clearRequests(friend(minecraftServer), player);
+                    // The friend approves the client's requests, so each one is answered at once.
+                    InstantTpaWhitelist.add(friend(minecraftServer), player);
+                    friend(minecraftServer).stopRiding();
+                    SimpleTPAFakePlayerScenario.place(
+                            friend(minecraftServer), HIGH_POSITION, WEST, 0.0F);
+                    look(player, LOOKOUT_POSITION, HIGH_POSITION);
+                });
+        context.waitTicks(10);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(30);
+
+        show(context, LANDING_CHECK_OFF);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    ServerPlayer rider = friend(minecraftServer);
+                    clearRequests(rider, player);
+                    rider.setXRot(0.0F);
+                    SimpleTPAFakePlayerScenario.place(rider, HIGH_POSITION, WEST, 0.0F);
+                    look(player, LOOKOUT_POSITION, HIGH_POSITION);
+                    minecraftServer
+                            .getCommands()
+                            .performPrefixedCommand(
+                                    player.createCommandSourceStack(), "tpasafety off");
+                });
+        context.waitTicks(10);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(45);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    player.setHealth(20.0F);
+                    player.getFoodData().setFoodLevel(20);
+                });
+
+        show(context, HAPPY_GHAST);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    ServerPlayer rider = friend(minecraftServer);
+                    clearRequests(rider, player);
+                    rider.startRiding(filmGhast(minecraftServer, rider), true, false);
+                    rider.setYRot(WEST);
+                    rider.setYHeadRot(WEST);
+                    rider.setXRot(30.0F);
+                    look(player, LOOKOUT_POSITION, rider.position());
+                });
+        context.waitTicks(10);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(25);
+        assertOnGhast(context, server, friend);
+        context.waitTicks(20);
+
+        show(context, SHORT_DROP);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    ServerPlayer target = friend(minecraftServer);
+                    clearRequests(target, player);
+                    target.stopRiding();
+                    target.setShiftKeyDown(true);
+                    SimpleTPAFakePlayerScenario.place(target, STEP_POSITION, WEST, 20.0F);
+                    look(player, PLAYER_POSITION, STEP_POSITION);
+                });
+        context.waitTicks(10);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(45);
+
+        show(context, ON_MAGMA);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    ServerPlayer target = friend(minecraftServer);
+                    clearRequests(target, player);
+                    target.setShiftKeyDown(false);
+                    SimpleTPAFakePlayerScenario.place(target, MAGMA_POSITION, WEST, 0.0F);
+                    look(player, PLAYER_POSITION, MAGMA_POSITION);
+                });
+        context.waitTicks(10);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(35);
+
+        show(context, CREATIVE);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    clearRequests(friend(minecraftServer), player);
+                    player.setGameMode(GameType.CREATIVE);
+                    look(player, PLAYER_POSITION, MAGMA_POSITION);
+                });
+        context.waitTicks(10);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(45);
+        server.runOnServer(
+                minecraftServer ->
+                        player(minecraftServer, playerName).setGameMode(GameType.SURVIVAL));
+        context.waitTicks(10);
+    }
+
+    /**
+     * Fails unless the client's player stands on the happy ghast: the game only holds a player
+     * whose feet are at or above its top (HappyGhast.java:576-585), so this is the client-side
+     * check of the arrival spot.
+     */
+    private static void assertOnGhast(
+            ClientGameTestContext context,
+            TestDedicatedServerContext server,
+            GameTestPlayer friend) {
+        double top =
+                server.computeOnServer(
+                        minecraftServer ->
+                                filmGhast(minecraftServer, friend(minecraftServer))
+                                        .getBoundingBox()
+                                        .maxY);
+        double[] player =
+                context.computeOnClient(
+                        (Minecraft game) ->
+                                game.player == null
+                                        ? new double[] {Double.NaN, Double.NaN}
+                                        : new double[] {
+                                            game.player.getY(), game.player.fallDistance
+                                        });
+        if (Math.abs(player[0] - top) > 0.25 || player[1] > 0.25) {
+            throw new AssertionError(
+                    "The player did not stay on the happy ghast: feet at "
+                            + player[0]
+                            + ", its top "
+                            + top
+                            + ", fall distance "
+                            + player[1]);
+        }
+    }
+
+    /** Places {@code player} at {@code position} looking at {@code target}. */
+    private static void look(ServerPlayer player, Vec3 position, Vec3 target) {
+        Vec3 towards = target.subtract(position.add(0.0D, 1.62D, 0.0D));
+        float yaw = (float) Math.toDegrees(Math.atan2(towards.z, towards.x)) - 90.0F;
+        float reach = (float) Math.sqrt(towards.x * towards.x + towards.z * towards.z);
+        float pitch = (float) -Math.toDegrees(Math.atan2(towards.y, reach));
+        SimpleTPAFakePlayerScenario.place(player, position, yaw, pitch);
+    }
+
+    /** Forgets the client's pending request, so the next scenario starts from a clean slate. */
+    private static void clearRequests(ServerPlayer friend, ServerPlayer player) {
+        TPRequestCommand.TP_REQUESTS.removeIf(
+                request -> request.matches(friend.getUUID(), player.getUUID()));
+    }
+
+    /** The happy ghast the film spawns before the client joins. */
+    private static HappyGhast filmGhast(MinecraftServer server, ServerPlayer friend) {
+        return friend
+                .level()
+                .getEntities(
+                        EntityTypes.HAPPY_GHAST,
+                        friend.getBoundingBox().inflate(64.0),
+                        entity -> true)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Expected the film's happy ghast."));
+    }
+
+    /**
      * Typed one character at a time, the partial command shows a parse error above it, so the
      * command is entered whole.
      */
@@ -266,6 +492,7 @@ public final class SimpleTPAFilm {
                                     BlockPos.containing(PLAYER_POSITION),
                                     EAST,
                                     PLAYER_PITCH));
+                    spawnGhast(level);
                     GameTestPlayer friend = SimpleTPAFakePlayerScenario.join(level, FRIEND_NAME);
                     placeFriend(friend.player());
                     SimpleTPAFakePlayerScenario.colorName(level, playerName, "aqua");
@@ -292,6 +519,25 @@ public final class SimpleTPAFilm {
                 BlockPos.containing(FRIEND_POSITION).below(),
                 Blocks.GOLD_BLOCK.defaultBlockState(),
                 3);
+        // The step the sneaking target stands on, two blocks above the stage floor, and the magma
+        // block a survival requester is refused on.
+        level.setBlock(BlockPos.containing(STEP_BLOCK), Blocks.STONE.defaultBlockState(), 3);
+        level.setBlock(
+                BlockPos.containing(MAGMA_POSITION).below(),
+                Blocks.MAGMA_BLOCK.defaultBlockState(),
+                3);
+    }
+
+    private static void spawnGhast(ServerLevel level) {
+        HappyGhast ghast = EntityTypes.HAPPY_GHAST.create(level, EntitySpawnReason.COMMAND);
+        if (ghast == null) {
+            throw new AssertionError("Could not create the film's happy ghast.");
+        }
+        ghast.setPos(GHAST_POSITION.x, GHAST_POSITION.y, GHAST_POSITION.z);
+        ghast.setNoAi(true);
+        ghast.setPersistenceRequired();
+        ghast.setItemSlot(EquipmentSlot.BODY, new ItemStack(Items.HARNESS.pick(DyeColor.WHITE)));
+        level.addFreshEntity(ghast);
     }
 
     private static void placeActors(ServerPlayer player, ServerPlayer friend) {

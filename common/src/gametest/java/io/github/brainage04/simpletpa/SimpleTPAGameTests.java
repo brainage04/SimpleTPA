@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import com.mojang.authlib.GameProfile;
 import io.github.brainage04.brainagelib.gametest.GameTestPlayer;
 import io.github.brainage04.brainagelib.help.ServerModHelpRegistry;
+import io.github.brainage04.simpletpa.command.Landing;
 import io.github.brainage04.simpletpa.command.TPAutoAcceptCommand;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
@@ -45,6 +46,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.animal.happyghast.HappyGhast;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.gamerules.GameRule;
@@ -52,6 +58,7 @@ import net.minecraft.world.level.gamerules.GameRuleMap;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.SavedDataStorage;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 public final class SimpleTPAGameTests {
@@ -71,7 +78,7 @@ public final class SimpleTPAGameTests {
                 helper,
                 players -> {
                     players[0].setPos(new Vec3(0, 0, 0));
-                    players[1].setPos(new Vec3(10.25, 10, 10.75));
+                    standOnStone(helper, players[1], new Vec3(10.25, 10, 10.75));
                     players[1].setYRot(135.0F);
                     players[1].setXRot(20.0F);
                     command(players[0], "tprequest " + players[1].getScoreboardName());
@@ -103,7 +110,7 @@ public final class SimpleTPAGameTests {
                 helper,
                 players -> {
                     players[0].setPos(new Vec3(0, 0, 0));
-                    players[1].setPos(new Vec3(10, 10, 10));
+                    standOnStone(helper, players[1], new Vec3(10, 10, 10));
                     command(players[0], "tpa " + players[1].getScoreboardName());
                     command(players[1], "tpaccept");
                     at(
@@ -200,7 +207,7 @@ public final class SimpleTPAGameTests {
                 helper,
                 players -> {
                     players[0].setPos(new Vec3(0, 0, 0));
-                    players[1].setPos(new Vec3(10, 10, 10));
+                    standOnStone(helper, players[1], new Vec3(10, 10, 10));
                     command(players[0], "tprequest " + players[1].getScoreboardName());
                     command(players[1], "tpdeny");
                     at(
@@ -219,7 +226,7 @@ public final class SimpleTPAGameTests {
                 helper,
                 players -> {
                     players[0].setPos(new Vec3(0, 0, 0));
-                    players[1].setPos(new Vec3(10, 10, 10));
+                    standOnStone(helper, players[1], new Vec3(10, 10, 10));
                     command(players[0], "tpa " + players[1].getScoreboardName());
                     command(players[1], "tpdeny " + players[0].getScoreboardName());
                     at(
@@ -339,7 +346,7 @@ public final class SimpleTPAGameTests {
                             2,
                             () -> {
                                 players[0].setPos(new Vec3(0, 0, 0));
-                                players[1].setPos(new Vec3(10, 10, 10));
+                                standOnStone(helper, players[1], new Vec3(10, 10, 10));
                             });
                     at(
                             helper,
@@ -365,7 +372,7 @@ public final class SimpleTPAGameTests {
                 helper,
                 players -> {
                     players[0].setPos(new Vec3(0, 0, 0));
-                    players[1].setPos(new Vec3(10, 10, 10));
+                    standOnStone(helper, players[1], new Vec3(10, 10, 10));
                     at(
                             helper,
                             1,
@@ -561,6 +568,324 @@ public final class SimpleTPAGameTests {
                 });
     }
 
+    /** A harnessed happy ghast at {@code relativePos}, staying where it is put. */
+    private static HappyGhast happyGhast(GameTestHelper helper, BlockPos relativePos) {
+        HappyGhast ghast = helper.spawn(EntityTypes.HAPPY_GHAST, relativePos);
+        ghast.setNoAi(true);
+        ghast.setItemSlot(EquipmentSlot.BODY, new ItemStack(Items.HARNESS.pick(DyeColor.WHITE)));
+        return ghast;
+    }
+
+    /**
+     * A stone floor around the structure, so a test owns the drop below the spot it measures. The
+     * test level is ordinary terrain, so its own ground would be at a height a test cannot predict.
+     */
+    private static void floorBelow(GameTestHelper helper, int relativeY) {
+        for (int x = 0; x <= 2; x++) {
+            for (int z = 0; z <= 2; z++) {
+                helper.setBlock(new BlockPos(x, relativeY, z), Blocks.STONE);
+            }
+        }
+    }
+
+    /**
+     * Puts {@code player} at {@code position} on a stone block, so the arrival spot has no drop.
+     * The drop check refuses a spot in the air above a drop that would hurt, and the test level's
+     * own ground under these coordinates is far below.
+     */
+    private static void standOnStone(GameTestHelper helper, ServerPlayer player, Vec3 position) {
+        player.setPos(position);
+        helper.getLevel()
+                .setBlockAndUpdate(
+                        BlockPos.containing(position).below(), Blocks.STONE.defaultBlockState());
+    }
+
+    /**
+     * A survival requester teleported to a player riding a harnessed happy ghast arrives on the
+     * ghast's top rather than in the rider's seat, where the client would not hold them
+     * (HappyGhast.java:576-585), and the long floor below does not refuse the request.
+     */
+    public static void teleportsOntoHappyGhast(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    ServerPlayer to = players[1];
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                HappyGhast ghast = happyGhast(helper, new BlockPos(1, 2, 1));
+                                to.startRiding(ghast, true, false);
+                                if (to.getVehicle() != ghast) {
+                                    fail(helper, "the target did not get on the ghast");
+                                    return;
+                                }
+                                double top = ghast.getBoundingBox().maxY;
+                                AABB seat =
+                                        from.getBoundingBox()
+                                                .move(to.position().subtract(from.position()));
+                                if (!Landing.dropHurts(from, seat)) {
+                                    fail(helper, "the drop from the rider's seat was too short");
+                                    return;
+                                }
+                                InstantTpaWhitelist.add(to, from);
+                                command(from, "tpa " + to.getScoreboardName());
+                                AABB box = ghast.getBoundingBox();
+                                Vec3 expected =
+                                        new Vec3(
+                                                (box.minX + box.maxX) / 2.0,
+                                                top,
+                                                (box.minZ + box.maxZ) / 2.0);
+                                if (from.position().distanceToSqr(expected) > 1.0E-8) {
+                                    fail(
+                                            helper,
+                                            "the requester arrived at "
+                                                    + from.position()
+                                                    + " instead of the ghast's top, "
+                                                    + expected
+                                                    + ", got "
+                                                    + texts(from));
+                                    return;
+                                }
+                                succeed(helper);
+                            });
+                });
+    }
+
+    /**
+     * A target in the air above a drop that would hurt is refused while the requester's safety
+     * check is on, and the same request goes through once they turn it off.
+     */
+    public static void refusesLongDrop(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    ServerPlayer to = players[1];
+                    Vec3 start = from.position();
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                floorBelow(helper, 1);
+                                to.setPos(
+                                        Vec3.atBottomCenterOf(
+                                                helper.absolutePos(new BlockPos(1, 6, 1))));
+                                InstantTpaWhitelist.add(to, from);
+                                command(from, "tpa " + to.getScoreboardName());
+                            });
+                    at(
+                            helper,
+                            2,
+                            () -> {
+                                String expected =
+                                        "[SimpleTPA] "
+                                                + to.getScoreboardName()
+                                                + " is in the air above a long drop, so your TP request was not accepted automatically.";
+                                if (!from.position().equals(start)) {
+                                    fail(helper, "teleported into a long drop");
+                                    return;
+                                }
+                                if (!pending(to, from)) {
+                                    fail(helper, "the request closed over a long drop");
+                                    return;
+                                }
+                                if (!received(from, expected)) {
+                                    fail(
+                                            helper,
+                                            "not told \"" + expected + "\", got " + texts(from));
+                                    return;
+                                }
+                                command(from, "tpasafety off");
+                                command(to, "tpaccept");
+                            });
+                    at(
+                            helper,
+                            3,
+                            () -> {
+                                String off =
+                                        "[SimpleTPA] Your TP requests go through while the player you teleport to is in the air above a long drop, so you will fall when you arrive.";
+                                if (!received(from, off)) {
+                                    fail(helper, "no safety-off message, got " + texts(from));
+                                    return;
+                                }
+                                if (!from.position().equals(to.position())) {
+                                    fail(
+                                            helper,
+                                            "the request did not go through once the check was off, got "
+                                                    + texts(from));
+                                    return;
+                                }
+                                succeed(helper);
+                            });
+                });
+    }
+
+    /**
+     * Short drops pass: a target sneaking at the edge of a block, and a target over the air two
+     * blocks above the floor. Both are shorter than the game's safe fall distance
+     * (Attributes.SAFE_FALL_DISTANCE).
+     */
+    public static void acceptsShortDrop(GameTestHelper helper) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        pair(helper, pairs::add);
+        pair(helper, pairs::add);
+        at(
+                helper,
+                1,
+                () -> {
+                    floorBelow(helper, 1);
+                    helper.setBlock(new BlockPos(1, 3, 1), Blocks.STONE);
+                    Vec3 ledge = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 4, 1)));
+                    ServerPlayer edgeFrom = pairs.get(0)[0];
+                    ServerPlayer edgeTo = pairs.get(0)[1];
+                    edgeTo.setShiftKeyDown(true);
+                    edgeTo.setPos(ledge.x + 1.02, ledge.y, ledge.z);
+                    ServerPlayer airFrom = pairs.get(1)[0];
+                    ServerPlayer airTo = pairs.get(1)[1];
+                    airTo.setPos(Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(2, 4, 2))));
+                    for (ServerPlayer[] pair : pairs) {
+                        InstantTpaWhitelist.add(pair[1], pair[0]);
+                        command(pair[0], "tpa " + pair[1].getScoreboardName());
+                    }
+                    for (ServerPlayer[] pair : pairs) {
+                        if (!pair[0].position().equals(pair[1].position())) {
+                            fail(
+                                    helper,
+                                    "a short drop was refused: "
+                                            + pair[1].position()
+                                            + " got "
+                                            + texts(pair[0]));
+                            return;
+                        }
+                    }
+                    succeed(helper);
+                });
+    }
+
+    /**
+     * A creative requester skips the landing checks a survival one is held to: they are put in the
+     * air above a long drop, and on a spot the spot checks call unsafe.
+     */
+    public static void creativeSkipsLandingChecks(GameTestHelper helper) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        for (int index = 0; index < 4; index++) {
+            pair(helper, pairs::add);
+        }
+        List<Vec3> starts = pairs.stream().map(players -> players[0].position()).toList();
+        at(
+                helper,
+                1,
+                () -> {
+                    floorBelow(helper, 1);
+                    helper.setBlock(new BlockPos(5, 1, 5), Blocks.MAGMA_BLOCK);
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer to = pairs.get(index)[1];
+                        if (index < 2) {
+                            to.setPos(
+                                    Vec3.atBottomCenterOf(
+                                            helper.absolutePos(new BlockPos(1, 6, 1))));
+                        } else {
+                            to.setPos(
+                                    Vec3.atBottomCenterOf(
+                                            helper.absolutePos(new BlockPos(5, 2, 5))));
+                        }
+                        if (index == 1 || index == 3) {
+                            fixture(pairs.get(index)[0]).gameMode(GameType.CREATIVE);
+                        }
+                        InstantTpaWhitelist.add(to, pairs.get(index)[0]);
+                        command(pairs.get(index)[0], "tpa " + to.getScoreboardName());
+                    }
+                });
+        at(
+                helper,
+                2,
+                () -> {
+                    String drop =
+                            " is in the air above a long drop, so your TP request was not accepted automatically.";
+                    String unsafe =
+                            " is somewhere unsafe, so your TP request was not accepted automatically.";
+                    String[][] refusals = {
+                        {drop, "a survival requester over a long drop was not refused"},
+                        {null, "a creative requester over a long drop was refused"},
+                        {unsafe, "a survival requester on a dangerous block was not refused"},
+                        {null, "a creative requester on a dangerous block was refused"}
+                    };
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        boolean moved = !from.position().equals(starts.get(index));
+                        String refusal = refusals[index][0];
+                        if ((refusal == null) != moved) {
+                            fail(
+                                    helper,
+                                    refusals[index][1]
+                                            + ", got "
+                                            + from.position()
+                                            + " "
+                                            + texts(from));
+                            return;
+                        }
+                        if (refusal != null
+                                && !received(
+                                        from,
+                                        "[SimpleTPA] "
+                                                + pairs.get(index)[1].getScoreboardName()
+                                                + refusal)) {
+                            fail(helper, "not told \"" + refusal + "\", got " + texts(from));
+                            return;
+                        }
+                    }
+                    succeed(helper);
+                });
+    }
+
+    /** /tpasafety shows the default, turns the check off and on, and says which it is. */
+    public static void safetyCommandShowsAndSets(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                command(from, "tpasafety");
+                                if (!received(
+                                        from,
+                                        "[SimpleTPA] Your TP requests wait while the player you teleport to is in the air above a long drop.")) {
+                                    fail(helper, "the default is not on, got " + texts(from));
+                                    return;
+                                }
+                                fixture(from).clearMessages();
+                                command(from, "tpasafety off");
+                                if (!received(
+                                        from,
+                                        "[SimpleTPA] Your TP requests go through while the player you teleport to is in the air above a long drop, so you will fall when you arrive.")) {
+                                    fail(helper, "no safety-off message, got " + texts(from));
+                                    return;
+                                }
+                                fixture(from).clearMessages();
+                                command(from, "tpasafety");
+                                if (!received(
+                                        from,
+                                        "[SimpleTPA] Your TP requests do not wait while the player you teleport to is in the air above a long drop.")) {
+                                    fail(helper, "the choice was not shown, got " + texts(from));
+                                    return;
+                                }
+                                fixture(from).clearMessages();
+                                command(from, "tpasafety on");
+                                if (!received(
+                                        from,
+                                        "[SimpleTPA] Your TP requests wait while the player you teleport to is in the air above a long drop.")) {
+                                    fail(helper, "no safety-on message, got " + texts(from));
+                                    return;
+                                }
+                                succeed(helper);
+                            });
+                });
+    }
+
     /**
      * One sender-receiver pair per state. {@code act} runs in tick 1; a tick later the sender must
      * not have moved, the request must still be open and {@code toldWho} must have been sent {@code
@@ -616,7 +941,7 @@ public final class SimpleTPAGameTests {
                     String sender = players[0].getScoreboardName();
                     UUID senderId = players[0].getUUID();
                     players[0].setPos(new Vec3(0, 0, 0));
-                    players[1].setPos(new Vec3(10, 10, 10));
+                    standOnStone(helper, players[1], new Vec3(10, 10, 10));
                     command(players[0], "tpa " + players[1].getScoreboardName());
                     at(
                             helper,
@@ -735,7 +1060,7 @@ public final class SimpleTPAGameTests {
                             2,
                             () -> {
                                 players[0].setPos(new Vec3(0, 0, 0));
-                                players[1].setPos(new Vec3(10, 10, 10));
+                                standOnStone(helper, players[1], new Vec3(10, 10, 10));
                                 command(players[0], "tpa " + players[1].getScoreboardName());
                             });
                     at(
@@ -912,7 +1237,7 @@ public final class SimpleTPAGameTests {
                             2,
                             () -> {
                                 players[0].setPos(new Vec3(0, 0, 0));
-                                players[1].setPos(new Vec3(10, 10, 10));
+                                standOnStone(helper, players[1], new Vec3(10, 10, 10));
                                 command(players[0], "tpa " + players[1].getScoreboardName());
                             });
                     at(
@@ -981,7 +1306,7 @@ public final class SimpleTPAGameTests {
                             3,
                             () -> {
                                 players[0].setPos(new Vec3(0, 0, 0));
-                                players[1].setPos(new Vec3(10, 10, 10));
+                                standOnStone(helper, players[1], new Vec3(10, 10, 10));
                                 command(players[0], "tpa " + players[1].getScoreboardName());
                             });
                     at(
@@ -1021,7 +1346,7 @@ public final class SimpleTPAGameTests {
                             4,
                             () -> {
                                 players[0].setPos(new Vec3(0, 0, 0));
-                                players[1].setPos(new Vec3(10, 10, 10));
+                                standOnStone(helper, players[1], new Vec3(10, 10, 10));
                                 command(players[0], "tpa " + players[1].getScoreboardName());
                             });
                     at(
@@ -1060,7 +1385,7 @@ public final class SimpleTPAGameTests {
                             3,
                             () -> {
                                 players[0].setPos(new Vec3(0, 0, 0));
-                                players[1].setPos(new Vec3(10, 10, 10));
+                                standOnStone(helper, players[1], new Vec3(10, 10, 10));
                                 command(players[0], "tpa " + players[1].getScoreboardName());
                             });
                     at(

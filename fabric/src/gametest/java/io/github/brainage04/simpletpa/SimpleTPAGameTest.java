@@ -69,6 +69,31 @@ public class SimpleTPAGameTest {
         SimpleTPAGameTests.teleportsWhenNobodyFalls(helper);
     }
 
+    @GameTest(maxTicks = 40)
+    public void teleportsOntoHappyGhast(GameTestHelper helper) {
+        SimpleTPAGameTests.teleportsOntoHappyGhast(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void refusesLongDrop(GameTestHelper helper) {
+        SimpleTPAGameTests.refusesLongDrop(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void acceptsShortDrop(GameTestHelper helper) {
+        SimpleTPAGameTests.acceptsShortDrop(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void creativeSkipsLandingChecks(GameTestHelper helper) {
+        SimpleTPAGameTests.creativeSkipsLandingChecks(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void safetyCommandShowsAndSets(GameTestHelper helper) {
+        SimpleTPAGameTests.safetyCommandShowsAndSets(helper);
+    }
+
     @GameTest
     public void requestButtons(GameTestHelper helper) {
         SimpleTPAGameTests.requestButtons(helper);

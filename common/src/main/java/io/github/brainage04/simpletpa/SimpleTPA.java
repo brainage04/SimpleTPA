@@ -8,6 +8,7 @@ import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.command.core.ModCommands;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
 import io.github.brainage04.simpletpa.data.LegacyGameRule;
+import io.github.brainage04.simpletpa.data.SafetyPreference;
 import io.github.brainage04.simpletpa.event.ModTickEvents;
 import io.github.brainage04.simpletpa.platform.ServerPlatform;
 import net.minecraft.world.level.gamerules.GameRule;
@@ -30,13 +31,16 @@ public final class SimpleTPA {
         platform.registerEndServerTick(ModTickEvents::onEndServerTick);
         platform.registerServerStarting(LegacyGameRule::migrate);
         platform.registerServerStarted(InstantTpaWhitelist::load);
+        platform.registerServerStarted(SafetyPreference::load);
         platform.registerPlayerJoin(InstantTpaWhitelist::refreshName);
         platform.registerServerStopping(
                 server -> {
                     try {
                         InstantTpaWhitelist.save();
+                        SafetyPreference.save();
                     } finally {
                         InstantTpaWhitelist.unload();
+                        SafetyPreference.unload();
                         TPRequestCommand.TP_REQUESTS.clear();
                         TPAutoAcceptCommand.ACCEPT_ALL_CONFIRMATION.clear();
                     }

@@ -2,6 +2,7 @@ package io.github.brainage04.simpletpa.command;
 
 import io.github.brainage04.simpletpa.SimpleTPA;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
+import io.github.brainage04.simpletpa.data.SafetyPreference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -15,6 +16,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class TPRequestCommand {
@@ -126,6 +128,13 @@ public class TPRequestCommand {
      * leave out vanilla's floor check (:87-90) and its refusal of a spot in INVALID_SPAWN_INSIDE
      * blocks (:105-107), which are the End portal and End gateway
      * (VanillaBlockTagsProvider.java:1178).
+     *
+     * <p>A creative or spectator requester skips the spot checks and the drop check: the game makes
+     * them invulnerable and unable to be hurt (GameType.java:68-84, Player.java:677). A requester
+     * who can fly takes no fall damage (Player.java:1437-1441), so the drop check skips them too.
+     * The drop check is the requester's own choice ({@link SafetyPreference#refusesDangerousDrop}),
+     * and it judges the drop below the arrival spot, so a target standing over a one or two block
+     * drop still passes ({@link Landing#dropHurts}).
      */
     public static @Nullable String blockedReason(ServerPlayer from, ServerPlayer to) {
         if (to.isRemoved()) {
@@ -137,6 +146,9 @@ public class TPRequestCommand {
         if (to.isSpectator()) {
             return "in spectator mode";
         }
+        if (from.getAbilities().invulnerable) {
+            return null;
+        }
         if (!from.getAbilities().mayfly) {
             if (to.isFallFlying()) {
                 return "gliding";
@@ -146,12 +158,18 @@ public class TPRequestCommand {
             }
         }
         ServerLevel level = to.level();
-        AABB arrival = from.getBoundingBox().move(to.position().subtract(from.position()));
+        AABB arrival =
+                from.getBoundingBox().move(Landing.arrival(from, to).subtract(from.position()));
         if (!level.noBlockCollision(from, arrival)
                 || level.getBlockStates(arrival).anyMatch(from.getType()::isBlockDangerous)
                 || from.getType().isBlockDangerous(level.getBlockState(to.getOnPos()))
                 || !level.getWorldBorder().isWithinBounds(arrival)) {
             return "somewhere unsafe";
+        }
+        if (SafetyPreference.refusesDangerousDrop(from)
+                && !from.getAbilities().mayfly
+                && Landing.dropHurts(from, arrival)) {
+            return "in the air above a long drop";
         }
         return null;
     }
@@ -163,12 +181,13 @@ public class TPRequestCommand {
 
     /** Puts {@code from} on {@code to}; false when {@code from} cannot be moved. */
     public static boolean teleport(ServerPlayer from, ServerPlayer to) {
+        Vec3 arrival = Landing.arrival(from, to);
         return canBeMoved(from)
                 && from.teleportTo(
                         to.level(),
-                        to.getX(),
-                        to.getY(),
-                        to.getZ(),
+                        arrival.x,
+                        arrival.y,
+                        arrival.z,
                         Set.of(),
                         to.getYRot(),
                         to.getXRot(),
