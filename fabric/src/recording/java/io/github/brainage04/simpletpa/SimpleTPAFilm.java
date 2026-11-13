@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import io.github.brainage04.brainagelib.gametest.GameTestPlayer;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestRecorder;
+import io.github.brainage04.minecraftmodconventions.ClientGameTestStages;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestServers;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
@@ -74,8 +75,7 @@ public final class SimpleTPAFilm {
             new Caption(
                     "simpletpa.nolanding",
                     "No landing spot",
-                    FRIEND_NAME
-                            + " hovers in the air with nothing under them, so your request waits");
+                    "Nothing under " + FRIEND_NAME + ", so your request waits");
     private static final Caption HAPPY_GHAST =
             new Caption(
                     "simpletpa.happyghast",
@@ -90,8 +90,7 @@ public final class SimpleTPAFilm {
             new Caption(
                     "simpletpa.shortdrop",
                     "Short drop",
-                    FRIEND_NAME
-                            + " sneaks at the edge of a step, two blocks above the floor, and you arrive beside them");
+                    "A two-block drop below " + FRIEND_NAME + " does not stop you");
     private static final Caption ON_MAGMA =
             new Caption(
                     "simpletpa.magma",
@@ -110,8 +109,13 @@ public final class SimpleTPAFilm {
     private static final float WEST = 90.0F;
     private static final float PLAYER_PITCH = 6.0F;
     private static final int COMMAND_VISIBLE_TICKS = 20;
+    /** Frames a stage keeps after its end marker, so a cut never lands on the next scene. */
+    private static final int STAGE_HOLD_TICKS = 6;
+
+    /** The stage on screen, for {@link #show}. */
+    private static String stage;
     private static final Vec3 LOOKOUT_POSITION = new Vec3(-11.5D, STAGE_Y, 0.5D);
-    private static final Vec3 HIGH_POSITION = new Vec3(2.5D, 78.0D, 0.5D);
+    private static final Vec3 HIGH_POSITION = new Vec3(2.5D, 78.0D, -5.5D);
     private static final Vec3 GHAST_POSITION = new Vec3(2.5D, 70.0D, 0.5D);
     private static final Vec3 STEP_POSITION = new Vec3(2.2D, STAGE_Y + 2, 0.5D);
     private static final Vec3 STEP_BLOCK = new Vec3(1.0D, STAGE_Y + 1, 0.0D);
@@ -148,6 +152,10 @@ public final class SimpleTPAFilm {
                         showAutoAcceptedRequest(context, server, playerName);
                         showLandingChecks(context, server, playerName, friend[0]);
                     } finally {
+                        if (stage != null) {
+                            ClientGameTestStages.endStage(context, stage, STAGE_HOLD_TICKS);
+                            stage = null;
+                        }
                         server.runOnServer(minecraftServer -> friend[0].close());
                     }
                 });
@@ -166,7 +174,9 @@ public final class SimpleTPAFilm {
                 minecraftServer ->
                         SimpleTPAFakePlayerScenario.executeCommand(
                                 friend(minecraftServer), "tpaccept"));
-        context.waitTicks(38);
+        context.waitTicks(8);
+        server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
+        context.waitTicks(30);
     }
 
     private static void showDeniedRequest(
@@ -212,9 +222,11 @@ public final class SimpleTPAFilm {
         context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
         context.waitTicks(5);
         server.runOnServer(
-                minecraftServer ->
-                        afterClickedAccept.accept(
-                                friend(minecraftServer), player(minecraftServer, playerName)));
+                minecraftServer -> {
+                    afterClickedAccept.accept(
+                            friend(minecraftServer), player(minecraftServer, playerName));
+                    stepAside(friend(minecraftServer));
+                });
         context.waitTicks(15);
         if (context.computeOnClient(client -> client.gui.screen() instanceof ChatScreen)) {
             context.getInput().pressKey(InputConstants.KEY_ESCAPE);
@@ -272,7 +284,9 @@ public final class SimpleTPAFilm {
                 minecraftServer ->
                         SimpleTPAFakePlayerScenario.executeCommand(
                                 friend(minecraftServer), "tpa " + playerName));
-        context.waitTicks(38);
+        context.waitTicks(8);
+        server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
+        context.waitTicks(30);
     }
 
     /**
@@ -307,8 +321,8 @@ public final class SimpleTPAFilm {
                     ServerPlayer player = player(minecraftServer, playerName);
                     ServerPlayer rider = friend(minecraftServer);
                     clearRequests(rider, player);
-                    rider.setXRot(0.0F);
-                    SimpleTPAFakePlayerScenario.place(rider, HIGH_POSITION, WEST, 0.0F);
+                    rider.setXRot(45.0F);
+                    SimpleTPAFakePlayerScenario.place(rider, HIGH_POSITION, WEST, 45.0F);
                     look(player, LOOKOUT_POSITION, HIGH_POSITION);
                     minecraftServer
                             .getCommands()
@@ -361,7 +375,9 @@ public final class SimpleTPAFilm {
                 });
         context.waitTicks(10);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(45);
+        context.waitTicks(8);
+        server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
+        context.waitTicks(30);
 
         show(context, ON_MAGMA);
         server.runOnServer(
@@ -387,7 +403,9 @@ public final class SimpleTPAFilm {
                 });
         context.waitTicks(10);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(45);
+        context.waitTicks(8);
+        server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
+        context.waitTicks(30);
         server.runOnServer(
                 minecraftServer ->
                         player(minecraftServer, playerName).setGameMode(GameType.SURVIVAL));
@@ -426,6 +444,23 @@ public final class SimpleTPAFilm {
                             + ", fall distance "
                             + player[1]);
         }
+    }
+
+    /**
+     * Moves the friend two blocks the way they face, out of the camera of a player who has just
+     * arrived on them, so the shot shows both of them instead of the inside of the friend's head.
+     */
+    private static void stepAside(ServerPlayer friend) {
+        Vec3 facing =
+                new Vec3(
+                        -Math.sin(Math.toRadians(friend.getYRot())),
+                        0.0D,
+                        Math.cos(Math.toRadians(friend.getYRot())));
+        SimpleTPAFakePlayerScenario.place(
+                friend,
+                friend.position().add(facing.scale(2.0D)),
+                friend.getYRot(),
+                friend.getXRot());
     }
 
     /** Places {@code player} at {@code position} looking at {@code target}. */
@@ -467,7 +502,13 @@ public final class SimpleTPAFilm {
         context.getInput().pressKey(InputConstants.KEY_RETURN);
     }
 
+    /** Shows a caption and films it as one stage, ending the one before it. */
     private static void show(ClientGameTestContext context, Caption caption) {
+        if (stage != null) {
+            ClientGameTestStages.endStage(context, stage, STAGE_HOLD_TICKS);
+        }
+        ClientGameTestStages.markStage(caption.id());
+        stage = caption.id();
         ClientGameTestRecorder.showStep(
                 context, caption.id(), caption.title(), caption.description());
     }
