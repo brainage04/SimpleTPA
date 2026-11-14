@@ -460,4 +460,25 @@ class FallRuleTest {
                 assertTimeoutPreemptively(Duration.ofSeconds(1), () -> dragged.freeFallStep(10.0)));
         assertEquals(0.98F, DRAG);
     }
+
+    /**
+     * An air_drag_modifier of 0 leaves no vertical drag, so the speed never settles, and with a
+     * tiny gravity a fall from rest takes about 1.6e11 ticks to pass 128 blocks. Both are in the
+     * attributes' ranges (Attributes.java:10-11, 55-56).
+     */
+    @Test
+    void aFreeFallStepWithoutDragIsWorkedOutQuicklyForATinyGravity() {
+        FallRule rule =
+                new FallRule(
+                        SAFE_DISTANCE,
+                        1.0,
+                        OptionalInt.empty(),
+                        1.0E-20,
+                        FallRule.verticalDrag(0.0));
+        double step =
+                assertTimeoutPreemptively(Duration.ofSeconds(1), () -> rule.freeFallStep(128.0));
+        // The fastest fall from rest moves at most g / 2 + sqrt(g^2 / 4 + 2 g d) in the tick that
+        // passes d, about 1.6e-9 blocks here.
+        assertTrue(step > 0.0 && step <= 2.0E-9, "step " + step);
+    }
 }

@@ -24,6 +24,12 @@ record FallRule(
     static final double MAX_SCAN = 128.0;
 
     /**
+     * The most ticks {@link #freeFallStep} follows one by one: a few thousand cover the scan at
+     * gravities down to 0.01, and a million still take only milliseconds.
+     */
+    static final int MAX_FREE_FALL_TICKS = 1_000_000;
+
+    /**
      * The most a climbable lets a player fall in a tick, from LivingEntity.handleOnClimbable
      * (LivingEntity.java:2690-2693), where it is a local value no API exposes.
      */
@@ -174,7 +180,14 @@ record FallRule(
         }
         double fallen = 0.0;
         double speed = 0.0;
-        while (fallen + speed <= depth) {
+        for (int tick = 0; fallen + speed <= depth; tick++) {
+            if (tick == MAX_FREE_FALL_TICKS) {
+                // Without drag the speed never settles, and a tiny gravity would take billions of
+                // ticks to pass the depth. No fall from rest is faster than one without drag, which
+                // moves at most this in the tick that passes the depth, so the step counts against
+                // the requester.
+                return gravity / 2.0 + Math.sqrt(gravity * gravity / 4.0 + 2.0 * gravity * depth);
+            }
             fallen += speed;
             double next = (speed + gravity) * drag;
             if (next <= speed) {
