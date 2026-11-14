@@ -15,8 +15,15 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.happyghast.HappyGhast;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.HayBlock;
+import net.minecraft.world.level.block.HoneyBlock;
+import net.minecraft.world.level.block.PointedDripstoneBlock;
 import net.minecraft.world.level.block.PowderSnowBlock;
+import net.minecraft.world.level.block.SlimeBlock;
+import net.minecraft.world.level.block.SpeleothemBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.SpeleothemThickness;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -145,9 +152,42 @@ public final class Landing {
                         ? countedFall(from, slowFalling, arrival.minY - support)
                         : countFrom - support;
         double distance = counted * (1.0F - landing.getBlock().getFallDistanceReduction());
+        return landingHurts(from, landing, counted, distance, safeDistance, multiplier);
+    }
+
+    /**
+     * Whether landing on {@code landing} after a counted fall of {@code counted} blocks hurts
+     * {@code from}. Most blocks pass the fall less their own reduction, {@code distance}, to the
+     * game's fall damage rule (Block.java:486-489). A few override {@code fallOn} with numbers of
+     * their own that no API exposes, copied here: a stalagmite tip adds 2.5 blocks and doubles the
+     * damage (PointedDripstoneBlock.java:54-58), hay and honey deal a fifth of it
+     * (HayBlock.java:17-19, HoneyBlock.java:45-50), and slime none unless the player sneaks
+     * (SlimeBlock.java:15-19, Entity.java:2775-2777).
+     */
+    private static boolean landingHurts(
+            ServerPlayer from,
+            BlockState landing,
+            double counted,
+            double distance,
+            double safeDistance,
+            double multiplier) {
+        Block block = landing.getBlock();
+        double fall = distance;
+        float damageModifier = 1.0F;
+        if (block instanceof PointedDripstoneBlock
+                && landing.getValue(SpeleothemBlock.TIP_DIRECTION) == Direction.UP
+                && landing.getValue(SpeleothemBlock.THICKNESS) == SpeleothemThickness.TIP) {
+            fall = counted + 2.5;
+            damageModifier = 2.0F;
+        } else if (block instanceof HayBlock || block instanceof HoneyBlock) {
+            fall = counted;
+            damageModifier = 0.2F;
+        } else if (block instanceof SlimeBlock && !from.isSuppressingBounce()) {
+            return false;
+        }
         // The game floors the damage after applying the multiplier, not the distance before it
         // (LivingEntity.java:1857).
-        return Math.floor((distance + 1.0E-6 - safeDistance) * multiplier) > 0.0;
+        return Math.floor((fall + 1.0E-6 - safeDistance) * damageModifier * multiplier) > 0.0;
     }
 
     /** The top of the first block or standable entity within {@code reach} below {@code box}. */
