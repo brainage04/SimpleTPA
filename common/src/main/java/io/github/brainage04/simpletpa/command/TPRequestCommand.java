@@ -169,7 +169,9 @@ public class TPRequestCommand {
         if (SafetyPreference.refusesDangerousDrop(from)
                 && !from.getAbilities().mayfly
                 && Landing.dropHurts(level, from, arrival)) {
-            return "in the air above a long drop";
+            return Landing.overVoid(level, from, arrival)
+                    ? "in the air above the void"
+                    : "in the air above a long drop";
         }
         return null;
     }

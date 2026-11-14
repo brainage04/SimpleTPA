@@ -274,7 +274,7 @@ public final class Landing {
      * gets past invulnerability (DamageTypeTagsProvider.java:56), so it kills a requester whom no
      * fall can hurt.
      */
-    private static boolean overVoid(ServerLevel level, ServerPlayer from, AABB arrival) {
+    public static boolean overVoid(ServerLevel level, ServerPlayer from, AABB arrival) {
         double reach = arrival.minY - level.getMinY();
         if (reach <= 0.0) {
             return true;
