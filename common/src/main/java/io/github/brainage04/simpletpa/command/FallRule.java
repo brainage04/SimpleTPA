@@ -15,11 +15,7 @@ import net.minecraft.world.entity.LivingEntity;
  * @param drag the player's vertical air drag, as {@link #verticalDrag} works it out
  */
 record FallRule(
-        double safeDistance,
-        double multiplier,
-        OptionalInt slowFalling,
-        double gravity,
-        float drag) {
+        double safeDistance, double multiplier, OptionalInt slowFalling, double gravity, float drag) {
     /** Far past any safe fall distance, so the search for a floor stops well inside it. */
     static final double MAX_SCAN = 128.0;
 
@@ -37,8 +33,8 @@ record FallRule(
 
     /**
      * How far below the start of a fall to look for the floor that ends it. A safe fall distance
-     * far enough below zero would take the reach to zero or above the player, so it is at least
-     * one block.
+     * far enough below zero would take the reach to zero or above the player, so it is at least one
+     * block.
      */
     double reach() {
         // Slow Falling leaves the first part of a fall uncounted, so the floor that decides may be
