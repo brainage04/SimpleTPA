@@ -202,6 +202,15 @@ class FallRuleTest {
                 rule.hurts(drop, restarted, restarted, FallRule.Floor.of(reduction)));
     }
 
+    /**
+     * jqwik mixes in the ranges' edges, and drop = 128 with share = 1 restarts the fall at the scan
+     * limit, where the safe distance 200 lets the model deal no damage.
+     */
+    @Test
+    void theRestartPropertyHoldsAtTheScanLimit() {
+        aFallThatABlockResetsCountsWhatRestartedBelowIt(128.0, 1.0, 0.0F, 200.0, 1.0, 0);
+    }
+
     @Property
     void slowFallingCountsTheFallFromItsLastTickOn(
             @ForAll @DoubleRange(min = 0.0, max = 128.0) double drop,
