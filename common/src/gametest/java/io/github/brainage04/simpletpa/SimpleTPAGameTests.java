@@ -613,9 +613,9 @@ public final class SimpleTPAGameTests {
     }
 
     /**
-     * The block two below the top of the world above {@code relative}, with {@code depth} blocks
-     * of air below it and in the column north of those, or null after failing the test. A drop
-     * taller than the test area's barrier box (its roof is at y 8) is built there.
+     * The block two below the top of the world above {@code relative}, with {@code depth} blocks of
+     * air below it and in the column north of those, or null after failing the test. A drop taller
+     * than the test area's barrier box (its roof is at y 8) is built there.
      */
     private static BlockPos skyColumn(GameTestHelper helper, BlockPos relative, int depth) {
         ServerLevel level = helper.getLevel();
@@ -624,9 +624,7 @@ public final class SimpleTPAGameTests {
         for (int below = 0; below <= depth; below++) {
             for (BlockPos pos : List.of(top.below(below), top.below(below).north())) {
                 if (!level.getBlockState(pos).isAir()) {
-                    fail(
-                            helper,
-                            "the test needs air below " + top + ", found a block at " + pos);
+                    fail(helper, "the test needs air below " + top + ", found a block at " + pos);
                     return null;
                 }
             }
@@ -1092,10 +1090,10 @@ public final class SimpleTPAGameTests {
     /**
      * Slow Falling gets no credit below a resetting block, which slows the requester down so the
      * effect may run out inside it. The target hangs at the top of the world over a 40 block drop
-     * with vines from 2 to 21 blocks down. The requester's 124 tick Slow Falling would carry a
-     * fall through open air to about 37 blocks down, but the vines hold them to 0.15 blocks a tick
-     * (LivingEntity.java:2690-2693) for over 130 ticks, so the effect runs out among the vines
-     * and the 19 blocks below them count: refused.
+     * with vines from 2 to 21 blocks down. The requester's 124 tick Slow Falling would carry a fall
+     * through open air to about 37 blocks down, but the vines hold them to 0.15 blocks a tick
+     * (LivingEntity.java:2690-2693) for over 130 ticks, so the effect runs out among the vines and
+     * the 19 blocks below them count: refused.
      */
     public static void slowFallingGetsNoCreditBelowAResettingBlock(GameTestHelper helper) {
         pair(
@@ -1122,8 +1120,7 @@ public final class SimpleTPAGameTests {
                                 }
                                 vines(level, vines, built);
                                 to.setPos(Vec3.atBottomCenterOf(top));
-                                from.addEffect(
-                                        new MobEffectInstance(MobEffects.SLOW_FALLING, 124));
+                                from.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 124));
                                 Vec3 start = from.position();
                                 InstantTpaWhitelist.add(to, from);
                                 command(from, "tpa " + to.getScoreboardName());
