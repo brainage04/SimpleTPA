@@ -938,13 +938,17 @@ public final class SimpleTPAGameTests {
 
     /**
      * A fall that goes on below a resetting block counts again from that block's bottom, and the
-     * drop check's Slow Falling and powder snow edges. Above the stone floor: a target three blocks
-     * above a single powder snow block with four blocks of air below it (refused, the fall below
-     * deals one damage); a target over water three blocks deep (accepted); a six block drop for a
-     * requester with infinite Slow Falling (accepted); a five block drop onto powder snow for a
-     * requester in leather boots who stands above its top, so it holds them (accepted). Last, a
+     * drop check's Slow Falling and powder snow edges. Each target stands at y 6 over its own stone
+     * floor: one block above a single powder snow block with four blocks of air below it (refused,
+     * the fall below deals one damage); over water three blocks deep (accepted); a five block drop
+     * for a requester with infinite Slow Falling (accepted); a four block drop onto powder snow for
+     * a requester in leather boots who stands above its top, so it holds them (accepted). Last, a
      * target at the top of the world with no floor within the check's 128 block scan, for a
      * requester with a long Slow Falling (refused).
+     *
+     * <p>The game encases the test area in barriers (TestInstanceBlockEntity.java:362-368), and
+     * the roof of this empty structure is at y 8, so a target above y 6 would be inside or on it.
+     * The powder snow column's floor therefore replaces the barrier below the area.
      */
     public static void fallBelowResetsAndSlowFallingEdges(GameTestHelper helper) {
         List<ServerPlayer[]> pairs = new ArrayList<>();
@@ -955,12 +959,15 @@ public final class SimpleTPAGameTests {
                 helper,
                 1,
                 () -> {
-                    floorBelow(helper, 1);
-                    helper.setBlock(new BlockPos(0, 6, 0), Blocks.POWDER_SNOW);
-                    for (int y = 2; y <= 4; y++) {
+                    helper.setBlock(new BlockPos(0, -1, 0), Blocks.STONE);
+                    helper.setBlock(new BlockPos(0, 4, 0), Blocks.POWDER_SNOW);
+                    helper.setBlock(new BlockPos(0, 0, 2), Blocks.STONE);
+                    for (int y = 1; y <= 3; y++) {
                         helper.setBlock(new BlockPos(0, y, 2), Blocks.WATER);
                     }
-                    helper.setBlock(new BlockPos(2, 2, 2), Blocks.POWDER_SNOW);
+                    helper.setBlock(new BlockPos(2, 0, 0), Blocks.STONE);
+                    helper.setBlock(new BlockPos(2, 0, 2), Blocks.STONE);
+                    helper.setBlock(new BlockPos(2, 1, 2), Blocks.POWDER_SNOW);
                     ServerLevel level = helper.getLevel();
                     BlockPos column = helper.absolutePos(new BlockPos(1, 0, 1));
                     BlockPos top = new BlockPos(column.getX(), level.getMaxY() - 2, column.getZ());
@@ -976,10 +983,10 @@ public final class SimpleTPAGameTests {
                         }
                     }
                     Vec3[] targets = {
-                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(0, 10, 0))),
-                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(0, 8, 2))),
-                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(2, 8, 0))),
-                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(2, 8, 2))),
+                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(0, 6, 0))),
+                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(0, 6, 2))),
+                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(2, 6, 0))),
+                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(2, 6, 2))),
                         Vec3.atBottomCenterOf(top)
                     };
                     pairs.get(2)[0].addEffect(
@@ -997,10 +1004,6 @@ public final class SimpleTPAGameTests {
                     for (int index = 0; index < pairs.size(); index++) {
                         ServerPlayer from = pairs.get(index)[0];
                         ServerPlayer to = pairs.get(index)[1];
-                        // Powder snow holds an entity that has fallen more than 2.5 blocks
-                        // (PowderSnowBlock.java:120-121), and the drop check asks it about the
-                        // requester, so a requester still counting a fall would land on the snow.
-                        from.resetFallDistance();
                         to.setPos(targets[index]);
                         InstantTpaWhitelist.add(to, from);
                         command(from, "tpa " + to.getScoreboardName());
