@@ -913,9 +913,9 @@ public final class SimpleTPAGameTests {
      * LivingEntity.java:2179-2180), which is no fall damage, so a drop no fall can hurt still kills
      * when nothing stops it before that height. With the fall_damage game rule off, a target over a
      * column empty down to the minimum build height is refused, while the same column with a block
-     * at that height, below the drop check's 128 blocks, is accepted. A requester whose fall
-     * damage multiplier is 0 is refused over the empty column too. The column lies far from the
-     * structure, so clearing it touches no other test.
+     * at that height, deeper than the drop check's 128 block scan, is accepted. A requester whose
+     * fall damage multiplier is 0 is refused over the empty column too. The column lies far from
+     * the structure, so clearing it touches no other test.
      */
     public static void noFallDamageStillRefusesTheVoid(GameTestHelper helper) {
         pair(
