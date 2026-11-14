@@ -27,6 +27,12 @@ public final class Landing {
     /** Far past any safe fall distance, so the search for a floor stops well inside it. */
     private static final double MAX_SCAN = 128.0;
 
+    /**
+     * The most a climbable lets a player fall in a tick, from LivingEntity.handleOnClimbable
+     * (LivingEntity.java:2690-2693), where it is a local value no API exposes.
+     */
+    private static final double CLIMB_SPEED = 0.15;
+
     private Landing() {}
 
     /**
@@ -67,11 +73,11 @@ public final class Landing {
      * first block or standable entity below. Water or a block the game tags as resetting fall
      * damage on the way down resets the fall (Entity.java:768-775, 1684-1689), and so does powder
      * snow, which holds a player who sinks into it stuck (Entity.java:3030-3032). A fall that goes
-     * on below such a block counts again from that block's bottom, with the same rule. The landing
-     * block's own reduction applies (Block.java:486-489), and powder snow underfoot deals no
-     * damage: it holds a falling player on top and its {@code fallOn} hurts nobody
-     * (PowderSnowBlock.java:101-107, 116-131). Slow Falling counts as {@link #countedFall} says,
-     * but only for a fall that crosses no resetting block.
+     * on below such a block counts again from about that block's bottom ({@link #restartAbove}),
+     * with the same rule. The landing block's own reduction applies (Block.java:486-489), and
+     * powder snow underfoot deals no damage: it holds a falling player on top and its {@code
+     * fallOn} hurts nobody (PowderSnowBlock.java:101-107, 116-131). Slow Falling counts as {@link
+     * #countedFall} says, but only for a fall that crosses no resetting block.
      *
      * <p>A tagged block the player lands on top of does not reset the fall: the game's check casts
      * a ray along the tick's movement (Entity.java:768-775), which ends on that block's top face,
@@ -102,17 +108,21 @@ public final class Landing {
                         ? MAX_SCAN
                         : Math.min(MAX_SCAN, Math.ceil(safeDistance + 1.0 / multiplier) + 1.0);
         AABB fallStart = arrival;
+        double countFrom = arrival.minY;
         double support;
         while (true) {
             support = support(level, from, fallStart, reach);
-            double resetBottom = lowestReset(level, fallStart, support);
-            if (Double.isNaN(resetBottom)) {
+            BlockPos reset = lowestReset(level, fallStart, support);
+            if (reset == null) {
                 break;
             }
-            if (resetBottom <= support) {
+            if (reset.getY() <= support) {
                 return false;
             }
-            fallStart = fallStart.move(0.0, resetBottom - fallStart.minY, 0.0);
+            double restart =
+                    reset.getY() + restartAbove(level.getBlockState(reset), from, arrival, reset);
+            countFrom = Math.min(countFrom, restart);
+            fallStart = fallStart.move(0.0, reset.getY() - fallStart.minY, 0.0);
         }
 
         Vec3 centre = arrival.getCenter();
@@ -133,7 +143,7 @@ public final class Landing {
         double counted =
                 fallStart == arrival
                         ? countedFall(from, slowFalling, arrival.minY - support)
-                        : fallStart.minY - support;
+                        : countFrom - support;
         double distance = counted * (1.0F - landing.getBlock().getFallDistanceReduction());
         // The game floors the damage after applying the multiplier, not the distance before it
         // (LivingEntity.java:1857).
@@ -155,23 +165,91 @@ public final class Landing {
     }
 
     /**
-     * The bottom of the lowest block between {@code box} and {@code support} that resets a fall
-     * through it, or NaN when there is none.
+     * The lowest block between {@code box} and {@code support} that resets a fall through it, or
+     * null when there is none.
      */
-    private static double lowestReset(ServerLevel level, AABB box, double support) {
+    private static BlockPos lowestReset(ServerLevel level, AABB box, double support) {
         Vec3 centre = box.getCenter();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-        double bottom = Double.NaN;
+        BlockPos lowest = null;
         for (double y = box.minY - 1.0E-4; y > support; y -= 1.0) {
             pos.set(centre.x, y, centre.z);
             BlockState state = level.getBlockState(pos);
             if (state.getFluidState().is(FluidTags.WATER)
                     || state.is(BlockTags.FALL_DAMAGE_RESETTING)
                     || state.getBlock() instanceof PowderSnowBlock) {
-                bottom = pos.getY();
+                lowest = pos.immutable();
             }
         }
-        return bottom;
+        return lowest;
+    }
+
+    /**
+     * How far above the bottom of the resetting block at {@code pos} the fall that counts below it
+     * may start, for a requester who falls from rest at {@code arrival}.
+     *
+     * <ul>
+     *   <li>A tick that moves the player a block or more resets the fall when its movement crosses
+     *       water or a tagged block (Entity.java:766-775), and the whole movement of that tick is
+     *       then added (Entity.java:1584-1587, through ServerGamePacketListenerImpl.java:1215). A
+     *       tick that passes a thin block whole therefore counts from where it began, up to one
+     *       tick's movement above the block's bottom.
+     *   <li>A climbable also resets the fall at the start of each tick that begins with the feet in
+     *       it (LivingEntity.java:2688-2689) and holds that tick's fall to {@link #CLIMB_SPEED}. A
+     *       fall slower than a block a tick cannot skip it, so it counts from at most that far
+     *       above the bottom.
+     *   <li>Water also resets it after each tick that ends with any part of the player's box in it
+     *       (Entity.java:1679-1683, EntityFluidInteraction.java:40-73). The tick after the last
+     *       such one, or a tick that passes it whole, ends with the box below the water, so the
+     *       fall counts from at most one tick's movement less the box's height above its bottom.
+     *   <li>A cobweb, berry bush or powder snow resets it after each tick whose movement touched it
+     *       (Entity.java:3030-3032), and the last such tick ends below the block.
+     * </ul>
+     *
+     * <p>The blocks on the way can only slow a fall down, so the tick's movement is taken from a
+     * fall through open air from {@code arrival} ({@link #freeFallStep}).
+     */
+    private static double restartAbove(
+            BlockState state, ServerPlayer from, AABB arrival, BlockPos pos) {
+        double step = freeFallStep(from, arrival.minY - pos.getY());
+        double above = 0.0;
+        if (state.is(BlockTags.CLIMBABLE)) {
+            above = step >= 1.0 ? step : Math.min(step, CLIMB_SPEED);
+        }
+        if (state.getFluidState().is(FluidTags.WATER)) {
+            double water = Math.max(0.0, step - arrival.getYsize());
+            above = state.is(BlockTags.CLIMBABLE) ? Math.min(above, water) : water;
+        }
+        return above;
+    }
+
+    /**
+     * The movement of the tick that takes a player falling from rest through open air more than
+     * {@code depth} blocks down, by the air model {@link #countedFall} describes.
+     */
+    private static double freeFallStep(ServerPlayer from, double depth) {
+        double gravity = from.getAttributeValue(Attributes.GRAVITY);
+        if (gravity <= 0.0) {
+            return 0.0;
+        }
+        float drag = verticalDrag(from);
+        double fallen = 0.0;
+        double speed = 0.0;
+        while (fallen + speed <= depth) {
+            fallen += speed;
+            speed = (speed + gravity) * drag;
+        }
+        return speed;
+    }
+
+    /** LivingEntity.computeModifiedFriction (LivingEntity.java:518-520), private there. */
+    private static float verticalDrag(ServerPlayer from) {
+        return Mth.clamp(
+                1.0F
+                        - (1.0F - LivingEntity.BASE_VERTICAL_AIR_DRAG)
+                                * (float) from.getAttributeValue(Attributes.AIR_DRAG_MODIFIER),
+                0.0F,
+                1.0F);
     }
 
     /**
@@ -196,16 +274,7 @@ public final class Landing {
         if (slowFalling == null || gravity <= 0.0) {
             return drop;
         }
-        // LivingEntity.computeModifiedFriction (LivingEntity.java:518-520), private there.
-        float drag =
-                Mth.clamp(
-                        1.0F
-                                - (1.0F - LivingEntity.BASE_VERTICAL_AIR_DRAG)
-                                        * (float)
-                                                from.getAttributeValue(
-                                                        Attributes.AIR_DRAG_MODIFIER),
-                        0.0F,
-                        1.0F);
+        float drag = verticalDrag(from);
         int slowTicks = slowFalling.getDuration() - 1;
         double fallen = 0.0;
         double speed = 0.0;
