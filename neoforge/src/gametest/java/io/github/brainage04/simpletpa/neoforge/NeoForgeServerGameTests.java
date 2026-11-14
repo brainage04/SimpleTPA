@@ -78,6 +78,10 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::slowFallingGetsNoCreditBelowAResettingBlock);
         register(
                 event,
+                "passing_through_vines_counts_from_above_their_bottom",
+                SimpleTPAGameTests::passingThroughVinesCountsFromAboveTheirBottom);
+        register(
+                event,
                 "creative_skips_landing_checks",
                 SimpleTPAGameTests::creativeSkipsLandingChecks);
         register(

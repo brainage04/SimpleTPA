@@ -110,6 +110,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void passingThroughVinesCountsFromAboveTheirBottom(GameTestHelper helper) {
+        SimpleTPAGameTests.passingThroughVinesCountsFromAboveTheirBottom(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void creativeSkipsLandingChecks(GameTestHelper helper) {
         SimpleTPAGameTests.creativeSkipsLandingChecks(helper);
     }

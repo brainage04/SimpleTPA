@@ -1148,6 +1148,83 @@ public final class SimpleTPAGameTests {
     }
 
     /**
+     * A fall through vines counts again from where the requester last was in them, which can be
+     * above their bottom. Two targets, both refused: one at the top of the world 11 blocks above a
+     * single vine with a floor 3 blocks below it, for a requester whose Slow Falling has two ticks
+     * left, so the check looks that far down and a fall from rest passes the vine whole in one tick
+     * of about 1.2 blocks, whose whole movement the game counts (Entity.java:766-775); one at y 6
+     * a block above a vine at y 4 with a carpet 3.94 blocks below it, where the requester leaves
+     * the vine at up to 0.15 blocks a tick (LivingEntity.java:2690-2693), so the counted fall can
+     * reach 4.09 blocks.
+     */
+    public static void passingThroughVinesCountsFromAboveTheirBottom(GameTestHelper helper) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        for (int index = 0; index < 2; index++) {
+            pair(helper, pairs::add);
+        }
+        at(
+                helper,
+                1,
+                () -> {
+                    BlockPos top = skyColumn(helper, new BlockPos(1, 0, 1), 16);
+                    if (top == null) {
+                        return;
+                    }
+                    ServerLevel level = helper.getLevel();
+                    List<BlockPos> built = new ArrayList<>();
+                    level.setBlockAndUpdate(top.below(16), Blocks.STONE.defaultBlockState());
+                    built.add(top.below(16));
+                    vines(level, List.of(top.below(12)), built);
+                    helper.setBlock(new BlockPos(4, -1, 4), Blocks.STONE);
+                    helper.setBlock(new BlockPos(4, 0, 4), Blocks.WHITE_CARPET);
+                    BlockPos lowVine = helper.absolutePos(new BlockPos(4, 4, 4));
+                    vines(level, List.of(lowVine), new ArrayList<>());
+                    Vec3[] targets = {
+                        Vec3.atBottomCenterOf(top),
+                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(4, 6, 4)))
+                    };
+                    pairs.get(0)[0].addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 2));
+                    List<Vec3> requesters =
+                            pairs.stream().map(players -> players[0].position()).toList();
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        ServerPlayer to = pairs.get(index)[1];
+                        to.setPos(targets[index]);
+                        InstantTpaWhitelist.add(to, from);
+                        command(from, "tpa " + to.getScoreboardName());
+                    }
+                    clear(level, built);
+                    String[] cases = {
+                        "a fall that passes a single vine in one tick",
+                        "a fall that leaves vines slowly above a floor 3.94 blocks below them"
+                    };
+                    List<String> failures = new ArrayList<>();
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        ServerPlayer to = pairs.get(index)[1];
+                        String refusal =
+                                "[SimpleTPA] "
+                                        + to.getScoreboardName()
+                                        + " is in the air above a long drop, so your TP request was not accepted automatically.";
+                        if (!from.position().equals(requesters.get(index))
+                                || !received(from, refusal)) {
+                            failures.add(
+                                    cases[index]
+                                            + " was not refused, got "
+                                            + from.position()
+                                            + " "
+                                            + texts(from));
+                        }
+                    }
+                    if (!failures.isEmpty()) {
+                        fail(helper, String.join("; ", failures));
+                        return;
+                    }
+                    succeed(helper);
+                });
+    }
+
+    /**
      * A creative requester skips the landing checks a survival one is held to: they are put in the
      * air above a long drop, and on a spot the spot checks call unsafe.
      */
