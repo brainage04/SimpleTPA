@@ -78,6 +78,14 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::fallDamageRuleOffAcceptsADrop);
         register(
                 event,
+                "fire_damage_rule_off_accepts_magma",
+                SimpleTPAGameTests::fireDamageRuleOffAcceptsMagma);
+        register(
+                event,
+                "freeze_damage_rule_off_accepts_powder_snow",
+                SimpleTPAGameTests::freezeDamageRuleOffAcceptsPowderSnow);
+        register(
+                event,
                 "no_fall_damage_still_refuses_the_void",
                 SimpleTPAGameTests::noFallDamageStillRefusesTheVoid);
         register(

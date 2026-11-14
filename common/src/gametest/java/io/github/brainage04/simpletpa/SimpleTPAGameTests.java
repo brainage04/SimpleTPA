@@ -1096,6 +1096,72 @@ public final class SimpleTPAGameTests {
     }
 
     /**
+     * Magma deals hot_floor damage, which is fire damage (DamageTypeTagsProvider.java:60-66), and a
+     * player takes none while the fire_damage game rule is off (Player.java:664-665), so a target
+     * standing on magma is reachable then.
+     */
+    public static void fireDamageRuleOffAcceptsMagma(GameTestHelper helper) {
+        ruleOffAcceptsSpot(
+                helper,
+                GameRules.FIRE_DAMAGE,
+                () -> helper.setBlock(new BlockPos(5, 1, 5), Blocks.MAGMA_BLOCK),
+                new BlockPos(5, 2, 5));
+    }
+
+    /**
+     * Powder snow deals freeze damage (DamageTypeTagsProvider.java:86), and a player takes none
+     * while the freeze_damage game rule is off (Player.java:666-667), so a target standing in
+     * powder snow is reachable then.
+     */
+    public static void freezeDamageRuleOffAcceptsPowderSnow(GameTestHelper helper) {
+        ruleOffAcceptsSpot(
+                helper,
+                GameRules.FREEZE_DAMAGE,
+                () -> {
+                    helper.setBlock(new BlockPos(5, 0, 5), Blocks.STONE);
+                    helper.setBlock(new BlockPos(5, 1, 5), Blocks.POWDER_SNOW);
+                },
+                new BlockPos(5, 1, 5));
+    }
+
+    private static void ruleOffAcceptsSpot(
+            GameTestHelper helper, GameRule<Boolean> rule, Runnable build, BlockPos targetPos) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    ServerPlayer to = players[1];
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                build.run();
+                                to.setPos(Vec3.atBottomCenterOf(helper.absolutePos(targetPos)));
+                                InstantTpaWhitelist.add(to, from);
+                                MinecraftServer server = helper.getLevel().getServer();
+                                GameRules rules = server.getGameRules();
+                                boolean before = rules.get(rule);
+                                // Set and restored within this call, so no other test sees the rule
+                                // off.
+                                rules.set(rule, false, server);
+                                try {
+                                    command(from, "tpa " + to.getScoreboardName());
+                                } finally {
+                                    rules.set(rule, before, server);
+                                }
+                                if (!from.position().equals(to.position())) {
+                                    fail(
+                                            helper,
+                                            "a spot that cannot hurt was refused, got "
+                                                    + texts(from));
+                                    return;
+                                }
+                                succeed(helper);
+                            });
+                });
+    }
+
+    /**
      * Below the minimum build height the game deals out_of_world damage (Entity.java:599-601,
      * LivingEntity.java:2179-2180), which is no fall damage, so a drop no fall can hurt still kills
      * when nothing stops it before that height. With the fall_damage game rule off, a target over a
