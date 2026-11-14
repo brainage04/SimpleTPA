@@ -15,11 +15,7 @@ import net.minecraft.world.entity.LivingEntity;
  * @param drag the player's vertical air drag, as {@link #verticalDrag} works it out
  */
 record FallRule(
-        double safeDistance,
-        double multiplier,
-        OptionalInt slowFalling,
-        double gravity,
-        float drag) {
+        double safeDistance, double multiplier, OptionalInt slowFalling, double gravity, float drag) {
     /** Far past any safe fall distance, so the search for a floor stops well inside it. */
     static final double MAX_SCAN = 128.0;
 
