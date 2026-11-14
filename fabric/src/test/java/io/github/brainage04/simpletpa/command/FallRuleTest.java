@@ -78,9 +78,11 @@ class FallRuleTest {
         return Double.NaN;
     }
 
+    /** A drop of the full scan depth or more always hurts: see {@link #aFallPastTheScanHurts}. */
     @Property
     void withoutSlowFallingADropHurtsExactlyWhenTheGameDealsDamage(
-            @ForAll @DoubleRange(min = 0.0, max = 128.0, minIncluded = false) double drop,
+            @ForAll @DoubleRange(min = 0.0, max = 128.0, minIncluded = false, maxIncluded = false)
+                    double drop,
             @ForAll @FloatRange(min = 0.0F, max = 1.0F) float reduction,
             @ForAll @DoubleRange(min = -1024.0, max = 1024.0) double safeDistance,
             @ForAll @DoubleRange(min = 0.01, max = 100.0) double multiplier) {
@@ -161,10 +163,35 @@ class FallRuleTest {
             @ForAll @DoubleRange(min = 0.04, max = 100.0) double multiplier) {
         FallRule rule = new FallRule(safeDistance, multiplier, OptionalInt.empty(), GRAVITY, DRAG);
         double reach = rule.reach();
-        assertTrue(reach > 0.0 && reach <= FallRule.MAX_SCAN, "reach " + reach);
         assertTrue(
                 vanillaDamage(reach, 0.0F, safeDistance, multiplier) > 0, "reach " + reach);
-        assertTrue(rule.hurts(reach, reach, 0.0F), "reach " + reach);
+    }
+
+    /**
+     * Over the attributes' whole ranges (Attributes.java:44-46, 86-87). Landing answers a zero
+     * multiplier before it asks the rule.
+     */
+    @Property
+    void aFallPastTheScanHurts(
+            @ForAll @DoubleRange(min = -1024.0, max = 1024.0) double safeDistance,
+            @ForAll @DoubleRange(min = 0.01, max = 100.0) double multiplier,
+            @ForAll @DoubleRange(min = 0.0, max = 1024.0) double extra) {
+        FallRule rule = new FallRule(safeDistance, multiplier, OptionalInt.empty(), GRAVITY, DRAG);
+        double reach = rule.reach();
+        // Landing looks for a floor down to the reach and no further.
+        assertTrue(reach > 0.0 && reach <= FallRule.MAX_SCAN, "reach " + reach);
+        assertTrue(rule.hurts(reach + extra, reach + extra, 0.0F), "reach " + reach);
+    }
+
+    @Property
+    void aDropOfNothingNeverHurts(
+            @ForAll @DoubleRange(min = -1024.0, max = 1024.0) double safeDistance,
+            @ForAll @DoubleRange(min = 0.01, max = 100.0) double multiplier,
+            @ForAll @FloatRange(min = 0.0F, max = 1.0F) float reduction,
+            @ForAll @IntRange(min = 0, max = 2400) int duration) {
+        OptionalInt slowFalling = duration > 0 ? OptionalInt.of(duration) : OptionalInt.empty();
+        FallRule rule = new FallRule(safeDistance, multiplier, slowFalling, GRAVITY, DRAG);
+        assertFalse(rule.hurts(0.0, 0.0, reduction));
     }
 
     @Property
