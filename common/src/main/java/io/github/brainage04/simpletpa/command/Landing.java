@@ -115,15 +115,15 @@ public final class Landing {
     public static boolean dropHurts(ServerLevel level, ServerPlayer from, AABB arrival) {
         double multiplier = from.getAttributeValue(Attributes.FALL_DAMAGE_MULTIPLIER);
         MobEffectInstance slowFalling = from.getEffect(MobEffects.SLOW_FALLING);
-        // The rule Player.isInvulnerableTo applies to fall damage (Player.java:662-663). Calling it
-        // would also count ServerPlayer's grace while the client loads (ServerPlayer.java:1334),
-        // which can end before the requester lands.
         // Levitation resets the fall every tick it lasts, as Slow Falling does
         // (LivingEntity.java:3119-3120), so an infinite one never lets the requester fall.
         MobEffectInstance levitation = from.getEffect(MobEffects.LEVITATION);
         if (levitation != null && levitation.isInfiniteDuration()) {
             return false;
         }
+        // The rule Player.isInvulnerableTo applies to fall damage (Player.java:662-663). Calling it
+        // would also count ServerPlayer's grace while the client loads (ServerPlayer.java:1334),
+        // which can end before the requester lands.
         if (from.is(EntityTypeTags.FALL_DAMAGE_IMMUNE)
                 || !level.getGameRules().get(GameRules.FALL_DAMAGE)
                 || multiplier <= 0.0
