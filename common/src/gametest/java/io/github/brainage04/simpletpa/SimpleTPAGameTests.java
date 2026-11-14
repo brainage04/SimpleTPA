@@ -1055,9 +1055,9 @@ public final class SimpleTPAGameTests {
     /**
      * Drops the game does not hurt for go through, and Slow Falling counts only while it lasts.
      * Each target is four blocks above the stone floor, a drop that refuses on its own: over water,
-     * over a cobweb (tagged as resetting fall damage), over powder snow, and above the plain floor
-     * for a requester with a long Slow Falling. A requester whose Slow Falling ends at once is
-     * still refused.
+     * over a cobweb (tagged as resetting fall damage), over powder snow for a requester in leather
+     * boots, and above the plain floor for a requester with a long Slow Falling. A requester whose
+     * Slow Falling ends at once is still refused.
      */
     public static void resettingLandingsAndSlowFallingAcceptADrop(GameTestHelper helper) {
         List<ServerPlayer[]> pairs = new ArrayList<>();
@@ -1080,6 +1080,8 @@ public final class SimpleTPAGameTests {
                         new BlockPos(2, 6, 2),
                         new BlockPos(1, 6, 1)
                     };
+                    pairs.get(2)[0].setItemSlot(
+                            EquipmentSlot.FEET, new ItemStack(Items.LEATHER_BOOTS));
                     pairs.get(3)[0].addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 600));
                     pairs.get(4)[0].addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 1));
                     for (int index = 0; index < pairs.size(); index++) {
@@ -1092,7 +1094,7 @@ public final class SimpleTPAGameTests {
                     String[] cases = {
                         "a drop into water",
                         "a drop through a cobweb",
-                        "a drop into powder snow",
+                        "a drop into powder snow in leather boots",
                         "a drop with a long Slow Falling"
                     };
                     for (int index = 0; index < cases.length; index++) {
@@ -1202,6 +1204,96 @@ public final class SimpleTPAGameTests {
                         "a drop with a long Slow Falling and no floor within 128 blocks"
                     };
                     boolean[] refused = {true, false, false, false, true};
+                    List<String> failures = new ArrayList<>();
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        ServerPlayer to = pairs.get(index)[1];
+                        if (!refused[index]) {
+                            if (!from.position().equals(to.position())) {
+                                failures.add(cases[index] + " was refused, got " + texts(from));
+                            }
+                            continue;
+                        }
+                        String refusal =
+                                "[SimpleTPA] "
+                                        + to.getScoreboardName()
+                                        + " is in the air above a long drop, so your TP request was not accepted automatically.";
+                        if (!from.position().equals(requesters.get(index))
+                                || !received(from, refusal)) {
+                            failures.add(
+                                    cases[index]
+                                            + " was not refused, got "
+                                            + from.position()
+                                            + " "
+                                            + texts(from));
+                        }
+                    }
+                    if (!failures.isEmpty()) {
+                        fail(helper, String.join("; ", failures));
+                        return;
+                    }
+                    succeed(helper);
+                });
+    }
+
+    /**
+     * A drop that leaves the requester held in powder snow is refused unless they wear leather
+     * boots, which let them climb out (PowderSnowBlock.java:59-60, 139-145;
+     * LivingEntity.java:2665). Each target stands at y 6 over its own column on a stone floor at y
+     * 0: two blocks of powder snow (refused); one block of powder snow (refused); one block of
+     * powder snow for a requester in a leather helmet, which stops freezing but not the hold
+     * (refused); two blocks of powder snow for a requester in leather boots who stands above their
+     * top (accepted); and powder snow at y 2 over air, which the requester sinks through to stand
+     * with only their head in it, a one block fall below it (accepted).
+     */
+    public static void powderSnowHoldsARequesterWithoutLeatherBoots(GameTestHelper helper) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        for (int index = 0; index < 5; index++) {
+            pair(helper, pairs::add);
+        }
+        at(
+                helper,
+                1,
+                () -> {
+                    int[][] columns = {{0, 0}, {2, 0}, {4, 0}, {0, 2}, {2, 2}};
+                    int[][] snow = {{1, 2}, {1, 1}, {1, 1}, {1, 2}, {2, 2}};
+                    for (int index = 0; index < columns.length; index++) {
+                        int x = columns[index][0];
+                        int z = columns[index][1];
+                        helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+                        for (int y = snow[index][0]; y <= snow[index][1]; y++) {
+                            helper.setBlock(new BlockPos(x, y, z), Blocks.POWDER_SNOW);
+                        }
+                    }
+                    pairs.get(2)[0].setItemSlot(
+                            EquipmentSlot.HEAD, new ItemStack(Items.LEATHER_HELMET));
+                    ServerPlayer booted = pairs.get(3)[0];
+                    booted.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.LEATHER_BOOTS));
+                    standOnStone(
+                            helper,
+                            booted,
+                            Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(5, 4, 5))));
+                    List<Vec3> requesters =
+                            pairs.stream().map(players -> players[0].position()).toList();
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        ServerPlayer to = pairs.get(index)[1];
+                        to.setPos(
+                                Vec3.atBottomCenterOf(
+                                        helper.absolutePos(
+                                                new BlockPos(
+                                                        columns[index][0], 6, columns[index][1]))));
+                        InstantTpaWhitelist.add(to, from);
+                        command(from, "tpa " + to.getScoreboardName());
+                    }
+                    String[] cases = {
+                        "a drop into two blocks of powder snow",
+                        "a drop into one block of powder snow",
+                        "a drop into powder snow in a leather helmet",
+                        "a drop into powder snow in leather boots",
+                        "a drop through powder snow that ends below it"
+                    };
+                    boolean[] refused = {true, true, true, false, false};
                     List<String> failures = new ArrayList<>();
                     for (int index = 0; index < pairs.size(); index++) {
                         ServerPlayer from = pairs.get(index)[0];

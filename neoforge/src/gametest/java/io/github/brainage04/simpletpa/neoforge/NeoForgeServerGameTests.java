@@ -82,6 +82,10 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::fallBelowResetsAndSlowFallingEdges);
         register(
                 event,
+                "powder_snow_holds_a_requester_without_leather_boots",
+                SimpleTPAGameTests::powderSnowHoldsARequesterWithoutLeatherBoots);
+        register(
+                event,
                 "slow_falling_gets_no_credit_below_a_resetting_block",
                 SimpleTPAGameTests::slowFallingGetsNoCreditBelowAResettingBlock);
         register(

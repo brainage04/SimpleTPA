@@ -115,6 +115,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void powderSnowHoldsARequesterWithoutLeatherBoots(GameTestHelper helper) {
+        SimpleTPAGameTests.powderSnowHoldsARequesterWithoutLeatherBoots(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void slowFallingGetsNoCreditBelowAResettingBlock(GameTestHelper helper) {
         SimpleTPAGameTests.slowFallingGetsNoCreditBelowAResettingBlock(helper);
     }
