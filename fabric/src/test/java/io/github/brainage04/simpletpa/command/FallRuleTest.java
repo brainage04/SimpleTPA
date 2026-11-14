@@ -183,11 +183,13 @@ class FallRuleTest {
 
     /**
      * With or without Slow Falling, a fall that crosses a block that resets it counts only what
-     * restarted below that block.
+     * restarted below that block. A restart at the scan limit always hurts: see {@link
+     * #aRestartAtTheScanLimitHurtsWhateverTheSafeDistance}.
      */
     @Property
     void aFallThatABlockResetsCountsWhatRestartedBelowIt(
-            @ForAll @DoubleRange(min = 0.0, max = 128.0, minIncluded = false) double drop,
+            @ForAll @DoubleRange(min = 0.0, max = 128.0, minIncluded = false, maxIncluded = false)
+                    double drop,
             @ForAll @DoubleRange(min = 0.0, max = 1.0, minIncluded = false) double share,
             @ForAll @FloatRange(min = 0.0F, max = 1.0F) float reduction,
             @ForAll @DoubleRange(min = -1024.0, max = 1024.0) double safeDistance,
@@ -203,12 +205,14 @@ class FallRuleTest {
     }
 
     /**
-     * jqwik mixes in the ranges' edges, and drop = 128 with share = 1 restarts the fall at the scan
-     * limit, where the safe distance 200 lets the model deal no damage.
+     * A fall that restarts below a resetting block and finds no floor within the scan may go on to
+     * any depth, so it hurts even where the safe distance would forgive the scanned part.
      */
     @Test
-    void theRestartPropertyHoldsAtTheScanLimit() {
-        aFallThatABlockResetsCountsWhatRestartedBelowIt(128.0, 1.0, 0.0F, 200.0, 1.0, 0);
+    void aRestartAtTheScanLimitHurtsWhateverTheSafeDistance() {
+        FallRule rule = new FallRule(200.0, 1.0, OptionalInt.empty(), GRAVITY, DRAG);
+        assertTrue(rule.hurts(FallRule.MAX_SCAN, FallRule.MAX_SCAN, FallRule.MAX_SCAN, PLAIN));
+        assertFalse(rule.hurts(FallRule.MAX_SCAN - 1.0E-6, 127.0, 127.0, PLAIN));
     }
 
     @Property
