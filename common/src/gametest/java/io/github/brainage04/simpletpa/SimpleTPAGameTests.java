@@ -946,9 +946,9 @@ public final class SimpleTPAGameTests {
      * target at the top of the world with no floor within the check's 128 block scan, for a
      * requester with a long Slow Falling (refused).
      *
-     * <p>The game encases the test area in barriers (TestInstanceBlockEntity.java:362-368), and
-     * the roof of this empty structure is at y 8, so a target above y 6 would be inside or on it.
-     * The powder snow column's floor therefore replaces the barrier below the area.
+     * <p>The game encases the test area in barriers (TestInstanceBlockEntity.java:362-368), and the
+     * roof of this empty structure is at y 8, so a target above y 6 would be inside or on it. The
+     * powder snow column's floor therefore replaces the barrier below the area.
      */
     public static void fallBelowResetsAndSlowFallingEdges(GameTestHelper helper) {
         List<ServerPlayer[]> pairs = new ArrayList<>();
