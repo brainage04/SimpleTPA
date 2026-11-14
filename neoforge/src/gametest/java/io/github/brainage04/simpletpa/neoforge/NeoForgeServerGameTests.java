@@ -70,6 +70,10 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::resettingLandingsAndSlowFallingAcceptADrop);
         register(
                 event,
+                "fall_below_resets_and_slow_falling_edges",
+                SimpleTPAGameTests::fallBelowResetsAndSlowFallingEdges);
+        register(
+                event,
                 "creative_skips_landing_checks",
                 SimpleTPAGameTests::creativeSkipsLandingChecks);
         register(

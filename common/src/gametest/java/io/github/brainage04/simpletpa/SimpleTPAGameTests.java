@@ -937,6 +937,110 @@ public final class SimpleTPAGameTests {
     }
 
     /**
+     * A fall that goes on below a resetting block counts again from that block's bottom, and the
+     * drop check's Slow Falling and powder snow edges. Above the stone floor: a target two blocks
+     * over a single powder snow block with four blocks of air below it (refused, the fall below
+     * deals one damage); a target over water three blocks deep (accepted); a six block drop for a
+     * requester with infinite Slow Falling (accepted); a five block drop onto powder snow for a
+     * requester in leather boots who stands above its top, so it holds them (accepted). Last, a
+     * target at the top of the world with no floor within the check's 128 block scan, for a
+     * requester with a long Slow Falling (refused).
+     */
+    public static void fallBelowResetsAndSlowFallingEdges(GameTestHelper helper) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        for (int index = 0; index < 5; index++) {
+            pair(helper, pairs::add);
+        }
+        at(
+                helper,
+                1,
+                () -> {
+                    floorBelow(helper, 1);
+                    helper.setBlock(new BlockPos(0, 6, 0), Blocks.POWDER_SNOW);
+                    for (int y = 2; y <= 4; y++) {
+                        helper.setBlock(new BlockPos(0, y, 2), Blocks.WATER);
+                    }
+                    helper.setBlock(new BlockPos(2, 2, 2), Blocks.POWDER_SNOW);
+                    ServerLevel level = helper.getLevel();
+                    BlockPos column = helper.absolutePos(new BlockPos(1, 0, 1));
+                    BlockPos top = new BlockPos(column.getX(), level.getMaxY() - 2, column.getZ());
+                    for (int below = 0; below <= 130; below++) {
+                        if (!level.getBlockState(top.below(below)).isAir()) {
+                            fail(
+                                    helper,
+                                    "the test needs 130 blocks of air below "
+                                            + top
+                                            + ", found a block at "
+                                            + top.below(below));
+                            return;
+                        }
+                    }
+                    Vec3[] targets = {
+                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(0, 8, 0))),
+                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(0, 8, 2))),
+                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(2, 8, 0))),
+                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(2, 8, 2))),
+                        Vec3.atBottomCenterOf(top)
+                    };
+                    pairs.get(2)[0].addEffect(
+                            new MobEffectInstance(
+                                    MobEffects.SLOW_FALLING,
+                                    MobEffectInstance.INFINITE_DURATION));
+                    ServerPlayer booted = pairs.get(3)[0];
+                    booted.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.LEATHER_BOOTS));
+                    standOnStone(
+                            helper,
+                            booted,
+                            Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(5, 4, 5))));
+                    pairs.get(4)[0].addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 600));
+                    List<Vec3> requesters =
+                            pairs.stream().map(players -> players[0].position()).toList();
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        ServerPlayer to = pairs.get(index)[1];
+                        to.setPos(targets[index]);
+                        InstantTpaWhitelist.add(to, from);
+                        command(from, "tpa " + to.getScoreboardName());
+                    }
+                    String[] cases = {
+                        "a fall that goes on four blocks below a single powder snow block",
+                        "a drop into deep water",
+                        "a drop with an infinite Slow Falling",
+                        "a drop onto powder snow in leather boots",
+                        "a drop with a long Slow Falling and no floor within 128 blocks"
+                    };
+                    boolean[] refused = {true, false, false, false, true};
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        ServerPlayer to = pairs.get(index)[1];
+                        if (!refused[index]) {
+                            if (!from.position().equals(to.position())) {
+                                fail(helper, cases[index] + " was refused, got " + texts(from));
+                                return;
+                            }
+                            continue;
+                        }
+                        String refusal =
+                                "[SimpleTPA] "
+                                        + to.getScoreboardName()
+                                        + " is in the air above a long drop, so your TP request was not accepted automatically.";
+                        if (!from.position().equals(requesters.get(index))
+                                || !received(from, refusal)) {
+                            fail(
+                                    helper,
+                                    cases[index]
+                                            + " was not refused, got "
+                                            + from.position()
+                                            + " "
+                                            + texts(from));
+                            return;
+                        }
+                    }
+                    succeed(helper);
+                });
+    }
+
+    /**
      * A creative requester skips the landing checks a survival one is held to: they are put in the
      * air above a long drop, and on a spot the spot checks call unsafe.
      */

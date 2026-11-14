@@ -100,6 +100,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void fallBelowResetsAndSlowFallingEdges(GameTestHelper helper) {
+        SimpleTPAGameTests.fallBelowResetsAndSlowFallingEdges(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void creativeSkipsLandingChecks(GameTestHelper helper) {
         SimpleTPAGameTests.creativeSkipsLandingChecks(helper);
     }
