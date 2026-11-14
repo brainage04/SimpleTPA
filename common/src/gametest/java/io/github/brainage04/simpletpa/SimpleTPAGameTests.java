@@ -1049,12 +1049,12 @@ public final class SimpleTPAGameTests {
     }
 
     /**
-     * A creative requester skips the landing checks a survival one is held to: they are put in the
-     * air above a long drop, and on a spot the spot checks call unsafe.
+     * A creative or spectator requester skips the landing checks a survival one is held to: they
+     * are put in the air above a long drop, and on a spot the spot checks call unsafe.
      */
     public static void creativeSkipsLandingChecks(GameTestHelper helper) {
         List<ServerPlayer[]> pairs = new ArrayList<>();
-        for (int index = 0; index < 4; index++) {
+        for (int index = 0; index < 6; index++) {
             pair(helper, pairs::add);
         }
         List<Vec3> starts = pairs.stream().map(players -> players[0].position()).toList();
@@ -1066,7 +1066,7 @@ public final class SimpleTPAGameTests {
                     helper.setBlock(new BlockPos(5, 1, 5), Blocks.MAGMA_BLOCK);
                     for (int index = 0; index < pairs.size(); index++) {
                         ServerPlayer to = pairs.get(index)[1];
-                        if (index < 2) {
+                        if (index < 2 || index == 4) {
                             to.setPos(
                                     Vec3.atBottomCenterOf(
                                             helper.absolutePos(new BlockPos(1, 6, 1))));
@@ -1077,6 +1077,8 @@ public final class SimpleTPAGameTests {
                         }
                         if (index == 1 || index == 3) {
                             fixture(pairs.get(index)[0]).gameMode(GameType.CREATIVE);
+                        } else if (index >= 4) {
+                            fixture(pairs.get(index)[0]).gameMode(GameType.SPECTATOR);
                         }
                         InstantTpaWhitelist.add(to, pairs.get(index)[0]);
                         command(pairs.get(index)[0], "tpa " + to.getScoreboardName());
@@ -1094,7 +1096,9 @@ public final class SimpleTPAGameTests {
                         {drop, "a survival requester over a long drop was not refused"},
                         {null, "a creative requester over a long drop was refused"},
                         {unsafe, "a survival requester on a dangerous block was not refused"},
-                        {null, "a creative requester on a dangerous block was refused"}
+                        {null, "a creative requester on a dangerous block was refused"},
+                        {null, "a spectator requester over a long drop was refused"},
+                        {null, "a spectator requester on a dangerous block was refused"}
                     };
                     for (int index = 0; index < pairs.size(); index++) {
                         ServerPlayer from = pairs.get(index)[0];
