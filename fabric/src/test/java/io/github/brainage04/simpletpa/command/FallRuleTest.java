@@ -92,14 +92,24 @@ class FallRuleTest {
                 rule.hurts(drop, drop, reduction));
     }
 
+    /**
+     * With or without Slow Falling: a block that resets a fall can also hold the player until the
+     * effect has run out. A cobweb keeps 5 % of a player's vertical movement and then stops them
+     * (WebBlock.java:22-27, Entity.java:755-761), so at the 0.01 a tick Slow Falling allows they
+     * take thousands of ticks to sink through one.
+     */
     @Property
     void aFallThatABlockResetsCountsFromThatBlocksBottom(
             @ForAll @DoubleRange(min = 0.0, max = 128.0, minIncluded = false) double drop,
-            @ForAll @DoubleRange(min = 0.0, max = 1.0, minIncluded = false) double share,
+            @ForAll @DoubleRange(min = 0.0, max = 1.0, minIncluded = false, maxIncluded = false)
+                    double share,
             @ForAll @FloatRange(min = 0.0F, max = 1.0F) float reduction,
             @ForAll @DoubleRange(min = -1024.0, max = 1024.0) double safeDistance,
-            @ForAll @DoubleRange(min = 0.01, max = 100.0) double multiplier) {
-        FallRule rule = new FallRule(safeDistance, multiplier, OptionalInt.empty(), GRAVITY, DRAG);
+            @ForAll @DoubleRange(min = 0.01, max = 100.0) double multiplier,
+            @ForAll @IntRange(min = 0, max = 2400) int slowFallingTicks) {
+        OptionalInt slowFalling =
+                slowFallingTicks > 0 ? OptionalInt.of(slowFallingTicks) : OptionalInt.empty();
+        FallRule rule = new FallRule(safeDistance, multiplier, slowFalling, GRAVITY, DRAG);
         double belowReset = drop * share;
         assertEquals(
                 vanillaDamage(belowReset, reduction, safeDistance, multiplier) > 0,
@@ -238,6 +248,15 @@ class FallRuleTest {
         assertTrue(longEffect.countedFall(10.0) < 0.5);
         assertFalse(longEffect.hurts(10.0, 10.0, 0.0F));
         assertEquals(FallRule.MAX_SCAN, longEffect.reach());
+    }
+
+    @Test
+    void slowFallingTakesNothingOffTheFallBelowACobweb() {
+        // A cobweb one block down, then twenty blocks of air: the effect can end in the cobweb.
+        FallRule rule = player(OptionalInt.of(600));
+        assertFalse(rule.hurts(21.0, 21.0, 0.0F));
+        assertTrue(rule.hurts(21.0, 20.0, 0.0F));
+        assertFalse(rule.hurts(21.0, 3.0, 0.0F));
     }
 
     @Test
