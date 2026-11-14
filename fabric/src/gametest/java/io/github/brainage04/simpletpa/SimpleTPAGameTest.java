@@ -100,6 +100,16 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void fireDamageRuleOffAcceptsMagma(GameTestHelper helper) {
+        SimpleTPAGameTests.fireDamageRuleOffAcceptsMagma(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void freezeDamageRuleOffAcceptsPowderSnow(GameTestHelper helper) {
+        SimpleTPAGameTests.freezeDamageRuleOffAcceptsPowderSnow(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void noFallDamageStillRefusesTheVoid(GameTestHelper helper) {
         SimpleTPAGameTests.noFallDamageStillRefusesTheVoid(helper);
     }
