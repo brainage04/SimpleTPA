@@ -65,6 +65,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
@@ -944,10 +945,9 @@ public final class SimpleTPAGameTests {
                 helper,
                 1,
                 () -> {
+                    Block bedBlock = Blocks.BED.pick(DyeColor.RED);
                     BlockState bed =
-                            Blocks.RED_BED
-                                    .defaultBlockState()
-                                    .setValue(BedBlock.FACING, Direction.SOUTH);
+                            bedBlock.defaultBlockState().setValue(BedBlock.FACING, Direction.SOUTH);
                     helper.setBlock(
                             new BlockPos(0, 0, 0), bed.setValue(BedBlock.PART, BedPart.FOOT));
                     helper.setBlock(
