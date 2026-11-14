@@ -23,18 +23,18 @@ permissions:
 # (release/2.0.0). Drop the @<sha> once 2.0.0 is published.
 jobs:
   build:
-    uses: brainage04/MinecraftModConventions/.github/workflows/reusable-mod-build.yml@v3.4.0
+    uses: brainage04/MinecraftModConventions/.github/workflows/reusable-mod-build.yml@v3.5.0
     with:
       prepare_siblings: BrainageLib@d783aa0a761aa6523fbf3ed291d7b5ca288fbffc
 
   production-gametests:
-    uses: brainage04/MinecraftModConventions/.github/workflows/reusable-production-gametests.yml@v3.4.0
+    uses: brainage04/MinecraftModConventions/.github/workflows/reusable-production-gametests.yml@v3.5.0
     with:
       prepare_siblings: BrainageLib@d783aa0a761aa6523fbf3ed291d7b5ca288fbffc
 
   client-gametests:
     if: ${{ vars.RUN_CLIENT_GAMETESTS != 'false' && (github.event_name != 'workflow_dispatch' || inputs.run_client_gametests || inputs.record_client_gametests) }}
-    uses: brainage04/MinecraftModConventions/.github/workflows/reusable-client-gametests.yml@v3.4.0
+    uses: brainage04/MinecraftModConventions/.github/workflows/reusable-client-gametests.yml@v3.5.0
     with:
       prepare_siblings: BrainageLib@d783aa0a761aa6523fbf3ed291d7b5ca288fbffc
       run_client_gametests: ${{ github.event_name != 'workflow_dispatch' || inputs.run_client_gametests }}
