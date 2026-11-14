@@ -997,6 +997,10 @@ public final class SimpleTPAGameTests {
                     for (int index = 0; index < pairs.size(); index++) {
                         ServerPlayer from = pairs.get(index)[0];
                         ServerPlayer to = pairs.get(index)[1];
+                        // Powder snow holds an entity that has fallen more than 2.5 blocks
+                        // (PowderSnowBlock.java:120-121), and the drop check asks it about the
+                        // requester, so a requester still counting a fall would land on the snow.
+                        from.resetFallDistance();
                         to.setPos(targets[index]);
                         InstantTpaWhitelist.add(to, from);
                         command(from, "tpa " + to.getScoreboardName());
