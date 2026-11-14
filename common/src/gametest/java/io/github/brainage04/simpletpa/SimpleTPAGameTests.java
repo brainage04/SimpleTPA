@@ -1149,10 +1149,10 @@ public final class SimpleTPAGameTests {
      * above their bottom. Two targets, both refused: one at the top of the world 11 blocks above a
      * single vine with a floor 3 blocks below it, for a requester whose Slow Falling has two ticks
      * left, so the check looks that far down and a fall from rest passes the vine whole in one tick
-     * of about 1.2 blocks, whose whole movement the game counts (Entity.java:766-775); one at y 6
-     * a block above a vine at y 4 with a carpet 3.94 blocks below it, where the requester leaves
-     * the vine at up to 0.15 blocks a tick (LivingEntity.java:2690-2693), so the counted fall can
-     * reach 4.09 blocks.
+     * of about 1.2 blocks, whose whole movement the game counts (Entity.java:766-775); one at y 6 a
+     * block above a vine at y 4 with a carpet 3.94 blocks below it, where the requester leaves the
+     * vine at up to 0.15 blocks a tick (LivingEntity.java:2690-2693), so the counted fall can reach
+     * 4.09 blocks.
      */
     public static void passingThroughVinesCountsFromAboveTheirBottom(GameTestHelper helper) {
         List<ServerPlayer[]> pairs = new ArrayList<>();
