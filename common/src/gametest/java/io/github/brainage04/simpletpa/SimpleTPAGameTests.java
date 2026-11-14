@@ -1176,7 +1176,7 @@ public final class SimpleTPAGameTests {
                     built.add(top.below(16));
                     vines(level, List.of(top.below(12)), built);
                     helper.setBlock(new BlockPos(4, -1, 4), Blocks.STONE);
-                    helper.setBlock(new BlockPos(4, 0, 4), Blocks.WHITE_CARPET);
+                    helper.setBlock(new BlockPos(4, 0, 4), Blocks.MOSS_CARPET);
                     BlockPos lowVine = helper.absolutePos(new BlockPos(4, 4, 4));
                     vines(level, List.of(lowVine), new ArrayList<>());
                     Vec3[] targets = {
