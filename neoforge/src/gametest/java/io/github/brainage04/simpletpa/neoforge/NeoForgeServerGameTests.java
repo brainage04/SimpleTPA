@@ -66,6 +66,10 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::smallFallMultiplierAcceptsAHurtlessDrop);
         register(
                 event,
+                "stalagmite_tip_refuses_a_short_drop",
+                SimpleTPAGameTests::stalagmiteTipRefusesAShortDrop);
+        register(
+                event,
                 "resetting_landings_and_slow_falling_accept_a_drop",
                 SimpleTPAGameTests::resettingLandingsAndSlowFallingAcceptADrop);
         register(

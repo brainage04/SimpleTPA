@@ -867,6 +867,61 @@ public final class SimpleTPAGameTests {
     }
 
     /**
+     * A stalagmite's tip hurts more than a plain landing: PointedDripstoneBlock.fallOn adds 2.5 to
+     * the fall distance and doubles the damage (PointedDripstoneBlock.java:54-58). The tip's top is
+     * 11/16 of a block up (SpeleothemBlock.java:48), so a target 1 5/16 blocks above it is a drop
+     * that deals floor((1.3125 + 2.5 + 1e-6 - 3) * 2) = 1 damage (refused), and a target 5/16 of a
+     * block above it one that deals floor((0.3125 + 2.5 + 1e-6 - 3) * 2) = -1, none (accepted).
+     */
+    public static void stalagmiteTipRefusesAShortDrop(GameTestHelper helper) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        for (int index = 0; index < 2; index++) {
+            pair(helper, pairs::add);
+        }
+        List<Vec3> starts = pairs.stream().map(players -> players[0].position()).toList();
+        at(
+                helper,
+                1,
+                () -> {
+                    floorBelow(helper, 1);
+                    helper.setBlock(new BlockPos(0, 2, 0), Blocks.POINTED_DRIPSTONE);
+                    helper.setBlock(new BlockPos(2, 2, 2), Blocks.POINTED_DRIPSTONE);
+                    ServerPlayer[] refused = pairs.get(0);
+                    ServerPlayer[] accepted = pairs.get(1);
+                    refused[1].setPos(
+                            Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(0, 4, 0))));
+                    accepted[1].setPos(
+                            Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(2, 3, 2))));
+                    for (ServerPlayer[] players : pairs) {
+                        InstantTpaWhitelist.add(players[1], players[0]);
+                        command(players[0], "tpa " + players[1].getScoreboardName());
+                    }
+                    String refusal =
+                            "[SimpleTPA] "
+                                    + refused[1].getScoreboardName()
+                                    + " is in the air above a long drop, so your TP request was not accepted automatically.";
+                    if (!refused[0].position().equals(starts.get(0))
+                            || !received(refused[0], refusal)) {
+                        fail(
+                                helper,
+                                "a drop onto a stalagmite's tip that deals damage was not refused, got "
+                                        + refused[0].position()
+                                        + " "
+                                        + texts(refused[0]));
+                        return;
+                    }
+                    if (!accepted[0].position().equals(accepted[1].position())) {
+                        fail(
+                                helper,
+                                "a drop onto a stalagmite's tip that deals no damage was refused, got "
+                                        + texts(accepted[0]));
+                        return;
+                    }
+                    succeed(helper);
+                });
+    }
+
+    /**
      * Drops the game does not hurt for go through, and Slow Falling counts only while it lasts.
      * Each target is four blocks above the stone floor, a drop that refuses on its own: over water,
      * over a cobweb (tagged as resetting fall damage), over powder snow, and above the plain floor

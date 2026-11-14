@@ -95,6 +95,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void stalagmiteTipRefusesAShortDrop(GameTestHelper helper) {
+        SimpleTPAGameTests.stalagmiteTipRefusesAShortDrop(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void resettingLandingsAndSlowFallingAcceptADrop(GameTestHelper helper) {
         SimpleTPAGameTests.resettingLandingsAndSlowFallingAcceptADrop(helper);
     }
