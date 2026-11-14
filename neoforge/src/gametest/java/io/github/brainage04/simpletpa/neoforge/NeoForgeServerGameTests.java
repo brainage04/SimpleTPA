@@ -70,6 +70,10 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::fallDamageRuleOffAcceptsADrop);
         register(
                 event,
+                "no_fall_damage_still_refuses_the_void",
+                SimpleTPAGameTests::noFallDamageStillRefusesTheVoid);
+        register(
+                event,
                 "resetting_landings_and_slow_falling_accept_a_drop",
                 SimpleTPAGameTests::resettingLandingsAndSlowFallingAcceptADrop);
         register(

@@ -100,6 +100,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void noFallDamageStillRefusesTheVoid(GameTestHelper helper) {
+        SimpleTPAGameTests.noFallDamageStillRefusesTheVoid(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void resettingLandingsAndSlowFallingAcceptADrop(GameTestHelper helper) {
         SimpleTPAGameTests.resettingLandingsAndSlowFallingAcceptADrop(helper);
     }
