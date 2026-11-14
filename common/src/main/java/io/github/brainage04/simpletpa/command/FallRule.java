@@ -86,7 +86,7 @@ record FallRule(
      * override {@code fallOn} with numbers of their own that no API exposes, which Landing copies:
      * a stalagmite tip adds 2.5 blocks and doubles the damage (PointedDripstoneBlock.java:54-58),
      * hay and honey deal a fifth of it (HayBlock.java:17-19, HoneyBlock.java:45-50), and slime none
-     * unless the player sneaks (SlimeBlock.java:15-19).
+     * (SlimeBlock.java:15-19).
      *
      * @param reduction the share of the fall the block takes away
      * @param addedDistance the blocks the block adds to the fall
