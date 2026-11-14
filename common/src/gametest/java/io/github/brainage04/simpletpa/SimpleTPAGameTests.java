@@ -867,6 +867,48 @@ public final class SimpleTPAGameTests {
     }
 
     /**
+     * With the fall_damage game rule off the game deals no fall damage (Player.java:662-663), so a
+     * target four blocks above the floor, a drop that refuses with the rule on, is reachable.
+     */
+    public static void fallDamageRuleOffAcceptsADrop(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    ServerPlayer to = players[1];
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                floorBelow(helper, 1);
+                                to.setPos(
+                                        Vec3.atBottomCenterOf(
+                                                helper.absolutePos(new BlockPos(1, 6, 1))));
+                                InstantTpaWhitelist.add(to, from);
+                                MinecraftServer server = helper.getLevel().getServer();
+                                GameRules rules = server.getGameRules();
+                                boolean fallDamage = rules.get(GameRules.FALL_DAMAGE);
+                                // Set and restored within this call, so no other test sees the rule
+                                // off.
+                                rules.set(GameRules.FALL_DAMAGE, false, server);
+                                try {
+                                    command(from, "tpa " + to.getScoreboardName());
+                                } finally {
+                                    rules.set(GameRules.FALL_DAMAGE, fallDamage, server);
+                                }
+                                if (!from.position().equals(to.position())) {
+                                    fail(
+                                            helper,
+                                            "a drop was refused while fall damage is off, got "
+                                                    + texts(from));
+                                    return;
+                                }
+                                succeed(helper);
+                            });
+                });
+    }
+
+    /**
      * Drops the game does not hurt for go through, and Slow Falling counts only while it lasts.
      * Each target is four blocks above the stone floor, a drop that refuses on its own: over water,
      * over a cobweb (tagged as resetting fall damage), over powder snow, and above the plain floor
