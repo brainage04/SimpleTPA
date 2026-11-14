@@ -35,30 +35,39 @@ record FallRule(
                 1.0F);
     }
 
-    /** How far below the start of a fall to look for the floor that ends it. */
+    /**
+     * How far below the start of a fall to look for the floor that ends it. A safe fall distance
+     * far enough below zero would take the reach to zero or above the player, so it is at least
+     * one block.
+     */
     double reach() {
         // Slow Falling leaves the first part of a fall uncounted, so the floor that decides may be
         // deeper than the safe distance.
         return slowFalling.isPresent()
                 ? MAX_SCAN
-                : Math.min(MAX_SCAN, Math.ceil(safeDistance + 1.0 / multiplier) + 1.0);
+                : Math.clamp(Math.ceil(safeDistance + 1.0 / multiplier) + 1.0, 1.0, MAX_SCAN);
     }
 
     /**
      * Whether a fall of {@code drop} blocks from rest hurts, judged by the game's fall damage rule
      * (LivingEntity.java:1851-1862). A block that resets the fall on the way down leaves {@code
      * dropBelowReset} blocks of it, and {@code reduction} is the landing block's fall distance
-     * reduction (Block.java:486-489). A {@code dropBelowReset} of {@link #reach} or more means no
-     * floor was found within the scan.
+     * reduction (Block.java:486-489). A {@code dropBelowReset} of {@link #MAX_SCAN} means no floor
+     * was found within the deepest scan, and the fall may go on to any depth. A shorter reach needs
+     * no such rule: a plain landing at the reach already hurts.
      */
     boolean hurts(double drop, double dropBelowReset, float reduction) {
-        if (slowFalling.isPresent() && dropBelowReset >= reach()) {
-            // No floor within the scan: how much of the fall counts depends on where it ends.
+        if (dropBelowReset >= MAX_SCAN) {
             return true;
         }
         // Slow Falling and a resetting block each take away the fall above them, so the lower of
         // the two starts what counts.
         double counted = Math.min(countedFall(drop), dropBelowReset);
+        // The game deals no fall damage for a landing without a fall (Entity.java:1590), whatever
+        // the safe distance.
+        if (counted <= 0.0) {
+            return false;
+        }
         double distance = counted * (1.0F - reduction);
         // The game floors the damage after applying the multiplier, not the distance before it
         // (LivingEntity.java:1857).
