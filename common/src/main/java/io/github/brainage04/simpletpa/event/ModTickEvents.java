@@ -1,34 +1,43 @@
 package io.github.brainage04.simpletpa.event;
 
-import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.SimpleTPA;
+import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 public class ModTickEvents {
-	public static void onEndServerTick(MinecraftServer server) {
-			long time = server.overworld().getGameTime();
+    public static final int REQUEST_LIFETIME_TICKS = 60 * 20;
 
-			TPRequestCommand.TP_REQUESTS.removeIf(tpRequest -> {
-				if (time - tpRequest.created() < 1200) {
-					return false;
-				}
+    public static void onEndServerTick(MinecraftServer server) {
+        long time = server.overworld().getGameTime();
 
-				ServerPlayer to = server.getPlayerList().getPlayer(tpRequest.toId());
+        TPRequestCommand.TP_REQUESTS.removeIf(
+                tpRequest -> {
+                    if (time - tpRequest.created() < REQUEST_LIFETIME_TICKS) {
+                        return false;
+                    }
 
-				if (to != null) {
-					SimpleTPA.FEEDBACK.error(to, "The TP request that %s sent you has expired.", tpRequest.fromName());
-					SimpleTPA.FEEDBACK.click(to);
-				}
+                    ServerPlayer to = server.getPlayerList().getPlayer(tpRequest.toId());
 
-				ServerPlayer from = server.getPlayerList().getPlayer(tpRequest.fromId());
+                    if (to != null) {
+                        SimpleTPA.FEEDBACK.error(
+                                to,
+                                "The TP request that %s sent you has expired.",
+                                tpRequest.fromName());
+                        SimpleTPA.FEEDBACK.click(to);
+                    }
 
-				if (from != null) {
-					SimpleTPA.FEEDBACK.error(from, "The TP request that you sent to %s has expired.", tpRequest.toName());
-					SimpleTPA.FEEDBACK.click(from);
-				}
+                    ServerPlayer from = server.getPlayerList().getPlayer(tpRequest.fromId());
 
-				return true;
-			});
-	}
+                    if (from != null) {
+                        SimpleTPA.FEEDBACK.error(
+                                from,
+                                "The TP request that you sent to %s has expired.",
+                                tpRequest.toName());
+                        SimpleTPA.FEEDBACK.click(from);
+                    }
+
+                    return true;
+                });
+    }
 }
