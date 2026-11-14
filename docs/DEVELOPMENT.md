@@ -1,0 +1,3 @@
+# Development
+
+`FallRuleTest` checks `FallRule`, the arithmetic of the landing check, with examples and jqwik properties against the game's own fall damage and Slow Falling arithmetic in 26.3, which the test writes out as the game runs it. jqwik finds no properties inside the Fabric loader, and `SimpleTPAMetadataTest` needs the loader, so `:fabric:propertyTest` runs the tests in the `command` package without it and `:fabric:test` runs the rest; `check` runs both. `:fabric:pitest` runs mutation tests on `FallRule` against `FallRuleTest`; it is not part of `check`, and the report is written to `fabric/build/reports/pitest`.
