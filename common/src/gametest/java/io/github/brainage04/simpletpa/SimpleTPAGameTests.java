@@ -1096,6 +1096,104 @@ public final class SimpleTPAGameTests {
     }
 
     /**
+     * Below the minimum build height the game deals out_of_world damage (Entity.java:599-601,
+     * LivingEntity.java:2179-2180), which is no fall damage, so a drop no fall can hurt still kills
+     * when nothing stops it before that height. With the fall_damage game rule off, a target over a
+     * column empty down to the minimum build height is refused, while the same column with a block
+     * at that height, farther down than one scan reaches, is accepted. A requester whose fall
+     * damage multiplier is 0 is refused over the empty column too. The column lies far from the
+     * structure, so clearing it touches no other test.
+     */
+    public static void noFallDamageStillRefusesTheVoid(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    ServerPlayer to = players[1];
+                    Vec3 start = from.position();
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                ServerLevel level = helper.getLevel();
+                                BlockPos column =
+                                        helper.absolutePos(new BlockPos(1, 0, 1))
+                                                .offset(3_000, 0, 3_000);
+                                BlockPos spot = column.atY(level.getMaxY() - 10);
+                                BlockPos bottom = column.atY(level.getMinY());
+                                level.getChunkAt(spot);
+                                for (int y = bottom.getY(); y <= spot.getY() + 2; y++) {
+                                    level.setBlockAndUpdate(
+                                            column.atY(y), Blocks.AIR.defaultBlockState());
+                                }
+                                to.setPos(Vec3.atBottomCenterOf(spot));
+                                AABB arrival =
+                                        from.getBoundingBox()
+                                                .move(to.position().subtract(from.position()));
+                                InstantTpaWhitelist.add(to, from);
+                                MinecraftServer server = level.getServer();
+                                GameRules rules = server.getGameRules();
+                                boolean fallDamage = rules.get(GameRules.FALL_DAMAGE);
+                                boolean floorHurts;
+                                // Set and restored within this call, so no other test sees the rule
+                                // off.
+                                rules.set(GameRules.FALL_DAMAGE, false, server);
+                                try {
+                                    command(from, "tpa " + to.getScoreboardName());
+                                    level.setBlockAndUpdate(
+                                            bottom, Blocks.STONE.defaultBlockState());
+                                    floorHurts = Landing.dropHurts(level, from, arrival);
+                                    level.setBlockAndUpdate(bottom, Blocks.AIR.defaultBlockState());
+                                } finally {
+                                    rules.set(GameRules.FALL_DAMAGE, fallDamage, server);
+                                }
+                                String expected =
+                                        "[SimpleTPA] "
+                                                + to.getScoreboardName()
+                                                + " is in the air above a long drop, so your TP request was not accepted automatically.";
+                                if (!from.position().equals(start)) {
+                                    fail(
+                                            helper,
+                                            "teleported over the void while fall damage is off");
+                                    return;
+                                }
+                                if (!pending(to, from)) {
+                                    fail(helper, "the request over the void closed");
+                                    return;
+                                }
+                                if (!received(from, expected)) {
+                                    fail(
+                                            helper,
+                                            "not told \"" + expected + "\", got " + texts(from));
+                                    return;
+                                }
+                                if (floorHurts) {
+                                    fail(
+                                            helper,
+                                            "a drop onto the block at the minimum build height was"
+                                                    + " refused while fall damage is off");
+                                    return;
+                                }
+                                AttributeInstance multiplier =
+                                        from.getAttribute(Attributes.FALL_DAMAGE_MULTIPLIER);
+                                if (multiplier == null) {
+                                    fail(helper, "the requester has no fall damage multiplier");
+                                    return;
+                                }
+                                multiplier.setBaseValue(0.0);
+                                if (!Landing.dropHurts(level, from, arrival)) {
+                                    fail(
+                                            helper,
+                                            "a drop into the void passed for a fall damage"
+                                                    + " multiplier of 0");
+                                    return;
+                                }
+                                succeed(helper);
+                            });
+                });
+    }
+
+    /**
      * Drops the game does not hurt for go through, and Slow Falling counts only while it lasts.
      * Each target is four blocks above the stone floor, a drop that refuses on its own: over water,
      * over a cobweb (tagged as resetting fall damage), over powder snow for a requester in leather
