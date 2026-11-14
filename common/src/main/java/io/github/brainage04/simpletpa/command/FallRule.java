@@ -208,9 +208,10 @@ record FallRule(
      * (LivingEntity.java:3119-3120) and caps the pull at 0.01 a tick while falling
      * (LivingEntity.java:2407-2410), so only the part of the fall from the effect's last tick on
      * counts. A tick moves the player by their speed, then gravity is added and the vertical air
-     * drag applied (LivingEntity.java:2450-2476); a teleport starts the fall at rest. The effect is
-     * taken to end a tick early and its last tick to count in full, so the uncertain tick counts
-     * against the requester.
+     * drag applied (LivingEntity.java:2450-2476); a teleport starts the fall at rest. A duration of
+     * D ticks at the check leaves D - 1 ticks with the effect, as tickEffects counts it down before
+     * aiStep (LivingEntity.java:503, 2750-2789; MobEffectInstance.java:223-239), and the last of
+     * them counts in full, against the requester.
      *
      * <p>Network delay is not covered. The server counts the fall from the client's movement
      * packets (ServerGamePacketListenerImpl.java:1216), and the client keeps the effect until the

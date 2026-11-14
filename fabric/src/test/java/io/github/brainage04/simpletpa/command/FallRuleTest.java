@@ -211,7 +211,7 @@ class FallRuleTest {
         float drag = FallRule.verticalDrag(airDragModifier);
         FallRule rule = new FallRule(SAFE_DISTANCE, 1.0, OptionalInt.of(duration), gravity, drag);
         double counted = rule.countedFall(drop);
-        // The effect is taken to end a tick early, after duration - 1 ticks.
+        // The effect lasts duration - 1 more ticks.
         double vanilla = vanillaCountedFall(drop, duration - 1, gravity, drag, 1_000_000);
         // The game adds each tick's movement to the fall distance as a float.
         assertEquals(vanilla, counted, 1.0E-6 * Math.max(1.0, drop));
