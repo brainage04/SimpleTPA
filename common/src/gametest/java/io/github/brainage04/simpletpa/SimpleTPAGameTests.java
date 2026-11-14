@@ -867,6 +867,88 @@ public final class SimpleTPAGameTests {
     }
 
     /**
+     * Blocks that change the damage of a landing on them are judged by their own rule. Each
+     * target stands at y 6 over its own block: a stalagmite tip at y 4, 1.31 blocks down, which
+     * adds 2.5 blocks and doubles the damage (refused); hay at y 0 and a honey block at y 1, five
+     * and 4.06 blocks down, which deal a fifth of the damage (accepted); a slime block at y 0,
+     * which deals none (accepted), and the same for a sneaking requester, who lands on it like on
+     * stone (refused).
+     */
+    public static void blocksWithTheirOwnFallDamageAreJudgedByIt(GameTestHelper helper) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        for (int index = 0; index < 5; index++) {
+            pair(helper, pairs::add);
+        }
+        at(
+                helper,
+                1,
+                () -> {
+                    helper.setBlock(new BlockPos(1, 3, 1), Blocks.STONE);
+                    // Pointed dripstone's default state is a stalagmite tip
+                    // (SpeleothemBlock.java:63-65).
+                    helper.setBlock(new BlockPos(1, 4, 1), Blocks.POINTED_DRIPSTONE);
+                    helper.setBlock(new BlockPos(3, 0, 1), Blocks.HAY_BLOCK);
+                    helper.setBlock(new BlockPos(5, 1, 1), Blocks.HONEY_BLOCK);
+                    helper.setBlock(new BlockPos(1, 0, 3), Blocks.SLIME_BLOCK);
+                    helper.setBlock(new BlockPos(3, 0, 3), Blocks.SLIME_BLOCK);
+                    BlockPos[] targets = {
+                        new BlockPos(1, 6, 1),
+                        new BlockPos(3, 6, 1),
+                        new BlockPos(5, 6, 1),
+                        new BlockPos(1, 6, 3),
+                        new BlockPos(3, 6, 3)
+                    };
+                    pairs.get(4)[0].setShiftKeyDown(true);
+                    List<Vec3> requesters =
+                            pairs.stream().map(players -> players[0].position()).toList();
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        ServerPlayer to = pairs.get(index)[1];
+                        to.setPos(Vec3.atBottomCenterOf(helper.absolutePos(targets[index])));
+                        InstantTpaWhitelist.add(to, from);
+                        command(from, "tpa " + to.getScoreboardName());
+                    }
+                    String[] cases = {
+                        "a short drop onto a stalagmite tip",
+                        "a five block drop onto hay",
+                        "a four block drop onto a honey block",
+                        "a five block drop onto a slime block",
+                        "a five block drop onto a slime block for a sneaking requester"
+                    };
+                    boolean[] refused = {true, false, false, false, true};
+                    List<String> failures = new ArrayList<>();
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        ServerPlayer to = pairs.get(index)[1];
+                        if (!refused[index]) {
+                            if (!from.position().equals(to.position())) {
+                                failures.add(cases[index] + " was refused, got " + texts(from));
+                            }
+                            continue;
+                        }
+                        String refusal =
+                                "[SimpleTPA] "
+                                        + to.getScoreboardName()
+                                        + " is in the air above a long drop, so your TP request was not accepted automatically.";
+                        if (!from.position().equals(requesters.get(index))
+                                || !received(from, refusal)) {
+                            failures.add(
+                                    cases[index]
+                                            + " was not refused, got "
+                                            + from.position()
+                                            + " "
+                                            + texts(from));
+                        }
+                    }
+                    if (!failures.isEmpty()) {
+                        fail(helper, String.join("; ", failures));
+                        return;
+                    }
+                    succeed(helper);
+                });
+    }
+
+    /**
      * Drops the game does not hurt for go through, and Slow Falling counts only while it lasts.
      * Each target is four blocks above the stone floor, a drop that refuses on its own: over water,
      * over a cobweb (tagged as resetting fall damage), over powder snow, and above the plain floor

@@ -1,0 +1,1 @@
+{"environment":"minecraft:default","structure":"minecraftmodconventions:empty","max_ticks":40,"type":"minecraft:function","function":"simpletpa:blocks_with_their_own_fall_damage_are_judged_by_it"}
