@@ -963,7 +963,7 @@ public final class SimpleTPAGameTests {
                                 String expected =
                                         "[SimpleTPA] "
                                                 + to.getScoreboardName()
-                                                + " is in the air above a long drop, so your TP request was not accepted automatically.";
+                                                + " is in the air above the void, so your TP request was not accepted automatically.";
                                 if (!from.position().equals(start)) {
                                     fail(
                                             helper,
