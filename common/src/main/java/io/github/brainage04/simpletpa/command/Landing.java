@@ -64,12 +64,13 @@ public final class Landing {
     /**
      * Whether the drop below {@code arrival} would hurt {@code from}, judged by the game's fall
      * damage rule (LivingEntity.java:1851-1858) for their own attributes. The fall stops at the
-     * first block or standable entity below, and water or a block the game tags as resetting fall
-     * damage on the way down (Entity.java:770-780,1684-1689) takes the damage away, as does the
-     * landing block's own reduction (Block.java:486-489). Powder snow on the way down or underfoot
-     * deals no damage either: it holds a falling player on top and its {@code fallOn} hurts nobody
-     * (PowderSnowBlock.java:101-107, 116-131), and a player who sinks into it is stuck, which
-     * resets the fall (Entity.java:3030-3032). Slow Falling counts as {@link #countedFall} says.
+     * first block or standable entity below. Water or a block the game tags as resetting fall
+     * damage on the way down resets the fall (Entity.java:768-775, 1684-1689), and so does powder
+     * snow, which holds a player who sinks into it stuck (Entity.java:3030-3032). A fall that goes
+     * on below such a block counts again from that block's bottom, with the same rule. The landing
+     * block's own reduction applies (Block.java:486-489), and powder snow underfoot deals no
+     * damage: it holds a falling player on top and its {@code fallOn} hurts nobody
+     * (PowderSnowBlock.java:101-107, 116-131). Slow Falling counts as {@link #countedFall} says.
      *
      * <p>A tagged block the player lands on top of does not reset the fall: the game's check casts
      * a ray along the tick's movement (Entity.java:768-775), which ends on that block's top face,
@@ -99,44 +100,74 @@ public final class Landing {
                 slowFalling != null
                         ? MAX_SCAN
                         : Math.min(MAX_SCAN, Math.ceil(safeDistance + 1.0 / multiplier) + 1.0);
-        AABB column = arrival.setMinY(arrival.minY - reach).setMaxY(arrival.minY);
-        List<VoxelShape> colliders = Entity.collectAllColliders(from, level, column);
-        double drop = -Shapes.collide(Direction.Axis.Y, arrival, colliders, -reach);
-        double support = arrival.minY - drop;
-        for (Entity entity : level.getEntities(from, column, entity -> standable(from, entity))) {
-            double top = entity.getBoundingBox().maxY;
-            if (top <= arrival.minY) {
-                support = Math.max(support, top);
+        AABB fallStart = arrival;
+        double support;
+        while (true) {
+            support = support(level, from, fallStart, reach);
+            double resetBottom = lowestReset(level, fallStart, support);
+            if (Double.isNaN(resetBottom)) {
+                break;
             }
+            if (resetBottom <= support) {
+                return false;
+            }
+            fallStart = fallStart.move(0.0, resetBottom - fallStart.minY, 0.0);
         }
 
         Vec3 centre = arrival.getCenter();
-        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-        for (double y = arrival.minY - 1.0E-4; y > support; y -= 1.0) {
-            pos.set(centre.x, y, centre.z);
-            BlockState state = level.getBlockState(pos);
-            if (state.getFluidState().is(FluidTags.WATER)
-                    || state.is(BlockTags.FALL_DAMAGE_RESETTING)
-                    || state.getBlock() instanceof PowderSnowBlock) {
-                return false;
-            }
-        }
-
         BlockPos landingPos = BlockPos.containing(centre.x, support - 1.0E-4, centre.z);
         BlockState landing = level.getBlockState(landingPos);
         if (landing.getBlock() instanceof PowderSnowBlock) {
             return false;
         }
-        if (slowFalling != null && arrival.minY - support >= reach) {
+        if (slowFalling != null && fallStart.minY - support >= reach) {
             // No floor within the scan: how much of the fall counts depends on where it ends.
             return true;
         }
-        double distance =
-                countedFall(from, slowFalling, arrival.minY - support)
-                        * (1.0F - landing.getBlock().getFallDistanceReduction());
+        // Slow Falling and a resetting block each take away the fall above them, so the lower of
+        // the two starts what counts.
+        double counted =
+                Math.min(
+                        countedFall(from, slowFalling, arrival.minY - support),
+                        fallStart.minY - support);
+        double distance = counted * (1.0F - landing.getBlock().getFallDistanceReduction());
         // The game floors the damage after applying the multiplier, not the distance before it
         // (LivingEntity.java:1857).
         return Math.floor((distance + 1.0E-6 - safeDistance) * multiplier) > 0.0;
+    }
+
+    /** The top of the first block or standable entity within {@code reach} below {@code box}. */
+    private static double support(ServerLevel level, ServerPlayer from, AABB box, double reach) {
+        AABB column = box.setMinY(box.minY - reach).setMaxY(box.minY);
+        List<VoxelShape> colliders = Entity.collectAllColliders(from, level, column);
+        double support = box.minY + Shapes.collide(Direction.Axis.Y, box, colliders, -reach);
+        for (Entity entity : level.getEntities(from, column, entity -> standable(from, entity))) {
+            double top = entity.getBoundingBox().maxY;
+            if (top <= box.minY) {
+                support = Math.max(support, top);
+            }
+        }
+        return support;
+    }
+
+    /**
+     * The bottom of the lowest block between {@code box} and {@code support} that resets a fall
+     * through it, or NaN when there is none.
+     */
+    private static double lowestReset(ServerLevel level, AABB box, double support) {
+        Vec3 centre = box.getCenter();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        double bottom = Double.NaN;
+        for (double y = box.minY - 1.0E-4; y > support; y -= 1.0) {
+            pos.set(centre.x, y, centre.z);
+            BlockState state = level.getBlockState(pos);
+            if (state.getFluidState().is(FluidTags.WATER)
+                    || state.is(BlockTags.FALL_DAMAGE_RESETTING)
+                    || state.getBlock() instanceof PowderSnowBlock) {
+                bottom = pos.getY();
+            }
+        }
+        return bottom;
     }
 
     /**
@@ -148,6 +179,12 @@ public final class Landing {
      * drag applied (LivingEntity.java:2450-2476); a teleport starts the fall at rest. The effect is
      * taken to end a tick early and its last tick to count in full, so the uncertain tick counts
      * against the requester.
+     *
+     * <p>Network delay is not covered. The server counts the fall from the client's movement
+     * packets (ServerGamePacketListenerImpl.java:1216), and the client keeps the effect until the
+     * server's removal reaches it (LivingEntity.java:845-865), so on a slow connection the fall the
+     * server counts after the effect ends can be up to about 0.49 blocks longer per tick of round
+     * trip. The README states this limit.
      */
     private static double countedFall(
             ServerPlayer from, MobEffectInstance slowFalling, double drop) {

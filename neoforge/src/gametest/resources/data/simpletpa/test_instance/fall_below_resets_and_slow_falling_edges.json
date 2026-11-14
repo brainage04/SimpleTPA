@@ -1,0 +1,1 @@
+{"environment":"minecraft:default","structure":"minecraftmodconventions:empty","max_ticks":40,"type":"minecraft:function","function":"simpletpa:fall_below_resets_and_slow_falling_edges"}
