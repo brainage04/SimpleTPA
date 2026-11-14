@@ -24,8 +24,9 @@ record FallRule(
     static final double MAX_SCAN = 128.0;
 
     /**
-     * The most ticks {@link #freeFallStep} follows one by one: a few thousand cover the scan at
-     * gravities down to 0.01, and a million still take only milliseconds.
+     * The most ticks {@link #freeFallStep} and {@link #countedFall} follow one by one while the
+     * speed still changes: a few thousand cover the scan at gravities down to 0.01, and a million
+     * still take only milliseconds.
      */
     static final int MAX_FREE_FALL_TICKS = 1_000_000;
 
@@ -232,8 +233,37 @@ record FallRule(
             fallen += step;
             // The cap from LivingEntity.getEffectiveGravity (LivingEntity.java:2409), which is
             // protected and answers for the motion the player has now, not for this fall.
-            speed = (speed + Math.min(gravity, 0.01)) * drag;
+            double next = (speed + Math.min(gravity, 0.01)) * drag;
+            if (next <= speed) {
+                // The speed has settled, at nothing for a drag of zero, and every later tick moves
+                // as far; a datapack's effect can last 2^31 ticks.
+                return settledCountedFall(drop, fallen, speed, slowTicks - 2 - tick);
+            }
+            if (tick == MAX_FREE_FALL_TICKS) {
+                // Without drag and with a tiny gravity the speed keeps growing for billions of
+                // ticks. The fall after this tick is left uncredited, which counts against the
+                // requester.
+                return drop - fallen;
+            }
+            speed = next;
         }
         return drop;
+    }
+
+    /**
+     * {@link #countedFall} from a tick on which the player has fallen {@code fallen} blocks and
+     * every tick moves {@code speed}, with {@code ticksBeforeLast} ticks left before the effect's
+     * last one: the fall stops at the drop or after those ticks, whichever comes first.
+     */
+    private static double settledCountedFall(
+            double drop, double fallen, double speed, double ticksBeforeLast) {
+        if (speed <= 0.0) {
+            return drop - fallen;
+        }
+        // The ticks before the one that reaches the drop, without the rounding of each step that a
+        // tick-by-tick sum would add.
+        double ticks = Math.min(ticksBeforeLast, Math.ceil((drop - fallen) / speed) - 1.0);
+        double counted = drop - (fallen + ticks * speed);
+        return counted > 0.0 ? counted : counted + speed;
     }
 }

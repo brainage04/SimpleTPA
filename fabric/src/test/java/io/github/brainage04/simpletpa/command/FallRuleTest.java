@@ -252,6 +252,65 @@ class FallRuleTest {
         assertTrue(longer <= shorter, longer + " > " + shorter);
     }
 
+    /**
+     * The Slow Falling replay as it ran tick by tick: each tick moves by the speed, then the capped
+     * gravity is added and the drag applied, and the effect's last tick counts in full.
+     */
+    private static double tickByTickCountedFall(
+            double drop, int duration, double gravity, float drag) {
+        int slowTicks = duration - 1;
+        double fallen = 0.0;
+        double speed = 0.0;
+        for (int tick = 0; tick < slowTicks; tick++) {
+            double step = Math.min(speed, drop - fallen);
+            if (tick == slowTicks - 1 || fallen + step >= drop) {
+                return drop - fallen;
+            }
+            fallen += step;
+            speed = (speed + Math.min(gravity, 0.01)) * drag;
+        }
+        return drop;
+    }
+
+    @Property
+    void slowFallingGivesWhatATickByTickReplayGives(
+            @ForAll @DoubleRange(min = 0.0, max = 128.0) double drop,
+            @ForAll @IntRange(min = 1, max = 100_000) int duration,
+            @ForAll @DoubleRange(min = -12.0, max = 0.0) double gravityPowerOfTen,
+            @ForAll @DoubleRange(min = 0.0, max = 2048.0) double airDragModifier) {
+        // Down to 1e-12, where the speed settles too slowly for the fall to reach the drop.
+        double gravity = Math.pow(10.0, gravityPowerOfTen);
+        float drag = FallRule.verticalDrag(airDragModifier);
+        FallRule rule = new FallRule(SAFE_DISTANCE, 1.0, OptionalInt.of(duration), gravity, drag);
+        assertEquals(
+                tickByTickCountedFall(drop, duration, gravity, drag),
+                rule.countedFall(drop),
+                1.0E-9 * Math.max(1.0, drop));
+    }
+
+    /**
+     * Over the attributes' whole ranges (Attributes.java:10-11, 55-56) and any effect duration a
+     * datapack can give. A speed that settles low, or at nothing, would otherwise be followed for
+     * every tick of the effect.
+     */
+    @Property(shrinking = ShrinkingMode.OFF)
+    void slowFallingIsWorkedOutQuicklyForAnyGravityDragAndDuration(
+            @ForAll @DoubleRange(min = 0.0, max = 128.0) double drop,
+            @ForAll @IntRange(min = 1) int duration,
+            @ForAll @DoubleRange(min = -1.0, max = 1.0) double gravity,
+            @ForAll @DoubleRange(min = 0.0, max = 2048.0) double airDragModifier) {
+        FallRule rule =
+                new FallRule(
+                        SAFE_DISTANCE,
+                        1.0,
+                        OptionalInt.of(duration),
+                        gravity,
+                        FallRule.verticalDrag(airDragModifier));
+        double counted =
+                assertTimeoutPreemptively(Duration.ofSeconds(1), () -> rule.countedFall(drop));
+        assertTrue(counted >= 0.0 && counted <= drop, "counted " + counted + " of " + drop);
+    }
+
     @Property
     void aFreeFallStepIsTheMovementOfTheTickThatPassesTheDepth(
             @ForAll @DoubleRange(min = 0.0, max = 128.0) double depth,
@@ -480,5 +539,31 @@ class FallRuleTest {
         // The fastest fall from rest moves at most g / 2 + sqrt(g^2 / 4 + 2 g d) in the tick that
         // passes d, about 1.6e-9 blocks here.
         assertTrue(step > 0.0 && step <= 2.0E-9, "step " + step);
+    }
+
+    /**
+     * An air_drag_modifier above 50 stops the fall, and a tiny gravity settles it at about 5e-19
+     * blocks a tick; either way a Slow Falling effect of 2^31 - 1 ticks must not be followed tick
+     * by tick.
+     */
+    @Test
+    void aLongSlowFallingWhoseSpeedSettlesIsWorkedOutQuickly() {
+        int longest = Integer.MAX_VALUE;
+        FallRule stopped =
+                new FallRule(
+                        SAFE_DISTANCE,
+                        1.0,
+                        OptionalInt.of(longest),
+                        GRAVITY,
+                        FallRule.verticalDrag(51.0));
+        assertEquals(
+                10.0,
+                assertTimeoutPreemptively(Duration.ofMillis(200), () -> stopped.countedFall(10.0)));
+        FallRule slow = new FallRule(SAFE_DISTANCE, 1.0, OptionalInt.of(longest), 1.0E-20, DRAG);
+        double counted =
+                assertTimeoutPreemptively(Duration.ofMillis(200), () -> slow.countedFall(10.0));
+        // The speed settles at 0.98 / 0.02 times the gravity, about 4.9e-19 blocks a tick, which
+        // covers about 1e-9 blocks in the effect's 2^31 - 2 ticks.
+        assertTrue(counted < 10.0 && counted > 10.0 - 2.0E-9, "counted " + counted);
     }
 }
