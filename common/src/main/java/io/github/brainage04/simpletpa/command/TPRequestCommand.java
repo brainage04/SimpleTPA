@@ -160,7 +160,7 @@ public class TPRequestCommand {
         ServerLevel level = to.level();
         AABB arrival =
                 from.getBoundingBox().move(Landing.arrival(from, to).subtract(from.position()));
-        if (!level.noBlockCollision(from, arrival)
+        if (!Landing.noBlockCollision(level, from, arrival)
                 || level.getBlockStates(arrival).anyMatch(from.getType()::isBlockDangerous)
                 || from.getType().isBlockDangerous(level.getBlockState(to.getOnPos()))
                 || !level.getWorldBorder().isWithinBounds(arrival)) {

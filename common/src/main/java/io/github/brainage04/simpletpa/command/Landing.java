@@ -72,6 +72,22 @@ public final class Landing {
     }
 
     /**
+     * Whether {@code from} meets no block collision in {@code arrival}, with collisions read as
+     * they will be once {@code from} stands there ({@link ArrivalCollisions}), not at their present
+     * height.
+     */
+    public static boolean noBlockCollision(ServerLevel level, ServerPlayer from, AABB arrival) {
+        for (VoxelShape shape :
+                level.getBlockCollisionsFromContext(
+                        new ArrivalCollisions(from, arrival), arrival)) {
+            if (!shape.isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Whether the drop below {@code arrival} would hurt {@code from}, judged by the game's fall
      * damage rule (LivingEntity.java:1851-1858) for their own attributes. The fall stops at the
      * first block or standable entity below. Water or a block the game tags as resetting fall
