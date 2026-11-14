@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
@@ -63,8 +64,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.VineBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.gamerules.GameRule;
 import net.minecraft.world.level.gamerules.GameRuleMap;
 import net.minecraft.world.level.gamerules.GameRules;
@@ -981,6 +986,66 @@ public final class SimpleTPAGameTests {
                     }
                     if (!failures.isEmpty()) {
                         fail(helper, String.join("; ", failures));
+                        return;
+                    }
+                    succeed(helper);
+                });
+    }
+
+    /**
+     * The landing block is the one the requester lands on, picked as the game picks it: the
+     * supporting block closest to their position among those under their feet (Entity.java:704-716,
+     * CollisionGetter.java:138-152). A bed beside a stone block, both on the area's floor: a target
+     * whose centre is over the bed but whose box reaches over the stone lands on the stone, which
+     * is higher, so its 4.5 block drop deals floor(4.5 + 1e-6 - 3) = 1 damage (refused), where the
+     * bed under the centre would have halved it (Block.java:486-489). A target over the bed alone
+     * lands on it: 4.9375 blocks halved deal none (accepted).
+     */
+    public static void landingBlockIsTheOneLandedOn(GameTestHelper helper) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        for (int index = 0; index < 2; index++) {
+            pair(helper, pairs::add);
+        }
+        List<Vec3> starts = pairs.stream().map(players -> players[0].position()).toList();
+        at(
+                helper,
+                1,
+                () -> {
+                    Block bedBlock = Blocks.BED.pick(DyeColor.RED);
+                    BlockState bed =
+                            bedBlock.defaultBlockState().setValue(BedBlock.FACING, Direction.SOUTH);
+                    helper.setBlock(
+                            new BlockPos(0, 0, 0), bed.setValue(BedBlock.PART, BedPart.FOOT));
+                    helper.setBlock(
+                            new BlockPos(0, 0, 1), bed.setValue(BedBlock.PART, BedPart.HEAD));
+                    helper.setBlock(new BlockPos(1, 0, 0), Blocks.STONE);
+                    ServerPlayer[] refused = pairs.get(0);
+                    ServerPlayer[] accepted = pairs.get(1);
+                    refused[1].setPos(helper.absoluteVec(new Vec3(0.9, 5.5, 0.5)));
+                    accepted[1].setPos(helper.absoluteVec(new Vec3(0.5, 5.5, 1.5)));
+                    for (ServerPlayer[] players : pairs) {
+                        InstantTpaWhitelist.add(players[1], players[0]);
+                        command(players[0], "tpa " + players[1].getScoreboardName());
+                    }
+                    String refusal =
+                            "[SimpleTPA] "
+                                    + refused[1].getScoreboardName()
+                                    + " is in the air above a long drop, so your TP request was not accepted automatically.";
+                    if (!refused[0].position().equals(starts.get(0))
+                            || !received(refused[0], refusal)) {
+                        fail(
+                                helper,
+                                "a drop onto the stone beside a bed was not refused, got "
+                                        + refused[0].position()
+                                        + " "
+                                        + texts(refused[0]));
+                        return;
+                    }
+                    if (!accepted[0].position().equals(accepted[1].position())) {
+                        fail(
+                                helper,
+                                "a drop onto a bed that deals no damage was refused, got "
+                                        + texts(accepted[0]));
                         return;
                     }
                     succeed(helper);

@@ -100,6 +100,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void landingBlockIsTheOneLandedOn(GameTestHelper helper) {
+        SimpleTPAGameTests.landingBlockIsTheOneLandedOn(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void resettingLandingsAndSlowFallingAcceptADrop(GameTestHelper helper) {
         SimpleTPAGameTests.resettingLandingsAndSlowFallingAcceptADrop(helper);
     }
