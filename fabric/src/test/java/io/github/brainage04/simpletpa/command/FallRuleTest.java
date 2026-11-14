@@ -29,6 +29,12 @@ class FallRuleTest {
     private static final float DRAG = FallRule.verticalDrag(1.0);
     private static final FallRule.Floor PLAIN = FallRule.Floor.of(0.0F);
 
+    /**
+     * How far along a tick's movement the game looks for a block that resets the fall
+     * (Entity.java:769).
+     */
+    private static final double RESET_CHECK_LENGTH = 8.0;
+
     private static FallRule player(OptionalInt slowFalling) {
         return new FallRule(SAFE_DISTANCE, 1.0, slowFalling, GRAVITY, DRAG);
     }
@@ -287,6 +293,10 @@ class FallRuleTest {
         FallRule rule = new FallRule(SAFE_DISTANCE, 1.0, OptionalInt.empty(), gravity, drag);
         double above = rule.restartAbove(climbable, water, depth, height);
         double step = rule.freeFallStep(depth);
+        if (step > RESET_CHECK_LENGTH) {
+            assertEquals(Double.POSITIVE_INFINITY, above, "step " + step);
+            return;
+        }
         assertTrue(above >= 0.0 && above <= step, above + " of " + step);
         if (!climbable && !water) {
             assertEquals(0.0, above);
@@ -399,6 +409,20 @@ class FallRuleTest {
         assertEquals(FallRule.MAX_SCAN, longEffect.reach());
         // Below a resetting block the effect gets no credit.
         assertTrue(longEffect.hurts(30.0, 10.0, 10.0, PLAIN));
+    }
+
+    /**
+     * At the highest gravity (Attributes.java:55-56) a tick moves about 9.76 blocks by the time a
+     * fall passes 60 blocks, past the 8 the game checks, so nothing there restarts the fall.
+     */
+    @Test
+    void aTickPastTheResetCheckGivesNoRestart() {
+        FallRule rule = new FallRule(60.0, 1.0, OptionalInt.empty(), 1.0, DRAG);
+        double step = rule.freeFallStep(60.0);
+        assertTrue(step > 9.7 && step < 9.8, "step " + step);
+        assertEquals(Double.POSITIVE_INFINITY, rule.restartAbove(true, false, 60.0, 1.8));
+        assertEquals(Double.POSITIVE_INFINITY, rule.restartAbove(false, true, 60.0, 1.8));
+        assertEquals(Double.POSITIVE_INFINITY, rule.restartAbove(false, false, 60.0, 1.8));
     }
 
     @Test

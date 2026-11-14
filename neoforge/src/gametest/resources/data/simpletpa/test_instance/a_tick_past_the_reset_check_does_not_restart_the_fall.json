@@ -1,0 +1,1 @@
+{"environment":"minecraft:default","structure":"minecraftmodconventions:empty","max_ticks":40,"type":"minecraft:function","function":"simpletpa:a_tick_past_the_reset_check_does_not_restart_the_fall"}

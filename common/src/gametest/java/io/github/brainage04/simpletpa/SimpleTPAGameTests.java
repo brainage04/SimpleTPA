@@ -1369,6 +1369,66 @@ public final class SimpleTPAGameTests {
     }
 
     /**
+     * The game looks for water or a block that resets the fall only along the first 8 blocks of a
+     * tick's movement (Entity.java:769). A requester at the highest gravity (Attributes.java:55-56)
+     * with a safe fall distance of 60 moves 9.76 blocks in the tick that passes 60 blocks down, so
+     * a vine there may not reset their fall, and the whole 61 block drop to the floor below it
+     * counts: floor(61 + 1e-6 - 60) = 1 damage, refused.
+     */
+    public static void aTickPastTheResetCheckDoesNotRestartTheFall(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    ServerPlayer to = players[1];
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                BlockPos top = skyColumn(helper, new BlockPos(1, 0, 1), 62);
+                                if (top == null) {
+                                    return;
+                                }
+                                AttributeInstance gravity = from.getAttribute(Attributes.GRAVITY);
+                                AttributeInstance safe =
+                                        from.getAttribute(Attributes.SAFE_FALL_DISTANCE);
+                                if (gravity == null || safe == null) {
+                                    fail(helper, "the requester has no gravity or safe distance");
+                                    return;
+                                }
+                                gravity.setBaseValue(1.0);
+                                safe.setBaseValue(60.0);
+                                ServerLevel level = helper.getLevel();
+                                List<BlockPos> built = new ArrayList<>();
+                                level.setBlockAndUpdate(
+                                        top.below(62), Blocks.STONE.defaultBlockState());
+                                built.add(top.below(62));
+                                vines(level, List.of(top.below(60)), built);
+                                to.setPos(Vec3.atBottomCenterOf(top));
+                                Vec3 start = from.position();
+                                InstantTpaWhitelist.add(to, from);
+                                command(from, "tpa " + to.getScoreboardName());
+                                clear(level, built);
+                                String refusal =
+                                        "[SimpleTPA] "
+                                                + to.getScoreboardName()
+                                                + " is in the air above a long drop, so your TP request was not accepted automatically.";
+                                if (!from.position().equals(start) || !received(from, refusal)) {
+                                    fail(
+                                            helper,
+                                            "a fall past a vine the game may not see was given"
+                                                    + " a restart there, got "
+                                                    + from.position()
+                                                    + " "
+                                                    + texts(from));
+                                    return;
+                                }
+                                succeed(helper);
+                            });
+                });
+    }
+
+    /**
      * A creative or spectator requester skips the landing checks a survival one is held to: they
      * are put in the air above a long drop, and on a spot the spot checks call unsafe.
      */

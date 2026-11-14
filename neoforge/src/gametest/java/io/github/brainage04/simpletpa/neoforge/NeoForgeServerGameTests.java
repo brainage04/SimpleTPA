@@ -90,6 +90,10 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::passingThroughVinesCountsFromAboveTheirBottom);
         register(
                 event,
+                "a_tick_past_the_reset_check_does_not_restart_the_fall",
+                SimpleTPAGameTests::aTickPastTheResetCheckDoesNotRestartTheFall);
+        register(
+                event,
                 "creative_skips_landing_checks",
                 SimpleTPAGameTests::creativeSkipsLandingChecks);
         register(
