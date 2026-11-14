@@ -14,8 +14,11 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.happyghast.HappyGhast;
+import net.minecraft.world.level.block.PointedDripstoneBlock;
 import net.minecraft.world.level.block.PowderSnowBlock;
+import net.minecraft.world.level.block.SpeleothemBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.SpeleothemThickness;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -64,10 +67,10 @@ public final class Landing {
      * damage on the way down resets the fall (Entity.java:768-775, 1684-1689), and so does powder
      * snow, which holds a player who sinks into it stuck (Entity.java:3030-3032). A fall that goes
      * on below such a block counts again from that block's bottom, with the same rule. The landing
-     * block's own reduction applies (Block.java:486-489), and powder snow underfoot deals no
-     * damage: it holds a falling player on top and its {@code fallOn} hurts nobody
-     * (PowderSnowBlock.java:101-107, 116-131). Slow Falling counts as {@link FallRule#countedFall}
-     * says.
+     * block's own reduction applies (Block.java:486-489), a stalagmite's tip adds to the fall and
+     * doubles the damage ({@link #floor}), and powder snow underfoot deals no damage: it holds a
+     * falling player on top and its {@code fallOn} hurts nobody (PowderSnowBlock.java:101-107,
+     * 116-131). Slow Falling counts as {@link FallRule#countedFall} says.
      *
      * <p>A tagged block the player lands on top of does not reset the fall: the game's check casts
      * a ray along the tick's movement (Entity.java:768-775), which ends on that block's top face,
@@ -121,10 +124,23 @@ public final class Landing {
         if (landing.getBlock() instanceof PowderSnowBlock) {
             return false;
         }
-        return rule.hurts(
-                arrival.minY - support,
-                fallStart.minY - support,
-                landing.getBlock().getFallDistanceReduction());
+        return rule.hurts(arrival.minY - support, fallStart.minY - support, floor(landing));
+    }
+
+    /**
+     * How {@code landing} turns a fall into damage. A stalagmite's tip, a pointed dripstone
+     * pointing up, replaces Block.fallOn with a fall 2.5 blocks longer and double the damage
+     * (PointedDripstoneBlock.java:54-58). Both numbers are private constants there
+     * (PointedDripstoneBlock.java:39-40), and nothing in the game answers them for a fall that has
+     * not happened, so they are repeated here.
+     */
+    private static FallRule.Floor floor(BlockState landing) {
+        if (landing.getBlock() instanceof PointedDripstoneBlock
+                && landing.getValue(SpeleothemBlock.TIP_DIRECTION) == Direction.UP
+                && landing.getValue(SpeleothemBlock.THICKNESS) == SpeleothemThickness.TIP) {
+            return new FallRule.Floor(0.0F, 2.5, 2.0F);
+        }
+        return FallRule.Floor.of(landing.getBlock().getFallDistanceReduction());
     }
 
     /** The top of the first block or standable entity within {@code reach} below {@code box}. */

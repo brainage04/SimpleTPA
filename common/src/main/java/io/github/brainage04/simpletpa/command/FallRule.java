@@ -24,6 +24,18 @@ record FallRule(
     static final double MAX_SCAN = 128.0;
 
     /**
+     * How the block a fall ends on turns the fall into damage: the fall distance it passes to
+     * LivingEntity.causeFallDamage, {@code fall * (1 - reduction) + addedDistance}, and the damage
+     * modifier it passes with it. Block.fallOn passes the fall less the block's fall distance
+     * reduction and a modifier of 1 (Block.java:486-489).
+     */
+    record Floor(float reduction, double addedDistance, float damageModifier) {
+        static Floor of(float reduction) {
+            return new Floor(reduction, 0.0, 1.0F);
+        }
+    }
+
+    /**
      * The vertical air drag for {@code airDragModifier}: LivingEntity.computeModifiedFriction
      * (LivingEntity.java:518-520), which is private there, applied to the vertical drag
      * (LivingEntity.java:2474).
@@ -51,12 +63,12 @@ record FallRule(
     /**
      * Whether a fall of {@code drop} blocks from rest hurts, judged by the game's fall damage rule
      * (LivingEntity.java:1851-1862). A block that resets the fall on the way down leaves {@code
-     * dropBelowReset} blocks of it, less than {@code drop}, and {@code reduction} is the landing
-     * block's fall distance reduction (Block.java:486-489). A {@code dropBelowReset} of {@link
-     * #MAX_SCAN} means no floor was found within the deepest scan, and the fall may go on to any
-     * depth. A shorter reach needs no such rule: a plain landing at the reach already hurts.
+     * dropBelowReset} blocks of it, less than {@code drop}, and {@code floor} is how the landing
+     * block deals the damage. A {@code dropBelowReset} of {@link #MAX_SCAN} means no floor was
+     * found within the deepest scan, and the fall may go on to any depth. A shorter reach needs no
+     * such rule: a plain landing at the reach already hurts.
      */
-    boolean hurts(double drop, double dropBelowReset, float reduction) {
+    boolean hurts(double drop, double dropBelowReset, Floor floor) {
         if (dropBelowReset >= MAX_SCAN) {
             return true;
         }
@@ -69,10 +81,12 @@ record FallRule(
         if (counted <= 0.0) {
             return false;
         }
-        double distance = counted * (1.0F - reduction);
-        // The game floors the damage after applying the multiplier, not the distance before it
-        // (LivingEntity.java:1857).
-        return Math.floor((distance + 1.0E-6 - safeDistance) * multiplier) > 0.0;
+        double distance = counted * (1.0F - floor.reduction()) + floor.addedDistance();
+        // The game floors the damage after applying the modifier and multiplier, not the distance
+        // before them (LivingEntity.java:1857).
+        return Math.floor(
+                        (distance + 1.0E-6 - safeDistance) * floor.damageModifier() * multiplier)
+                > 0.0;
     }
 
     /**

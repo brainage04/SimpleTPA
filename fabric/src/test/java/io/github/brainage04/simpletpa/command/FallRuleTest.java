@@ -23,6 +23,10 @@ class FallRuleTest {
 
     private static final double GRAVITY = 0.08;
     private static final float DRAG = FallRule.verticalDrag(1.0);
+    private static final FallRule.Floor PLAIN = FallRule.Floor.of(0.0F);
+
+    /** PointedDripstoneBlock.fallOn for a stalagmite's tip (PointedDripstoneBlock.java:54-58). */
+    private static final FallRule.Floor STALAGMITE_TIP = new FallRule.Floor(0.0F, 2.5, 2.0F);
 
     private static FallRule player(OptionalInt slowFalling) {
         return new FallRule(SAFE_DISTANCE, 1.0, slowFalling, GRAVITY, DRAG);
@@ -43,6 +47,21 @@ class FallRuleTest {
         double reduced = fallDistance * (1.0F - reduction);
         double fallPower = reduced + 1.0E-6 - safeDistance;
         return Mth.floor(fallPower * 1.0F * multiplier);
+    }
+
+    /**
+     * The damage the game deals for landing after {@code fallDistance} on a stalagmite's tip: its
+     * fallOn passes the fall 2.5 blocks longer with a damage modifier of 2
+     * (PointedDripstoneBlock.java:54-58), and LivingEntity.calculateFallDamage applies the modifier
+     * before it floors the damage (LivingEntity.java:1851-1862).
+     */
+    private static int vanillaStalagmiteDamage(
+            double fallDistance, double safeDistance, double multiplier) {
+        if (!(fallDistance > 0.0)) {
+            return 0;
+        }
+        double fallPower = fallDistance + 2.5 + 1.0E-6 - safeDistance;
+        return Mth.floor(fallPower * 2.0F * multiplier);
     }
 
     /**
@@ -89,7 +108,18 @@ class FallRuleTest {
         FallRule rule = new FallRule(safeDistance, multiplier, OptionalInt.empty(), GRAVITY, DRAG);
         assertEquals(
                 vanillaDamage(drop, reduction, safeDistance, multiplier) > 0,
-                rule.hurts(drop, drop, reduction));
+                rule.hurts(drop, drop, FallRule.Floor.of(reduction)));
+    }
+
+    @Property
+    void aDropOntoAStalagmitesTipHurtsExactlyWhenTheGameDealsDamage(
+            @ForAll @DoubleRange(min = 0.0, max = 128.0, maxIncluded = false) double drop,
+            @ForAll @DoubleRange(min = -1024.0, max = 1024.0) double safeDistance,
+            @ForAll @DoubleRange(min = 0.01, max = 100.0) double multiplier) {
+        FallRule rule = new FallRule(safeDistance, multiplier, OptionalInt.empty(), GRAVITY, DRAG);
+        assertEquals(
+                vanillaStalagmiteDamage(drop, safeDistance, multiplier) > 0,
+                rule.hurts(drop, drop, STALAGMITE_TIP));
     }
 
     /**
@@ -113,7 +143,7 @@ class FallRuleTest {
         double belowReset = drop * share;
         assertEquals(
                 vanillaDamage(belowReset, reduction, safeDistance, multiplier) > 0,
-                rule.hurts(drop, belowReset, reduction));
+                rule.hurts(drop, belowReset, FallRule.Floor.of(reduction)));
     }
 
     @Property
@@ -190,7 +220,7 @@ class FallRuleTest {
         double reach = rule.reach();
         // Landing looks for a floor down to the reach and no further.
         assertTrue(reach > 0.0 && reach <= FallRule.MAX_SCAN, "reach " + reach);
-        assertTrue(rule.hurts(reach + extra, reach + extra, 0.0F), "reach " + reach);
+        assertTrue(rule.hurts(reach + extra, reach + extra, PLAIN), "reach " + reach);
     }
 
     @Property
@@ -201,7 +231,7 @@ class FallRuleTest {
             @ForAll @IntRange(min = 0, max = 2400) int duration) {
         OptionalInt slowFalling = duration > 0 ? OptionalInt.of(duration) : OptionalInt.empty();
         FallRule rule = new FallRule(safeDistance, multiplier, slowFalling, GRAVITY, DRAG);
-        assertFalse(rule.hurts(0.0, 0.0, reduction));
+        assertFalse(rule.hurts(0.0, 0.0, FallRule.Floor.of(reduction)));
     }
 
     @Property
@@ -211,29 +241,38 @@ class FallRuleTest {
         FallRule rule = player(OptionalInt.of(duration));
         assertEquals(FallRule.MAX_SCAN, rule.reach());
         double drop = rule.reach() + extra;
-        assertTrue(rule.hurts(drop, drop, 0.0F));
+        assertTrue(rule.hurts(drop, drop, PLAIN));
     }
 
     @Test
     void aPlayerTakesDamageFromFourBlocksDown() {
         FallRule rule = player(OptionalInt.empty());
         assertEquals(5.0, rule.reach());
-        assertFalse(rule.hurts(3.0, 3.0, 0.0F));
-        assertFalse(rule.hurts(3.99, 3.99, 0.0F));
-        assertTrue(rule.hurts(4.0, 4.0, 0.0F));
+        assertFalse(rule.hurts(3.0, 3.0, PLAIN));
+        assertFalse(rule.hurts(3.99, 3.99, PLAIN));
+        assertTrue(rule.hurts(4.0, 4.0, PLAIN));
         // A bed halves the distance (Blocks.java:715-721, Block.java:487).
-        assertFalse(rule.hurts(7.99, 7.99, 0.5F));
-        assertTrue(rule.hurts(8.0, 8.0, 0.5F));
+        FallRule.Floor bed = FallRule.Floor.of(0.5F);
+        assertFalse(rule.hurts(7.99, 7.99, bed));
+        assertTrue(rule.hurts(8.0, 8.0, bed));
         // Below a resetting block only the three blocks under its bottom count.
-        assertFalse(rule.hurts(20.0, 3.0, 0.0F));
+        assertFalse(rule.hurts(20.0, 3.0, PLAIN));
     }
 
     @Test
     void theFallDamageMultiplierAppliesBeforeTheDamageIsFloored() {
         FallRule half = new FallRule(SAFE_DISTANCE, 0.5, OptionalInt.empty(), GRAVITY, DRAG);
         assertEquals(6.0, half.reach());
-        assertFalse(half.hurts(4.99, 4.99, 0.0F));
-        assertTrue(half.hurts(5.0, 5.0, 0.0F));
+        assertFalse(half.hurts(4.99, 4.99, PLAIN));
+        assertTrue(half.hurts(5.0, 5.0, PLAIN));
+    }
+
+    @Test
+    void aStalagmitesTipHurtsFromOneBlockUp() {
+        FallRule rule = player(OptionalInt.empty());
+        assertFalse(rule.hurts(0.0, 0.0, STALAGMITE_TIP));
+        assertFalse(rule.hurts(0.99, 0.99, STALAGMITE_TIP));
+        assertTrue(rule.hurts(1.0, 1.0, STALAGMITE_TIP));
     }
 
     @Test
@@ -242,11 +281,11 @@ class FallRuleTest {
         FallRule rule = player(OptionalInt.of(21));
         double counted = rule.countedFall(10.0);
         assertTrue(counted > 8.0 && counted < 9.0, "counted " + counted);
-        assertTrue(rule.hurts(10.0, 10.0, 0.0F));
+        assertTrue(rule.hurts(10.0, 10.0, PLAIN));
         // A long effect lands the player before it ends: only the last tick's step counts.
         FallRule longEffect = player(OptionalInt.of(1200));
         assertTrue(longEffect.countedFall(10.0) < 0.5);
-        assertFalse(longEffect.hurts(10.0, 10.0, 0.0F));
+        assertFalse(longEffect.hurts(10.0, 10.0, PLAIN));
         assertEquals(FallRule.MAX_SCAN, longEffect.reach());
     }
 
@@ -254,9 +293,9 @@ class FallRuleTest {
     void slowFallingTakesNothingOffTheFallBelowACobweb() {
         // A cobweb one block down, then twenty blocks of air: the effect can end in the cobweb.
         FallRule rule = player(OptionalInt.of(600));
-        assertFalse(rule.hurts(21.0, 21.0, 0.0F));
-        assertTrue(rule.hurts(21.0, 20.0, 0.0F));
-        assertFalse(rule.hurts(21.0, 3.0, 0.0F));
+        assertFalse(rule.hurts(21.0, 21.0, PLAIN));
+        assertTrue(rule.hurts(21.0, 20.0, PLAIN));
+        assertFalse(rule.hurts(21.0, 3.0, PLAIN));
     }
 
     @Test
