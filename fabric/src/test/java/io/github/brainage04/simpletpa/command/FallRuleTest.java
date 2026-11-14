@@ -30,6 +30,15 @@ class FallRuleTest {
         return new FallRule(SAFE_DISTANCE, 1.0, slowFalling, GRAVITY, DRAG);
     }
 
+    private static FallRule.Floor floor(int kind, float reduction) {
+        return switch (kind) {
+            case 1 -> FallRule.Floor.STALAGMITE_TIP;
+            case 2 -> FallRule.Floor.FIFTH;
+            case 3 -> FallRule.Floor.NO_DAMAGE;
+            default -> FallRule.Floor.of(reduction);
+        };
+    }
+
     /**
      * The damage of Entity.causeFallDamage for a fall of {@code fallDistance} with {@code
      * damageModifier}: LivingEntity.calculateFallDamage floors it after the modifier and the
@@ -130,9 +139,11 @@ class FallRuleTest {
         }
     }
 
+    /** A drop of the full scan depth or more always hurts: see {@link #aFallPastTheScanHurts}. */
     @Property
     void withoutSlowFallingADropHurtsExactlyWhenTheGameDealsDamage(
-            @ForAll @DoubleRange(min = 0.0, max = 128.0, minIncluded = false) double drop,
+            @ForAll @DoubleRange(min = 0.0, max = 128.0, minIncluded = false, maxIncluded = false)
+                    double drop,
             @ForAll @FloatRange(min = 0.0F, max = 1.0F) float reduction,
             @ForAll @DoubleRange(min = -1024.0, max = 1024.0) double safeDistance,
             @ForAll @DoubleRange(min = 0.01, max = 100.0) double multiplier) {
@@ -285,6 +296,38 @@ class FallRuleTest {
         assertEquals(FallRule.MAX_SCAN, rule.reach());
         double drop = rule.reach() + extra;
         assertTrue(rule.hurts(drop, drop, Double.NaN, PLAIN));
+    }
+
+    /**
+     * Over the attributes' whole ranges (Attributes.java:44-46, 86-87). Landing answers a zero
+     * multiplier before it asks the rule.
+     */
+    @Property
+    void aFallPastTheScanHurts(
+            @ForAll @DoubleRange(min = -1024.0, max = 1024.0) double safeDistance,
+            @ForAll @DoubleRange(min = 0.01, max = 100.0) double multiplier,
+            @ForAll @DoubleRange(min = 0.0, max = 1024.0) double extra) {
+        FallRule rule = new FallRule(safeDistance, multiplier, OptionalInt.empty(), GRAVITY, DRAG);
+        double reach = rule.reach();
+        // Landing looks for a floor down to the reach and no further.
+        assertTrue(reach > 0.0 && reach <= FallRule.MAX_SCAN, "reach " + reach);
+        assertTrue(rule.hurts(reach + extra, reach + extra, Double.NaN, PLAIN), "reach " + reach);
+    }
+
+    /** The game calls fallOn only for a fall above zero (Entity.java:1590). */
+    @Property
+    void aDropOfNothingNeverHurts(
+            @ForAll @DoubleRange(min = -1024.0, max = 1024.0) double safeDistance,
+            @ForAll @DoubleRange(min = 0.01, max = 100.0) double multiplier,
+            @ForAll @IntRange(min = 0, max = 3) int kind,
+            @ForAll @FloatRange(min = 0.0F, max = 1.0F) float reduction,
+            @ForAll @DoubleRange(min = 0.0, max = 128.0, maxIncluded = false) double drop,
+            @ForAll @IntRange(min = 0, max = 2400) int duration) {
+        OptionalInt slowFalling = duration > 0 ? OptionalInt.of(duration) : OptionalInt.empty();
+        FallRule rule = new FallRule(safeDistance, multiplier, slowFalling, GRAVITY, DRAG);
+        FallRule.Floor floor = floor(kind, reduction);
+        assertFalse(rule.hurts(0.0, 0.0, Double.NaN, floor), "no drop");
+        assertFalse(rule.hurts(drop, 0.0, 0.0, floor), "nothing below a resetting block");
     }
 
     @Test
