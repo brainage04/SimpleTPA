@@ -41,25 +41,29 @@ record FallRule(
                 1.0F);
     }
 
-    /** How far below the start of a fall to look for the floor that ends it. */
+    /**
+     * How far below the start of a fall to look for the floor that ends it. A safe fall distance
+     * far enough below zero would take the reach to zero or above the player, so it is at least one
+     * block.
+     */
     double reach() {
         // Slow Falling leaves the first part of a fall uncounted, so the floor that decides may be
         // deeper than the safe distance.
         return slowFalling.isPresent()
                 ? MAX_SCAN
-                : Math.min(MAX_SCAN, Math.ceil(safeDistance + 1.0 / multiplier) + 1.0);
+                : Math.clamp(Math.ceil(safeDistance + 1.0 / multiplier) + 1.0, 1.0, MAX_SCAN);
     }
 
     /**
      * Whether a fall of {@code drop} blocks from rest onto {@code floor} hurts. {@code scanned} is
      * the part of it below the lowest block that resets the fall on the way down, or all of it when
-     * there is none; a {@code scanned} of {@link #reach} or more means no floor was found within
-     * the scan. {@code restarted} is the fall that still counts below that block ({@link
-     * #restartAbove}), or NaN when the fall crosses none.
+     * there is none; a {@code scanned} of {@link #MAX_SCAN} or more means no floor was found within
+     * the deepest scan, and the fall may go on to any depth. A shorter reach needs no such rule: a
+     * plain landing at the reach already hurts. {@code restarted} is the fall that still counts
+     * below that block ({@link #restartAbove}), or NaN when the fall crosses none.
      */
     boolean hurts(double drop, double scanned, double restarted, Floor floor) {
-        if (slowFalling.isPresent() && scanned >= reach()) {
-            // No floor within the scan: how much of the fall counts depends on where it ends.
+        if (scanned >= MAX_SCAN) {
             return true;
         }
         // A resetting block also slows the fall through it: a climbable to 0.15 a tick
@@ -68,6 +72,11 @@ record FallRule(
         // drag (LivingEntity.java:2497-2498). How long it holds the requester decides where Slow
         // Falling runs out, which may be inside it, so below one the effect gets no credit.
         double counted = Double.isNaN(restarted) ? countedFall(drop) : restarted;
+        // The game deals no fall damage for a landing without a fall (Entity.java:1590), whatever
+        // the safe distance or the block.
+        if (counted <= 0.0) {
+            return false;
+        }
         return floor.hurts(counted, safeDistance, multiplier);
     }
 
