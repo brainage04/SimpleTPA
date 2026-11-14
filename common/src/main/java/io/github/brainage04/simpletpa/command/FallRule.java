@@ -30,6 +30,12 @@ record FallRule(
     static final double CLIMB_SPEED = 0.15;
 
     /**
+     * How far along a tick's movement Entity.move looks for water or a block that resets the fall
+     * (Entity.java:769), where it is a local value no API exposes.
+     */
+    static final double RESET_CHECK_LENGTH = 8.0;
+
+    /**
      * The vertical air drag for {@code airDragModifier}: LivingEntity.computeModifiedFriction
      * (LivingEntity.java:518-520), which is private there, applied to the vertical drag
      * (LivingEntity.java:2474).
@@ -115,14 +121,15 @@ record FallRule(
     /**
      * How far above the bottom of a resetting block the fall that counts below it may start, for a
      * player falling from rest who reaches the block's bottom {@code depth} blocks down, with a box
-     * {@code height} blocks tall.
+     * {@code height} blocks tall, or infinity when the block may not reset the fall at all.
      *
      * <ul>
-     *   <li>A tick that moves the player a block or more resets the fall when its movement crosses
-     *       water or a tagged block (Entity.java:766-775), and the whole movement of that tick is
-     *       then added (Entity.java:1584-1587, through ServerGamePacketListenerImpl.java:1215). A
-     *       tick that passes a thin block whole therefore counts from where it began, up to one
-     *       tick's movement above the block's bottom.
+     *   <li>A tick that moves the player a block or more resets the fall when the first {@link
+     *       #RESET_CHECK_LENGTH} blocks of its movement cross water or a tagged block
+     *       (Entity.java:766-775), and the whole movement of that tick is then added
+     *       (Entity.java:1584-1587, through ServerGamePacketListenerImpl.java:1215). A tick that
+     *       passes a thin block whole therefore counts from where it began, up to one tick's
+     *       movement above the block's bottom.
      *   <li>A climbable also resets the fall at the start of each tick that begins with the feet in
      *       it (LivingEntity.java:2688-2689) and holds that tick's fall to {@link #CLIMB_SPEED}. A
      *       fall slower than a block a tick cannot skip it, so it counts from at most that far
@@ -136,10 +143,16 @@ record FallRule(
      * </ul>
      *
      * <p>The blocks on the way can only slow a fall down, so the tick's movement is taken from a
-     * fall through open air ({@link #freeFallStep}).
+     * fall through open air ({@link #freeFallStep}). A tick that moves more than {@link
+     * #RESET_CHECK_LENGTH} blocks may pass the block beyond the part the game checks, and the fall
+     * then goes on counting from above it. A cobweb, berry bush or powder snow is found along a
+     * longer stretch (Entity.java:1316), so for them this is the cautious side.
      */
     double restartAbove(boolean climbable, boolean water, double depth, double height) {
         double step = freeFallStep(depth);
+        if (step > RESET_CHECK_LENGTH) {
+            return Double.POSITIVE_INFINITY;
+        }
         double above = 0.0;
         if (climbable) {
             above = step >= 1.0 ? step : Math.min(step, CLIMB_SPEED);
