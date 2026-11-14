@@ -9,12 +9,15 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.happyghast.HappyGhast;
+import net.minecraft.world.level.BlockCollisions;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.HayBlock;
 import net.minecraft.world.level.block.HoneyBlock;
 import net.minecraft.world.level.block.PointedDripstoneBlock;
@@ -71,11 +74,11 @@ public final class Landing {
      * damage on the way down resets the fall (Entity.java:768-775, 1684-1689), and so does powder
      * snow, which holds a player who sinks into it stuck (Entity.java:3030-3032). A fall that goes
      * on below such a block counts again from about that block's bottom ({@link
-     * FallRule#restartAbove}), with the same rule. The landing block's own reduction applies
-     * (Block.java:486-489), and powder snow underfoot deals no damage: it holds a falling player on
-     * top and its {@code fallOn} hurts nobody (PowderSnowBlock.java:101-107, 116-131). Slow Falling
-     * counts as {@link FallRule#countedFall} says, but only for a fall that crosses no resetting
-     * block.
+     * FallRule#restartAbove}), with the same rule. The landing block is the one the game calls
+     * {@code fallOn} on ({@link #landingPos}). Its own reduction applies (Block.java:486-489), and
+     * powder snow underfoot deals no damage: it holds a falling player on top and its {@code
+     * fallOn} hurts nobody (PowderSnowBlock.java:101-107, 116-131). Slow Falling counts as {@link
+     * FallRule#countedFall} says, but only for a fall that crosses no resetting block.
      *
      * <p>A tagged block the player lands on top of does not reset the fall: the game's check casts
      * a ray along the tick's movement (Entity.java:768-775), which ends on that block's top face,
@@ -137,9 +140,8 @@ public final class Landing {
             fallStart = fallStart.move(0.0, reset.getY() - fallStart.minY, 0.0);
         }
 
-        Vec3 centre = arrival.getCenter();
-        BlockPos landingPos = BlockPos.containing(centre.x, support - 1.0E-4, centre.z);
-        BlockState landing = level.getBlockState(landingPos);
+        AABB landed = arrival.move(0.0, support - arrival.minY, 0.0);
+        BlockState landing = level.getBlockState(landingPos(level, from, landed));
         if (landing.getBlock() instanceof PowderSnowBlock) {
             return false;
         }
@@ -148,6 +150,50 @@ public final class Landing {
                 fallStart.minY - support,
                 fallStart == arrival ? Double.NaN : countFrom - support,
                 floor(landing));
+    }
+
+    /**
+     * The block whose {@code fallOn} the game calls when {@code from} lands in {@code landed}: the
+     * main supporting block, the block closest to the player's position among those whose collision
+     * reaches a 1e-6 slab under their feet (Entity.java:704-716, CollisionGetter.java:138-152),
+     * taken 0.2 below the feet unless it is a fence, wall or fence gate, and without a supporting
+     * block the block 0.2 below the position (Entity.java:1093-1103, getOnPosLegacy at 1081-1083).
+     * CollisionGetter.findSupportingBlock measures from the player's present position, not from
+     * where they will land, so its choice is repeated here.
+     */
+    private static BlockPos landingPos(ServerLevel level, ServerPlayer from, AABB landed) {
+        Vec3 position = landed.getBottomCenter();
+        AABB underFeet =
+                new AABB(
+                        landed.minX,
+                        landed.minY - 1.0E-6,
+                        landed.minZ,
+                        landed.maxX,
+                        landed.minY,
+                        landed.maxZ);
+        BlockCollisions<BlockPos> collisions =
+                new BlockCollisions<>(level, from, underFeet, false, (pos, shape) -> pos);
+        BlockPos main = null;
+        double mainDistance = Double.MAX_VALUE;
+        while (collisions.hasNext()) {
+            BlockPos pos = collisions.next();
+            double distance = pos.distToCenterSqr(position);
+            if (distance < mainDistance
+                    || distance == mainDistance && (main == null || main.compareTo(pos) < 0)) {
+                main = pos.immutable();
+                mainDistance = distance;
+            }
+        }
+        if (main == null) {
+            return BlockPos.containing(position.x, position.y - 0.2F, position.z);
+        }
+        BlockState state = level.getBlockState(main);
+        if (state.is(BlockTags.FENCES)
+                || state.is(BlockTags.WALLS)
+                || state.getBlock() instanceof FenceGateBlock) {
+            return main;
+        }
+        return main.atY(Mth.floor(position.y - 0.2F));
     }
 
     /**
