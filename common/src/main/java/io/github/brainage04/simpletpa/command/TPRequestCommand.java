@@ -182,11 +182,11 @@ public class TPRequestCommand {
 
     /**
      * Whether {@code state} is a block the player type finds dangerous (EntityType.java:338-345)
-     * and its damage can hurt {@code from}. Burning blocks deal fire damage and powder snow
-     * freezes (DamageTypeTagsProvider.java:60-66, 86), which a player ignores while the
-     * fire_damage or freeze_damage game rule is off (Player.java:664-667). The rules are read
-     * directly, as {@link Landing#dropHurts} does: calling {@code isInvulnerableTo} would also count
-     * the grace while the client loads (ServerPlayer.java:1334).
+     * and its damage can hurt {@code from}. Burning blocks deal fire damage and powder snow freezes
+     * (DamageTypeTagsProvider.java:60-66, 86), which a player ignores while the fire_damage or
+     * freeze_damage game rule is off (Player.java:664-667). The rules are read directly, as {@link
+     * Landing#dropHurts} does: calling {@code isInvulnerableTo} would also count the grace while
+     * the client loads (ServerPlayer.java:1334).
      */
     private static boolean hurts(ServerLevel level, ServerPlayer from, BlockState state) {
         if (!from.getType().isBlockDangerous(state)) {
