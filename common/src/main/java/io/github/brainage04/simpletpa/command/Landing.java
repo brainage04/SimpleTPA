@@ -174,6 +174,8 @@ public final class Landing {
                 return drop - fallen;
             }
             fallen += step;
+            // The cap from LivingEntity.getEffectiveGravity (LivingEntity.java:2409), which is
+            // protected and answers for the motion the player has now, not for this fall.
             speed = (speed + Math.min(gravity, 0.01)) * drag;
         }
         return drop;
