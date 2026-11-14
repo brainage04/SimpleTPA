@@ -113,8 +113,7 @@ class FallRuleTest {
             @ForAll @DoubleRange(min = 0.01, max = 1.0) double gravity,
             @ForAll @DoubleRange(min = 0.0, max = 10.0) double airDragModifier) {
         float drag = FallRule.verticalDrag(airDragModifier);
-        FallRule rule =
-                new FallRule(SAFE_DISTANCE, 1.0, OptionalInt.of(duration), gravity, drag);
+        FallRule rule = new FallRule(SAFE_DISTANCE, 1.0, OptionalInt.of(duration), gravity, drag);
         double counted = rule.countedFall(drop);
         // The effect is taken to end a tick early, after duration - 1 ticks.
         double vanilla = vanillaCountedFall(drop, duration - 1, gravity, drag, 1_000_000);
@@ -163,8 +162,7 @@ class FallRuleTest {
             @ForAll @DoubleRange(min = 0.04, max = 100.0) double multiplier) {
         FallRule rule = new FallRule(safeDistance, multiplier, OptionalInt.empty(), GRAVITY, DRAG);
         double reach = rule.reach();
-        assertTrue(
-                vanillaDamage(reach, 0.0F, safeDistance, multiplier) > 0, "reach " + reach);
+        assertTrue(vanillaDamage(reach, 0.0F, safeDistance, multiplier) > 0, "reach " + reach);
     }
 
     /**
