@@ -1125,9 +1125,9 @@ public final class SimpleTPAGameTests {
     }
 
     /**
-     * A requester with an infinite Levitation never falls, so a long drop below the target does
-     * not refuse them; a requester whose Levitation runs out falls once it does, and is refused.
-     * Both targets stand at y 6, four blocks above the stone floor.
+     * A requester with an infinite Levitation never falls, so a long drop below the target does not
+     * refuse them; a requester whose Levitation runs out falls once it does, and is refused. Both
+     * targets stand at y 6, four blocks above the stone floor.
      */
     public static void infiniteLevitationSkipsTheDropCheck(GameTestHelper helper) {
         List<ServerPlayer[]> pairs = new ArrayList<>();
