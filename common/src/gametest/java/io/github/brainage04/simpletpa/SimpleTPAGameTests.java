@@ -67,6 +67,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ScaffoldingBlock;
 import net.minecraft.world.level.block.VineBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
@@ -1294,6 +1295,120 @@ public final class SimpleTPAGameTests {
                         "a drop through powder snow that ends below it"
                     };
                     boolean[] refused = {true, true, true, false, false};
+                    List<String> failures = new ArrayList<>();
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        ServerPlayer to = pairs.get(index)[1];
+                        if (!refused[index]) {
+                            if (!from.position().equals(to.position())) {
+                                failures.add(cases[index] + " was refused, got " + texts(from));
+                            }
+                            continue;
+                        }
+                        String refusal =
+                                "[SimpleTPA] "
+                                        + to.getScoreboardName()
+                                        + " is in the air above a long drop, so your TP request was not accepted automatically.";
+                        if (!from.position().equals(requesters.get(index))
+                                || !received(from, refusal)) {
+                            failures.add(
+                                    cases[index]
+                                            + " was not refused, got "
+                                            + from.position()
+                                            + " "
+                                            + texts(from));
+                        }
+                    }
+                    if (!failures.isEmpty()) {
+                        fail(helper, String.join("; ", failures));
+                        return;
+                    }
+                    succeed(helper);
+                });
+    }
+
+    /**
+     * The drop check reads collisions as the requester would see them standing at the arrival, not
+     * from where they are now (EntityCollisionContext.java:78-80). Every requester stands on stone
+     * at y 1, below each target. A target standing on a scaffolding bridge over a five block drop:
+     * scaffolding holds a player above it (ScaffoldingBlock.java:130-140), so this is accepted. A
+     * target four blocks above a one block scaffolding tower: the requester lands on its top, so
+     * this is refused. A requester who is falling now over powder snow with a one block drop below
+     * it: the game holds a player who has fallen more than 2.5 blocks on top of the snow only until
+     * they land, and then they sink through (PowderSnowBlock.java:120-121, Entity.java:3030-3032),
+     * so this is accepted. Last, at the top of the world, a requester in leather boots standing
+     * above powder snow that lies three blocks below the target, with five blocks of air under it:
+     * after a fall of three blocks the snow does not hold them either, and the fall below it hurts,
+     * so this is refused.
+     */
+    public static void collisionsAreJudgedAtTheTargetsHeight(GameTestHelper helper) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        for (int index = 0; index < 4; index++) {
+            pair(helper, pairs::add);
+        }
+        at(
+                helper,
+                1,
+                () -> {
+                    BlockPos top = skyColumn(helper, new BlockPos(4, 0, 4), 10);
+                    if (top == null) {
+                        return;
+                    }
+                    ServerLevel level = helper.getLevel();
+                    BlockState tower =
+                            Blocks.SCAFFOLDING
+                                    .defaultBlockState()
+                                    .setValue(ScaffoldingBlock.DISTANCE, 0)
+                                    .setValue(ScaffoldingBlock.BOTTOM, false);
+                    helper.setBlock(new BlockPos(0, 0, 0), Blocks.STONE);
+                    for (int y = 1; y <= 4; y++) {
+                        helper.setBlock(new BlockPos(0, y, 0), tower);
+                    }
+                    for (int x = 1; x <= 2; x++) {
+                        helper.setBlock(
+                                new BlockPos(x, 4, 0),
+                                tower.setValue(ScaffoldingBlock.DISTANCE, x)
+                                        .setValue(ScaffoldingBlock.BOTTOM, true));
+                    }
+                    helper.setBlock(new BlockPos(4, 0, 0), Blocks.STONE);
+                    helper.setBlock(new BlockPos(4, 1, 0), tower);
+                    helper.setBlock(new BlockPos(2, 0, 2), Blocks.STONE);
+                    helper.setBlock(new BlockPos(2, 2, 2), Blocks.POWDER_SNOW);
+                    level.setBlockAndUpdate(top.below(4), Blocks.POWDER_SNOW.defaultBlockState());
+                    level.setBlockAndUpdate(top.below(10), Blocks.STONE.defaultBlockState());
+                    for (int index = 0; index < 3; index++) {
+                        standOnStone(
+                                helper,
+                                pairs.get(index)[0],
+                                Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(5, 1, 5))));
+                    }
+                    pairs.get(2)[0].fallDistance = 10.0;
+                    ServerPlayer booted = pairs.get(3)[0];
+                    booted.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.LEATHER_BOOTS));
+                    level.setBlockAndUpdate(top.north().below(), Blocks.STONE.defaultBlockState());
+                    booted.setPos(Vec3.atBottomCenterOf(top.north()));
+                    Vec3[] targets = {
+                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(2, 5, 0))),
+                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(4, 6, 0))),
+                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(2, 6, 2))),
+                        Vec3.atBottomCenterOf(top)
+                    };
+                    List<Vec3> requesters =
+                            pairs.stream().map(players -> players[0].position()).toList();
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        ServerPlayer to = pairs.get(index)[1];
+                        to.setPos(targets[index]);
+                        InstantTpaWhitelist.add(to, from);
+                        command(from, "tpa " + to.getScoreboardName());
+                    }
+                    String[] cases = {
+                        "a target on a scaffolding bridge above the requester",
+                        "a target four blocks above a scaffolding tower",
+                        "a falling requester over powder snow with a short drop below it",
+                        "a requester in leather boots three blocks above powder snow over a drop"
+                    };
+                    boolean[] refused = {false, true, false, true};
                     List<String> failures = new ArrayList<>();
                     for (int index = 0; index < pairs.size(); index++) {
                         ServerPlayer from = pairs.get(index)[0];

@@ -120,6 +120,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void collisionsAreJudgedAtTheTargetsHeight(GameTestHelper helper) {
+        SimpleTPAGameTests.collisionsAreJudgedAtTheTargetsHeight(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void slowFallingGetsNoCreditBelowAResettingBlock(GameTestHelper helper) {
         SimpleTPAGameTests.slowFallingGetsNoCreditBelowAResettingBlock(helper);
     }

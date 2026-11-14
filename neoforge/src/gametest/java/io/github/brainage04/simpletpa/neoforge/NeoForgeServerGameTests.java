@@ -86,6 +86,10 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::powderSnowHoldsARequesterWithoutLeatherBoots);
         register(
                 event,
+                "collisions_are_judged_at_the_targets_height",
+                SimpleTPAGameTests::collisionsAreJudgedAtTheTargetsHeight);
+        register(
+                event,
                 "slow_falling_gets_no_credit_below_a_resetting_block",
                 SimpleTPAGameTests::slowFallingGetsNoCreditBelowAResettingBlock);
         register(
