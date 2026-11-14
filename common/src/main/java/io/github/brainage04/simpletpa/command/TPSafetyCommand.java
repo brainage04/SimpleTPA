@@ -12,7 +12,10 @@ public class TPSafetyCommand {
         if (player == null) {
             return -1;
         }
+        return show(player);
+    }
 
+    private static int show(ServerPlayer player) {
         SimpleTPA.FEEDBACK.neutral(
                 player,
                 "Your TP requests %s while the player you teleport to is in the air above a long drop.",
@@ -27,7 +30,7 @@ public class TPSafetyCommand {
         }
 
         if (!SafetyPreference.setRefusesDangerousDrop(player, refuses)) {
-            return show(source);
+            return show(player);
         }
 
         if (!SafetyPreference.save()) {

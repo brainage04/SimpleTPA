@@ -66,6 +66,10 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::smallFallMultiplierAcceptsAHurtlessDrop);
         register(
                 event,
+                "resetting_landings_and_slow_falling_accept_a_drop",
+                SimpleTPAGameTests::resettingLandingsAndSlowFallingAcceptADrop);
+        register(
+                event,
                 "creative_skips_landing_checks",
                 SimpleTPAGameTests::creativeSkipsLandingChecks);
         register(

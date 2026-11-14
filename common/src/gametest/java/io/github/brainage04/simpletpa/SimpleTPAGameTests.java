@@ -12,6 +12,8 @@ import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
 import io.github.brainage04.simpletpa.data.LegacyGameRule;
 import io.github.brainage04.simpletpa.event.ModTickEvents;
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.ReferenceCountUtil;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,10 +44,15 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.TextColor;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
+import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -860,6 +867,76 @@ public final class SimpleTPAGameTests {
     }
 
     /**
+     * Drops the game does not hurt for go through, and Slow Falling counts only while it lasts.
+     * Each target is four blocks above the stone floor, a drop that refuses on its own: over water,
+     * over a cobweb (tagged as resetting fall damage), over powder snow, and above the plain floor
+     * for a requester with a long Slow Falling. A requester whose Slow Falling ends at once is
+     * still refused.
+     */
+    public static void resettingLandingsAndSlowFallingAcceptADrop(GameTestHelper helper) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        for (int index = 0; index < 5; index++) {
+            pair(helper, pairs::add);
+        }
+        List<Vec3> starts = pairs.stream().map(players -> players[0].position()).toList();
+        at(
+                helper,
+                1,
+                () -> {
+                    floorBelow(helper, 1);
+                    helper.setBlock(new BlockPos(0, 2, 0), Blocks.WATER);
+                    helper.setBlock(new BlockPos(0, 3, 2), Blocks.COBWEB);
+                    helper.setBlock(new BlockPos(2, 2, 0), Blocks.POWDER_SNOW);
+                    BlockPos[] targets = {
+                        new BlockPos(0, 6, 0),
+                        new BlockPos(0, 6, 2),
+                        new BlockPos(2, 6, 0),
+                        new BlockPos(2, 6, 2),
+                        new BlockPos(1, 6, 1)
+                    };
+                    pairs.get(3)[0].addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 600));
+                    pairs.get(4)[0].addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 1));
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        ServerPlayer to = pairs.get(index)[1];
+                        to.setPos(Vec3.atBottomCenterOf(helper.absolutePos(targets[index])));
+                        InstantTpaWhitelist.add(to, from);
+                        command(from, "tpa " + to.getScoreboardName());
+                    }
+                    String[] cases = {
+                        "a drop into water",
+                        "a drop through a cobweb",
+                        "a drop into powder snow",
+                        "a drop with a long Slow Falling"
+                    };
+                    for (int index = 0; index < cases.length; index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        if (!from.position().equals(pairs.get(index)[1].position())) {
+                            fail(helper, cases[index] + " was refused, got " + texts(from));
+                            return;
+                        }
+                    }
+                    ServerPlayer shortSlow = pairs.get(4)[0];
+                    ServerPlayer shortSlowTarget = pairs.get(4)[1];
+                    String refusal =
+                            "[SimpleTPA] "
+                                    + shortSlowTarget.getScoreboardName()
+                                    + " is in the air above a long drop, so your TP request was not accepted automatically.";
+                    if (!shortSlow.position().equals(starts.get(4))
+                            || !received(shortSlow, refusal)) {
+                        fail(
+                                helper,
+                                "a drop with a Slow Falling that ends at once was not refused, got "
+                                        + shortSlow.position()
+                                        + " "
+                                        + texts(shortSlow));
+                        return;
+                    }
+                    succeed(helper);
+                });
+    }
+
+    /**
      * A creative requester skips the landing checks a survival one is held to: they are put in the
      * air above a long drop, and on a spot the spot checks call unsafe.
      */
@@ -976,9 +1053,56 @@ public final class SimpleTPAGameTests {
                                     fail(helper, "no safety-on message, got " + texts(from));
                                     return;
                                 }
+                                fixture(from).clearMessages();
+                                command(from, "tpasafety on");
+                                Outbound sent = outbound(from);
+                                if (!sent.messages()
+                                        .equals(
+                                                List.of(
+                                                        "[SimpleTPA] Your TP requests wait while the player you teleport to is in the air above a long drop."))) {
+                                    fail(
+                                            helper,
+                                            "turning on what is on must show it once, got "
+                                                    + sent.messages());
+                                    return;
+                                }
+                                if (sent.clicks() != 1) {
+                                    fail(
+                                            helper,
+                                            "turning on what is on must click once, got "
+                                                    + sent.clicks());
+                                    return;
+                                }
                                 succeed(helper);
                             });
                 });
+    }
+
+    private record Outbound(List<String> messages, int clicks) {}
+
+    /**
+     * The chat messages and UI clicks sent to {@code player} since their connection was last
+     * drained. Reading the connection takes the messages away from {@link GameTestPlayer#messages}.
+     */
+    private static Outbound outbound(ServerPlayer player) {
+        EmbeddedChannel channel = fixture(player).channel();
+        channel.runPendingTasks();
+        channel.flushOutbound();
+        List<String> messages = new ArrayList<>();
+        int clicks = 0;
+        Object packet;
+        while ((packet = channel.readOutbound()) != null) {
+            if (packet instanceof ClientboundSystemChatPacket(Component content, boolean overlay)) {
+                if (!overlay) {
+                    messages.add(content.getString());
+                }
+            } else if (packet instanceof ClientboundSoundPacket sound
+                    && sound.getSound().value() == SoundEvents.UI_BUTTON_CLICK.value()) {
+                clicks++;
+            }
+            ReferenceCountUtil.release(packet);
+        }
+        return new Outbound(messages, clicks);
     }
 
     /**
