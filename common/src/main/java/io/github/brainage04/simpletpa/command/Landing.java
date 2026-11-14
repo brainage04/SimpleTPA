@@ -68,8 +68,8 @@ public final class Landing {
      * damage on the way down resets the fall (Entity.java:768-775, 1684-1689), and so does powder
      * snow, which holds a player who sinks into it stuck (Entity.java:3030-3032). A fall that goes
      * on below such a block counts again from that block's bottom, with the same rule. The landing
-     * block's own reduction applies (Block.java:486-489), and powder snow underfoot deals no damage:
-     * it holds a falling player on top and its {@code fallOn} hurts nobody
+     * block's own reduction applies (Block.java:486-489), and powder snow underfoot deals no
+     * damage: it holds a falling player on top and its {@code fallOn} hurts nobody
      * (PowderSnowBlock.java:101-107, 116-131). Slow Falling counts as {@link #countedFall} says.
      *
      * <p>A tagged block the player lands on top of does not reset the fall: the game's check casts
@@ -182,9 +182,9 @@ public final class Landing {
      *
      * <p>Network delay is not covered. The server counts the fall from the client's movement
      * packets (ServerGamePacketListenerImpl.java:1216), and the client keeps the effect until the
-     * server's removal reaches it (LivingEntity.java:845-865), so on a slow connection the fall
-     * the server counts after the effect ends can be up to about 0.49 blocks longer per tick of
-     * round trip. The README states this limit.
+     * server's removal reaches it (LivingEntity.java:845-865), so on a slow connection the fall the
+     * server counts after the effect ends can be up to about 0.49 blocks longer per tick of round
+     * trip. The README states this limit.
      */
     private static double countedFall(
             ServerPlayer from, MobEffectInstance slowFalling, double drop) {

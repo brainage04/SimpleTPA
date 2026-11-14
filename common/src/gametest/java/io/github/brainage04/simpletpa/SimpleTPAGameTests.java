@@ -938,8 +938,8 @@ public final class SimpleTPAGameTests {
 
     /**
      * A fall that goes on below a resetting block counts again from that block's bottom, and the
-     * drop check's Slow Falling and powder snow edges. Above the stone floor: a target two blocks
-     * over a single powder snow block with four blocks of air below it (refused, the fall below
+     * drop check's Slow Falling and powder snow edges. Above the stone floor: a target three blocks
+     * above a single powder snow block with four blocks of air below it (refused, the fall below
      * deals one damage); a target over water three blocks deep (accepted); a six block drop for a
      * requester with infinite Slow Falling (accepted); a five block drop onto powder snow for a
      * requester in leather boots who stands above its top, so it holds them (accepted). Last, a
@@ -976,7 +976,7 @@ public final class SimpleTPAGameTests {
                         }
                     }
                     Vec3[] targets = {
-                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(0, 8, 0))),
+                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(0, 10, 0))),
                         Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(0, 8, 2))),
                         Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(2, 8, 0))),
                         Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(2, 8, 2))),
@@ -984,8 +984,7 @@ public final class SimpleTPAGameTests {
                     };
                     pairs.get(2)[0].addEffect(
                             new MobEffectInstance(
-                                    MobEffects.SLOW_FALLING,
-                                    MobEffectInstance.INFINITE_DURATION));
+                                    MobEffects.SLOW_FALLING, MobEffectInstance.INFINITE_DURATION));
                     ServerPlayer booted = pairs.get(3)[0];
                     booted.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.LEATHER_BOOTS));
                     standOnStone(
@@ -1010,13 +1009,13 @@ public final class SimpleTPAGameTests {
                         "a drop with a long Slow Falling and no floor within 128 blocks"
                     };
                     boolean[] refused = {true, false, false, false, true};
+                    List<String> failures = new ArrayList<>();
                     for (int index = 0; index < pairs.size(); index++) {
                         ServerPlayer from = pairs.get(index)[0];
                         ServerPlayer to = pairs.get(index)[1];
                         if (!refused[index]) {
                             if (!from.position().equals(to.position())) {
-                                fail(helper, cases[index] + " was refused, got " + texts(from));
-                                return;
+                                failures.add(cases[index] + " was refused, got " + texts(from));
                             }
                             continue;
                         }
@@ -1026,15 +1025,17 @@ public final class SimpleTPAGameTests {
                                         + " is in the air above a long drop, so your TP request was not accepted automatically.";
                         if (!from.position().equals(requesters.get(index))
                                 || !received(from, refusal)) {
-                            fail(
-                                    helper,
+                            failures.add(
                                     cases[index]
                                             + " was not refused, got "
                                             + from.position()
                                             + " "
                                             + texts(from));
-                            return;
                         }
+                    }
+                    if (!failures.isEmpty()) {
+                        fail(helper, String.join("; ", failures));
+                        return;
                     }
                     succeed(helper);
                 });
