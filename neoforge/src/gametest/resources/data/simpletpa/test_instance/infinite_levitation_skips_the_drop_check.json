@@ -1,0 +1,1 @@
+{"environment":"minecraft:default","structure":"minecraftmodconventions:empty","max_ticks":40,"type":"minecraft:function","function":"simpletpa:infinite_levitation_skips_the_drop_check"}

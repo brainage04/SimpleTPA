@@ -1124,6 +1124,62 @@ public final class SimpleTPAGameTests {
                 });
     }
 
+    /**
+     * A requester with an infinite Levitation never falls, so a long drop below the target does
+     * not refuse them; a requester whose Levitation runs out falls once it does, and is refused.
+     * Both targets stand at y 6, four blocks above the stone floor.
+     */
+    public static void infiniteLevitationSkipsTheDropCheck(GameTestHelper helper) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        for (int index = 0; index < 2; index++) {
+            pair(helper, pairs::add);
+        }
+        at(
+                helper,
+                1,
+                () -> {
+                    floorBelow(helper, 1);
+                    pairs.get(0)[0].addEffect(
+                            new MobEffectInstance(
+                                    MobEffects.LEVITATION, MobEffectInstance.INFINITE_DURATION));
+                    pairs.get(1)[0].addEffect(new MobEffectInstance(MobEffects.LEVITATION, 200));
+                    List<Vec3> requesters =
+                            pairs.stream().map(players -> players[0].position()).toList();
+                    BlockPos[] targets = {new BlockPos(0, 6, 0), new BlockPos(2, 6, 2)};
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        ServerPlayer to = pairs.get(index)[1];
+                        to.setPos(Vec3.atBottomCenterOf(helper.absolutePos(targets[index])));
+                        InstantTpaWhitelist.add(to, from);
+                        command(from, "tpa " + to.getScoreboardName());
+                    }
+                    ServerPlayer floating = pairs.get(0)[0];
+                    if (!floating.position().equals(pairs.get(0)[1].position())) {
+                        fail(
+                                helper,
+                                "a requester with an infinite Levitation was refused, got "
+                                        + texts(floating));
+                        return;
+                    }
+                    ServerPlayer falling = pairs.get(1)[0];
+                    String refusal =
+                            "[SimpleTPA] "
+                                    + pairs.get(1)[1].getScoreboardName()
+                                    + " is in the air above a long drop, so your TP request was not accepted automatically.";
+                    if (!falling.position().equals(requesters.get(1))
+                            || !received(falling, refusal)) {
+                        fail(
+                                helper,
+                                "a requester whose Levitation runs out was not refused, got "
+                                        + falling.position()
+                                        + " "
+                                        + texts(falling));
+                        return;
+                    }
+                    succeed(helper);
+                });
+    }
+
     /** /tpasafety shows the default, turns the check off and on, and says which it is. */
     public static void safetyCommandShowsAndSets(GameTestHelper helper) {
         pair(
