@@ -51,18 +51,19 @@ record FallRule(
     /**
      * Whether a fall of {@code drop} blocks from rest hurts, judged by the game's fall damage rule
      * (LivingEntity.java:1851-1862). A block that resets the fall on the way down leaves {@code
-     * dropBelowReset} blocks of it, and {@code reduction} is the landing block's fall distance
-     * reduction (Block.java:486-489). A {@code dropBelowReset} of {@link #MAX_SCAN} means no floor
-     * was found within the deepest scan, and the fall may go on to any depth. A shorter reach needs
-     * no such rule: a plain landing at the reach already hurts.
+     * dropBelowReset} blocks of it, less than {@code drop}, and {@code reduction} is the landing
+     * block's fall distance reduction (Block.java:486-489). A {@code dropBelowReset} of {@link
+     * #MAX_SCAN} means no floor was found within the deepest scan, and the fall may go on to any
+     * depth. A shorter reach needs no such rule: a plain landing at the reach already hurts.
      */
     boolean hurts(double drop, double dropBelowReset, float reduction) {
         if (dropBelowReset >= MAX_SCAN) {
             return true;
         }
-        // Slow Falling and a resetting block each take away the fall above them, so the lower of
-        // the two starts what counts.
-        double counted = Math.min(countedFall(drop), dropBelowReset);
+        // A block that resets the fall can also hold the player until Slow Falling has run out: a
+        // cobweb keeps 5 % of their vertical movement and then stops them (WebBlock.java:22-27,
+        // Entity.java:755-761), so below such a block the effect takes nothing off the fall.
+        double counted = dropBelowReset < drop ? dropBelowReset : countedFall(drop);
         // The game deals no fall damage for a landing without a fall (Entity.java:1590), whatever
         // the safe distance.
         if (counted <= 0.0) {
