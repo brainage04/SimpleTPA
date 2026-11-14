@@ -1,0 +1,1 @@
+{"environment":"minecraft:default","structure":"minecraftmodconventions:empty","max_ticks":20,"type":"minecraft:function","function":"simpletpa:auto_accept_waits_for_blocked_target"}
