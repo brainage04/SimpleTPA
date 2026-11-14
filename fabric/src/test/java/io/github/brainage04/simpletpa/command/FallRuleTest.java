@@ -260,8 +260,8 @@ class FallRuleTest {
 
     /**
      * Over the attributes' whole ranges (Attributes.java:10-11, 55-56). A drag of zero stops the
-     * fall, and a tiny gravity or drag keeps it slow for millions of ticks; neither may hold up
-     * the server.
+     * fall, and a tiny gravity or drag keeps it slow for millions of ticks; neither may hold up the
+     * server.
      */
     @Property(shrinking = ShrinkingMode.OFF)
     void aFreeFallStepIsWorkedOutQuicklyForAnyGravityAndDrag(
