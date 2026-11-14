@@ -77,8 +77,10 @@ public final class Landing {
      * FallRule#restartAbove}), with the same rule. The landing block is the one the game calls
      * {@code fallOn} on ({@link #landingPos}). Its own reduction applies (Block.java:486-489), and
      * powder snow underfoot deals no damage: it holds a falling player on top and its {@code
-     * fallOn} hurts nobody (PowderSnowBlock.java:101-107, 116-131). Slow Falling counts as {@link
-     * FallRule#countedFall} says, but only for a fall that crosses no resetting block.
+     * fallOn} hurts nobody (PowderSnowBlock.java:101-107, 116-131). A drop that leaves the
+     * requester held in powder snow they cannot climb out of counts as hurting ({@link
+     * #heldInPowderSnow}). Slow Falling counts as {@link FallRule#countedFall} says, but only for a
+     * fall that crosses no resetting block.
      *
      * <p>A tagged block the player lands on top of does not reset the fall: the game's check casts
      * a ray along the tick's movement (Entity.java:768-775), which ends on that block's top face,
@@ -121,6 +123,7 @@ public final class Landing {
         AABB fallStart = arrival;
         double countFrom = arrival.minY;
         double support;
+        boolean landsInReset = false;
         while (true) {
             support = support(level, from, fallStart, reach);
             BlockPos reset = lowestReset(level, fallStart, support);
@@ -128,7 +131,8 @@ public final class Landing {
                 break;
             }
             if (reset.getY() <= support) {
-                return false;
+                landsInReset = true;
+                break;
             }
             BlockState state = level.getBlockState(reset);
             boolean climbable = state.is(BlockTags.CLIMBABLE);
@@ -141,6 +145,12 @@ public final class Landing {
         }
 
         AABB landed = arrival.move(0.0, support - arrival.minY, 0.0);
+        if (heldInPowderSnow(level, from, landed)) {
+            return true;
+        }
+        if (landsInReset) {
+            return false;
+        }
         BlockState landing = level.getBlockState(landingPos(level, from, landed));
         if (landing.getBlock() instanceof PowderSnowBlock) {
             return false;
@@ -150,6 +160,20 @@ public final class Landing {
                 fallStart.minY - support,
                 fallStart == arrival ? Double.NaN : countFrom - support,
                 floor(landing));
+    }
+
+    /**
+     * Whether {@code from}, at rest in {@code landed}, is held in powder snow they cannot climb out
+     * of. Powder snow holds a living entity whose feet are in it (PowderSnowBlock.java:59-60, the
+     * block at its position, Entity.java:3837-3839) and freezes one that wears no leather
+     * (LivingEntity.java:3977-3988, 3140-3148). Only an entity that can walk on powder snow climbs
+     * out of it (LivingEntity.java:2665), which for a player means leather boots
+     * (PowderSnowBlock.java:139-145).
+     */
+    private static boolean heldInPowderSnow(ServerLevel level, ServerPlayer from, AABB landed) {
+        return !PowderSnowBlock.canEntityWalkOnPowderSnow(from)
+                && level.getBlockState(BlockPos.containing(landed.getBottomCenter())).getBlock()
+                        instanceof PowderSnowBlock;
     }
 
     /**
