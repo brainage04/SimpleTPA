@@ -4,5 +4,13 @@
     "utility"
   ],
   "client_side": "unsupported",
-  "server_side": "required"
+  "server_side": "required",
+  "dependency_overrides": {
+    "fabric-api": {
+      "curseforge_slug": "fabric-api"
+    },
+    "brainagelib": {
+      "curseforge_slug": "brainagelib"
+    }
+  }
 }
