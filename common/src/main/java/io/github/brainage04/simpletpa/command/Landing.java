@@ -28,6 +28,7 @@ import net.minecraft.world.level.block.SlimeBlock;
 import net.minecraft.world.level.block.SpeleothemBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.SpeleothemThickness;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -112,6 +113,12 @@ public final class Landing {
      */
     public static boolean dropHurts(ServerLevel level, ServerPlayer from, AABB arrival) {
         if (from.is(EntityTypeTags.FALL_DAMAGE_IMMUNE)) {
+            return false;
+        }
+        // The rule Player.isInvulnerableTo applies to fall damage (Player.java:662-663). Calling it
+        // would also count ServerPlayer's grace while the client loads (ServerPlayer.java:1334),
+        // which can end before the requester lands.
+        if (!level.getGameRules().get(GameRules.FALL_DAMAGE)) {
             return false;
         }
         double multiplier = from.getAttributeValue(Attributes.FALL_DAMAGE_MULTIPLIER);

@@ -105,6 +105,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void fallDamageRuleOffAcceptsADrop(GameTestHelper helper) {
+        SimpleTPAGameTests.fallDamageRuleOffAcceptsADrop(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void resettingLandingsAndSlowFallingAcceptADrop(GameTestHelper helper) {
         SimpleTPAGameTests.resettingLandingsAndSlowFallingAcceptADrop(helper);
     }
