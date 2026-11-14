@@ -1339,11 +1339,13 @@ public final class SimpleTPAGameTests {
      * so this is accepted. Last, at the top of the world, a requester in leather boots standing
      * above powder snow that lies three blocks below the target, with five blocks of air under it:
      * after a fall of three blocks the snow does not hold them either, and the fall below it hurts,
-     * so this is refused.
+     * so this is refused. The spot check reads collisions at the arrival too: a requester on stone
+     * at y 6 above a target standing inside a two block scaffolding tower is accepted, although
+     * from the requester's own height the scaffolding would be solid.
      */
     public static void collisionsAreJudgedAtTheTargetsHeight(GameTestHelper helper) {
         List<ServerPlayer[]> pairs = new ArrayList<>();
-        for (int index = 0; index < 4; index++) {
+        for (int index = 0; index < 5; index++) {
             pair(helper, pairs::add);
         }
         at(
@@ -1374,6 +1376,9 @@ public final class SimpleTPAGameTests {
                     helper.setBlock(new BlockPos(4, 1, 0), tower);
                     helper.setBlock(new BlockPos(2, 0, 2), Blocks.STONE);
                     helper.setBlock(new BlockPos(2, 2, 2), Blocks.POWDER_SNOW);
+                    helper.setBlock(new BlockPos(6, 0, 2), Blocks.STONE);
+                    helper.setBlock(new BlockPos(6, 1, 2), tower);
+                    helper.setBlock(new BlockPos(6, 2, 2), tower);
                     level.setBlockAndUpdate(top.below(4), Blocks.POWDER_SNOW.defaultBlockState());
                     level.setBlockAndUpdate(top.below(10), Blocks.STONE.defaultBlockState());
                     for (int index = 0; index < 3; index++) {
@@ -1387,11 +1392,16 @@ public final class SimpleTPAGameTests {
                     booted.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.LEATHER_BOOTS));
                     level.setBlockAndUpdate(top.north().below(), Blocks.STONE.defaultBlockState());
                     booted.setPos(Vec3.atBottomCenterOf(top.north()));
+                    standOnStone(
+                            helper,
+                            pairs.get(4)[0],
+                            Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(6, 6, 6))));
                     Vec3[] targets = {
                         Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(2, 5, 0))),
                         Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(4, 6, 0))),
                         Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(2, 6, 2))),
-                        Vec3.atBottomCenterOf(top)
+                        Vec3.atBottomCenterOf(top),
+                        Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(6, 1, 2)))
                     };
                     List<Vec3> requesters =
                             pairs.stream().map(players -> players[0].position()).toList();
@@ -1406,9 +1416,10 @@ public final class SimpleTPAGameTests {
                         "a target on a scaffolding bridge above the requester",
                         "a target four blocks above a scaffolding tower",
                         "a falling requester over powder snow with a short drop below it",
-                        "a requester in leather boots three blocks above powder snow over a drop"
+                        "a requester in leather boots three blocks above powder snow over a drop",
+                        "a requester above a target inside a scaffolding tower"
                     };
-                    boolean[] refused = {false, true, false, true};
+                    boolean[] refused = {false, true, false, true, false};
                     List<String> failures = new ArrayList<>();
                     for (int index = 0; index < pairs.size(); index++) {
                         ServerPlayer from = pairs.get(index)[0];
