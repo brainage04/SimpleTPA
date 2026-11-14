@@ -1,3 +1,7 @@
+plugins {
+	id 'info.solidsoft.pitest' version '1.19.0'
+}
+
 workspaceDependencies {
 	siblingMaven('BrainageLib') {
 		coordinate.set("io.github.brainage04:brainagelib:${rootProject.brainagelib_version}")
@@ -15,4 +19,48 @@ dependencies {
 	// Test-only GameTest fixtures; productionRuntimeMods feeds the production GameTest runs, not the release JAR.
 	gametestImplementation "io.github.brainage04:brainagelib-gametest:${project.brainagelib_version}"
 	productionRuntimeMods "io.github.brainage04:brainagelib-gametest:${project.brainagelib_version}"
+	// jqwik 1.10.2 is built on JUnit Platform 1.14, so the JUnit modules follow the same release line.
+	testImplementation platform('org.junit:junit-bom:5.14.4')
+	testImplementation 'org.junit.jupiter:junit-jupiter'
+	testImplementation 'net.jqwik:jqwik:1.10.2'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// fabric-loader-junit runs the tests inside the Fabric loader, where jqwik finds no @Property methods
+// (MagicCarpet's CarpetMotionTest ran 6 of its 10 tests there, 14 Nov 2026). SimpleTPAMetadataTest needs
+// the loader, so the property tests get a task of their own without it.
+def propertyTests = 'io/github/brainage04/simpletpa/command/**'
+tasks.named('test') {
+	exclude propertyTests
+}
+def propertyTest = tasks.register('propertyTest', Test) {
+	description = 'Runs the jqwik property tests outside the Fabric loader.'
+	group = 'verification'
+	def unitTest = tasks.named('test', Test).get()
+	testClassesDirs = unitTest.testClassesDirs
+	classpath = unitTest.classpath.filter { !it.name.startsWith('fabric-loader-junit') }
+	include propertyTests
+	useJUnitPlatform()
+}
+tasks.named('check') {
+	dependsOn propertyTest
+}
+
+pitest {
+	pitestVersion = '1.30.2'
+	junit5PluginVersion = '1.2.3'
+	targetClasses = ['io.github.brainage04.simpletpa.command.FallRule']
+	targetTests = ['io.github.brainage04.simpletpa.command.FallRuleTest']
+	additionalMutableCodePaths = project(':common').sourceSets.main.output.classesDirs.files
+	threads = 1
+	timeoutConstInMillis = 5000
+	outputFormats = ['HTML', 'XML']
+	timestampedReports = false
+}
+tasks.named('pitest') {
+	dependsOn ':common:classes'
+	// With fabric-loader-junit on the classpath PIT records no coverage (SimpleTwitchChat measured 0 of 90 lines),
+	// and FallRuleTest does not need the Fabric loader.
+	def classpath = files(additionalClasspath.from.toList())
+	additionalClasspath.setFrom(classpath.filter { !it.name.startsWith('fabric-loader-junit') })
 }
