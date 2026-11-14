@@ -74,6 +74,10 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::fallBelowResetsAndSlowFallingEdges);
         register(
                 event,
+                "slow_falling_gets_no_credit_below_a_resetting_block",
+                SimpleTPAGameTests::slowFallingGetsNoCreditBelowAResettingBlock);
+        register(
+                event,
                 "creative_skips_landing_checks",
                 SimpleTPAGameTests::creativeSkipsLandingChecks);
         register(

@@ -64,6 +64,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.VineBlock;
 import net.minecraft.world.level.gamerules.GameRule;
 import net.minecraft.world.level.gamerules.GameRuleMap;
 import net.minecraft.world.level.gamerules.GameRules;
@@ -612,6 +613,46 @@ public final class SimpleTPAGameTests {
     }
 
     /**
+     * The block two below the top of the world above {@code relative}, with {@code depth} blocks
+     * of air below it and in the column north of those, or null after failing the test. A drop
+     * taller than the test area's barrier box (its roof is at y 8) is built there.
+     */
+    private static BlockPos skyColumn(GameTestHelper helper, BlockPos relative, int depth) {
+        ServerLevel level = helper.getLevel();
+        BlockPos column = helper.absolutePos(relative);
+        BlockPos top = new BlockPos(column.getX(), level.getMaxY() - 2, column.getZ());
+        for (int below = 0; below <= depth; below++) {
+            for (BlockPos pos : List.of(top.below(below), top.below(below).north())) {
+                if (!level.getBlockState(pos).isAir()) {
+                    fail(
+                            helper,
+                            "the test needs air below " + top + ", found a block at " + pos);
+                    return null;
+                }
+            }
+        }
+        return top;
+    }
+
+    /** Puts vines on stone to the north at each of {@code positions}, and records both. */
+    private static void vines(ServerLevel level, List<BlockPos> positions, List<BlockPos> built) {
+        for (BlockPos pos : positions) {
+            level.setBlockAndUpdate(pos.north(), Blocks.STONE.defaultBlockState());
+            level.setBlockAndUpdate(
+                    pos, Blocks.VINE.defaultBlockState().setValue(VineBlock.NORTH, true));
+            built.add(pos.north());
+            built.add(pos);
+        }
+    }
+
+    /** Removes what a sky test built, the last block first, so no vine loses its support. */
+    private static void clear(ServerLevel level, List<BlockPos> built) {
+        for (int index = built.size() - 1; index >= 0; index--) {
+            level.setBlockAndUpdate(built.get(index), Blocks.AIR.defaultBlockState());
+        }
+    }
+
+    /**
      * A survival requester teleported to a player riding a harnessed happy ghast arrives on the
      * ghast's top rather than in the rider's seat, where the client would not hold them
      * (HappyGhast.java:576-585), and the long floor below does not refuse the request.
@@ -1045,6 +1086,64 @@ public final class SimpleTPAGameTests {
                         return;
                     }
                     succeed(helper);
+                });
+    }
+
+    /**
+     * Slow Falling gets no credit below a resetting block, which slows the requester down so the
+     * effect may run out inside it. The target hangs at the top of the world over a 40 block drop
+     * with vines from 2 to 21 blocks down. The requester's 124 tick Slow Falling would carry a
+     * fall through open air to about 37 blocks down, but the vines hold them to 0.15 blocks a tick
+     * (LivingEntity.java:2690-2693) for over 130 ticks, so the effect runs out among the vines
+     * and the 19 blocks below them count: refused.
+     */
+    public static void slowFallingGetsNoCreditBelowAResettingBlock(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    ServerPlayer to = players[1];
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                BlockPos top = skyColumn(helper, new BlockPos(1, 0, 1), 41);
+                                if (top == null) {
+                                    return;
+                                }
+                                ServerLevel level = helper.getLevel();
+                                List<BlockPos> built = new ArrayList<>();
+                                level.setBlockAndUpdate(
+                                        top.below(41), Blocks.STONE.defaultBlockState());
+                                built.add(top.below(41));
+                                List<BlockPos> vines = new ArrayList<>();
+                                for (int depth = 2; depth <= 21; depth++) {
+                                    vines.add(top.below(depth));
+                                }
+                                vines(level, vines, built);
+                                to.setPos(Vec3.atBottomCenterOf(top));
+                                from.addEffect(
+                                        new MobEffectInstance(MobEffects.SLOW_FALLING, 124));
+                                Vec3 start = from.position();
+                                InstantTpaWhitelist.add(to, from);
+                                command(from, "tpa " + to.getScoreboardName());
+                                clear(level, built);
+                                String refusal =
+                                        "[SimpleTPA] "
+                                                + to.getScoreboardName()
+                                                + " is in the air above a long drop, so your TP request was not accepted automatically.";
+                                if (!from.position().equals(start) || !received(from, refusal)) {
+                                    fail(
+                                            helper,
+                                            "a Slow Falling that runs out among vines was given"
+                                                    + " credit below them, got "
+                                                    + from.position()
+                                                    + " "
+                                                    + texts(from));
+                                    return;
+                                }
+                                succeed(helper);
+                            });
                 });
     }
 
