@@ -2,11 +2,14 @@ package io.github.brainage04.simpletpa.command;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.OptionalInt;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
+import net.jqwik.api.ShrinkingMode;
 import net.jqwik.api.constraints.DoubleRange;
 import net.jqwik.api.constraints.FloatRange;
 import net.jqwik.api.constraints.IntRange;
@@ -250,7 +253,26 @@ class FallRuleTest {
             @ForAll @DoubleRange(min = 0.0, max = 10.0) double airDragModifier) {
         float drag = FallRule.verticalDrag(airDragModifier);
         FallRule rule = new FallRule(SAFE_DISTANCE, 1.0, OptionalInt.empty(), gravity, drag);
-        assertEquals(vanillaFreeFallStep(depth, gravity, drag), rule.freeFallStep(depth));
+        double vanilla = vanillaFreeFallStep(depth, gravity, drag);
+        // Once the speed settles, the last bits of it may round either way from tick to tick.
+        assertEquals(vanilla, rule.freeFallStep(depth), 1.0E-12 * Math.max(1.0, vanilla));
+    }
+
+    /**
+     * Over the attributes' whole ranges (Attributes.java:10-11, 55-56). A drag of zero stops the
+     * fall, and a tiny gravity or drag keeps it slow for millions of ticks; neither may hold up
+     * the server.
+     */
+    @Property(shrinking = ShrinkingMode.OFF)
+    void aFreeFallStepIsWorkedOutQuicklyForAnyGravityAndDrag(
+            @ForAll @DoubleRange(min = 0.0, max = 128.0) double depth,
+            @ForAll @DoubleRange(min = -1.0, max = 1.0) double gravity,
+            @ForAll @DoubleRange(min = 0.0, max = 2048.0) double airDragModifier) {
+        float drag = FallRule.verticalDrag(airDragModifier);
+        FallRule rule = new FallRule(SAFE_DISTANCE, 1.0, OptionalInt.empty(), gravity, drag);
+        double step =
+                assertTimeoutPreemptively(Duration.ofSeconds(1), () -> rule.freeFallStep(depth));
+        assertTrue(step >= 0.0 && step <= depth + Math.abs(gravity), "step " + step);
     }
 
     @Property
@@ -408,6 +430,10 @@ class FallRuleTest {
                         GRAVITY,
                         FallRule.verticalDrag(2048.0));
         assertEquals(10.0, dragged.countedFall(10.0));
+        // A drag of zero stops the player: no tick ever passes the depth, and none moves at all.
+        assertEquals(
+                0.0,
+                assertTimeoutPreemptively(Duration.ofSeconds(1), () -> dragged.freeFallStep(10.0)));
         assertEquals(0.98F, DRAG);
     }
 }
