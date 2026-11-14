@@ -1,5 +1,6 @@
 package io.github.brainage04.simpletpa.command;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalInt;
 import net.minecraft.core.BlockPos;
@@ -16,6 +17,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.happyghast.HappyGhast;
 import net.minecraft.world.level.BlockCollisions;
+import net.minecraft.world.level.CollisionGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.HayBlock;
@@ -28,6 +30,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.SpeleothemThickness;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.EntityCollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -120,12 +124,13 @@ public final class Landing {
                         FallRule.verticalDrag(
                                 from.getAttributeValue(Attributes.AIR_DRAG_MODIFIER)));
         double reach = rule.reach();
+        CollisionContext collisions = new ArrivalCollisions(from, arrival);
         AABB fallStart = arrival;
         double countFrom = arrival.minY;
         double support;
         boolean landsInReset = false;
         while (true) {
-            support = support(level, from, fallStart, reach);
+            support = support(level, from, collisions, fallStart, reach);
             BlockPos reset = lowestReset(level, fallStart, support);
             if (reset == null) {
                 break;
@@ -151,7 +156,7 @@ public final class Landing {
         if (landsInReset) {
             return false;
         }
-        BlockState landing = level.getBlockState(landingPos(level, from, landed));
+        BlockState landing = level.getBlockState(landingPos(level, collisions, landed));
         if (landing.getBlock() instanceof PowderSnowBlock) {
             return false;
         }
@@ -177,15 +182,16 @@ public final class Landing {
     }
 
     /**
-     * The block whose {@code fallOn} the game calls when {@code from} lands in {@code landed}: the
-     * main supporting block, the block closest to the player's position among those whose collision
+     * The block whose {@code fallOn} the game calls when a player lands in {@code landed}: the main
+     * supporting block, the block closest to the player's position among those whose collision
      * reaches a 1e-6 slab under their feet (Entity.java:704-716, CollisionGetter.java:138-152),
      * taken 0.2 below the feet unless it is a fence, wall or fence gate, and without a supporting
      * block the block 0.2 below the position (Entity.java:1093-1103, getOnPosLegacy at 1081-1083).
      * CollisionGetter.findSupportingBlock measures from the player's present position, not from
      * where they will land, so its choice is repeated here.
      */
-    private static BlockPos landingPos(ServerLevel level, ServerPlayer from, AABB landed) {
+    private static BlockPos landingPos(
+            ServerLevel level, CollisionContext collisionContext, AABB landed) {
         Vec3 position = landed.getBottomCenter();
         AABB underFeet =
                 new AABB(
@@ -196,7 +202,8 @@ public final class Landing {
                         landed.minY,
                         landed.maxZ);
         BlockCollisions<BlockPos> collisions =
-                new BlockCollisions<>(level, from, underFeet, false, (pos, shape) -> pos);
+                new BlockCollisions<>(
+                        level, collisionContext, underFeet, false, (pos, shape) -> pos);
         BlockPos main = null;
         double mainDistance = Double.MAX_VALUE;
         while (collisions.hasNext()) {
@@ -243,9 +250,15 @@ public final class Landing {
     }
 
     /** The top of the first block or standable entity within {@code reach} below {@code box}. */
-    private static double support(ServerLevel level, ServerPlayer from, AABB box, double reach) {
+    private static double support(
+            ServerLevel level,
+            ServerPlayer from,
+            CollisionContext collisionContext,
+            AABB box,
+            double reach) {
         AABB column = box.setMinY(box.minY - reach).setMaxY(box.minY);
-        List<VoxelShape> colliders = Entity.collectAllColliders(from, level, column);
+        List<VoxelShape> colliders = new ArrayList<>(level.getEntityCollisions(from, column));
+        level.getBlockCollisionsFromContext(collisionContext, column).forEach(colliders::add);
         double support = box.minY + Shapes.collide(Direction.Axis.Y, box, colliders, -reach);
         for (Entity entity : level.getEntities(from, column, entity -> standable(from, entity))) {
             double top = entity.getBoundingBox().maxY;
@@ -274,5 +287,35 @@ public final class Landing {
             }
         }
         return lowest;
+    }
+
+    /**
+     * Block collisions as the requester would meet them falling from the arrival, not from where
+     * they are now. Scaffolding holds only a player above it (ScaffoldingBlock.java:130-140), and
+     * the game's own context asks the requester's present height (EntityCollisionContext.java:
+     * 78-80), so a requester below the target would fall through a scaffolding floor the target
+     * stands on. CollisionContext.withPosition would set the height but marks the context as a
+     * placement, which empties scaffolding (CollisionContext.java:52-60).
+     *
+     * <p>Powder snow never holds the falling requester here. Its shape depends on the requester's
+     * present fall distance (PowderSnowBlock.java:120-121), not the one they arrive with. A player
+     * who has fallen more than 2.5 blocks lands on a 0.9 high top, and once landed they are no
+     * longer above the block, so it stops holding them and they sink through (125-131). Only
+     * leather boots hold a player who reaches it sooner, and letting that player sink too is the
+     * cautious answer: the snow resets the fall ({@link #lowestReset}), the fall below it counts,
+     * and a landing in it is judged by {@link #heldInPowderSnow}.
+     */
+    private static final class ArrivalCollisions extends EntityCollisionContext {
+        ArrivalCollisions(ServerPlayer from, AABB arrival) {
+            super(from.isDescending(), false, arrival.minY, from.getMainHandItem(), false, from);
+        }
+
+        @Override
+        public VoxelShape getCollisionShape(
+                BlockState state, CollisionGetter collisionGetter, BlockPos pos) {
+            return state.getBlock() instanceof PowderSnowBlock
+                    ? Shapes.empty()
+                    : super.getCollisionShape(state, collisionGetter, pos);
+        }
     }
 }
