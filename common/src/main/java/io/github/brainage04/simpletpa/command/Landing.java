@@ -147,15 +147,16 @@ public final class Landing {
                 arrival.minY - support,
                 fallStart.minY - support,
                 fallStart == arrival ? Double.NaN : countFrom - support,
-                floor(from, landing));
+                floor(landing));
     }
 
     /**
      * How {@code landing} turns a fall into damage ({@link FallRule.Floor}). A stalagmite tip is a
-     * pointed dripstone pointing up (PointedDripstoneBlock.java:54-58), and slime deals none unless
-     * the player sneaks (SlimeBlock.java:15-19, Entity.java:2775-2777).
+     * pointed dripstone pointing up (PointedDripstoneBlock.java:54-58), and slime deals none
+     * whether or not the player sneaks: its {@code fallOn} calls causeFallDamage, with a modifier
+     * of 0, only for a player who does not (SlimeBlock.java:15-19).
      */
-    private static FallRule.Floor floor(ServerPlayer from, BlockState landing) {
+    private static FallRule.Floor floor(BlockState landing) {
         Block block = landing.getBlock();
         if (block instanceof PointedDripstoneBlock
                 && landing.getValue(SpeleothemBlock.TIP_DIRECTION) == Direction.UP
@@ -165,7 +166,7 @@ public final class Landing {
         if (block instanceof HayBlock || block instanceof HoneyBlock) {
             return FallRule.Floor.FIFTH;
         }
-        if (block instanceof SlimeBlock && !from.isSuppressingBounce()) {
+        if (block instanceof SlimeBlock) {
             return FallRule.Floor.NO_DAMAGE;
         }
         return FallRule.Floor.of(block.getFallDistanceReduction());
