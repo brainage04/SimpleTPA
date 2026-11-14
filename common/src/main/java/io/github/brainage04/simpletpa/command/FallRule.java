@@ -163,7 +163,14 @@ record FallRule(
         double speed = 0.0;
         while (fallen + speed <= depth) {
             fallen += speed;
-            speed = (speed + gravity) * drag;
+            double next = (speed + gravity) * drag;
+            if (next <= speed) {
+                // The speed has settled at the drag's terminal speed, to within rounding, or at
+                // nothing for a drag of zero, and every later tick moves as far. Counting those
+                // ticks one by one could take billions of them.
+                return speed;
+            }
+            speed = next;
         }
         return speed;
     }
