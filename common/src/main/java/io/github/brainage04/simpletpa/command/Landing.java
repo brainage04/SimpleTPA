@@ -106,6 +106,12 @@ public final class Landing {
         if (slowFalling != null && slowFalling.isInfiniteDuration()) {
             return false;
         }
+        // Levitation resets the fall every tick it lasts, as Slow Falling does
+        // (LivingEntity.java:3119-3120), so an infinite one never lets the requester fall.
+        MobEffectInstance levitation = from.getEffect(MobEffects.LEVITATION);
+        if (levitation != null && levitation.isInfiniteDuration()) {
+            return false;
+        }
 
         double safeDistance = from.getAttributeValue(Attributes.SAFE_FALL_DISTANCE);
         // Slow Falling leaves the first part of a fall uncounted, so the floor that decides may be

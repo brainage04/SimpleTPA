@@ -125,6 +125,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void infiniteLevitationSkipsTheDropCheck(GameTestHelper helper) {
+        SimpleTPAGameTests.infiniteLevitationSkipsTheDropCheck(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void safetyCommandShowsAndSets(GameTestHelper helper) {
         SimpleTPAGameTests.safetyCommandShowsAndSets(helper);
     }

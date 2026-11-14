@@ -90,6 +90,10 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::creativeSkipsLandingChecks);
         register(
                 event,
+                "infinite_levitation_skips_the_drop_check",
+                SimpleTPAGameTests::infiniteLevitationSkipsTheDropCheck);
+        register(
+                event,
                 "safety_command_shows_and_sets",
                 SimpleTPAGameTests::safetyCommandShowsAndSets);
         register(event, "request_buttons", SimpleTPAGameTests::requestButtons);
