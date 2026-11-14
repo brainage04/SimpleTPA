@@ -910,8 +910,8 @@ public final class SimpleTPAGameTests {
      * stands at y 6 over its own block: a stalagmite tip at y 4, 1.31 blocks down, which adds 2.5
      * blocks and doubles the damage (refused); hay at y 0 and a honey block at y 1, five and 4.06
      * blocks down, which deal a fifth of the damage (accepted); a slime block at y 0, which deals
-     * none (accepted), and the same for a sneaking requester, who lands on it like on stone
-     * (refused).
+     * none (accepted), and the same for a sneaking requester, for whom its fallOn deals no damage
+     * either (SlimeBlock.java:15-19) (accepted).
      */
     public static void blocksWithTheirOwnFallDamageAreJudgedByIt(GameTestHelper helper) {
         List<ServerPlayer[]> pairs = new ArrayList<>();
@@ -954,7 +954,7 @@ public final class SimpleTPAGameTests {
                         "a five block drop onto a slime block",
                         "a five block drop onto a slime block for a sneaking requester"
                     };
-                    boolean[] refused = {true, false, false, false, true};
+                    boolean[] refused = {true, false, false, false, false};
                     List<String> failures = new ArrayList<>();
                     for (int index = 0; index < pairs.size(); index++) {
                         ServerPlayer from = pairs.get(index)[0];
