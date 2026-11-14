@@ -15,6 +15,10 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.pathfinder.NodeEvaluator;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
@@ -124,9 +128,9 @@ public class TPRequestCommand {
      *
      * <p>The spot checks are a subset of the ones vanilla makes for a respawn spot in {@code
      * DismountHelper.findSafeDismountLocation} (DismountHelper.java:80-111): no block collision, no
-     * block the player type finds dangerous in it or underfoot, and inside the world border. They
-     * leave out vanilla's floor check (:87-90) and its refusal of a spot in INVALID_SPAWN_INSIDE
-     * blocks (:105-107), which are the End portal and End gateway
+     * block the player type finds dangerous in it or underfoot ({@link #hurts}), and inside the
+     * world border. They leave out vanilla's floor check (:87-90) and its refusal of a spot in
+     * INVALID_SPAWN_INSIDE blocks (:105-107), which are the End portal and End gateway
      * (VanillaBlockTagsProvider.java:1178).
      *
      * <p>A creative or spectator requester skips the spot checks and the drop check: the game makes
@@ -161,8 +165,8 @@ public class TPRequestCommand {
         AABB arrival =
                 from.getBoundingBox().move(Landing.arrival(from, to).subtract(from.position()));
         if (!level.noBlockCollision(from, arrival)
-                || level.getBlockStates(arrival).anyMatch(from.getType()::isBlockDangerous)
-                || from.getType().isBlockDangerous(level.getBlockState(to.getOnPos()))
+                || level.getBlockStates(arrival).anyMatch(state -> hurts(level, from, state))
+                || hurts(level, from, level.getBlockState(to.getOnPos()))
                 || !level.getWorldBorder().isWithinBounds(arrival)) {
             return "somewhere unsafe";
         }
@@ -174,6 +178,27 @@ public class TPRequestCommand {
                     : "in the air above a long drop";
         }
         return null;
+    }
+
+    /**
+     * Whether {@code state} is a block the player type finds dangerous (EntityType.java:338-345)
+     * and its damage can hurt {@code from}. Burning blocks deal fire damage and powder snow
+     * freezes (DamageTypeTagsProvider.java:60-66, 86), which a player ignores while the
+     * fire_damage or freeze_damage game rule is off (Player.java:664-667). The rules are read
+     * directly, as {@link Landing#dropHurts} does: calling {@code isInvulnerableTo} would also count
+     * the grace while the client loads (ServerPlayer.java:1334).
+     */
+    private static boolean hurts(ServerLevel level, ServerPlayer from, BlockState state) {
+        if (!from.getType().isBlockDangerous(state)) {
+            return false;
+        }
+        if (NodeEvaluator.isBurningBlock(state)) {
+            return level.getGameRules().get(GameRules.FIRE_DAMAGE);
+        }
+        if (state.is(Blocks.POWDER_SNOW)) {
+            return level.getGameRules().get(GameRules.FREEZE_DAMAGE);
+        }
+        return true;
     }
 
     /** Whether {@code from} can be moved at all: alive and in a level. */
