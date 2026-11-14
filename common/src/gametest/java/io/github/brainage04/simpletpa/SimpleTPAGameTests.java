@@ -1104,28 +1104,33 @@ public final class SimpleTPAGameTests {
         ruleOffAcceptsSpot(
                 helper,
                 GameRules.FIRE_DAMAGE,
-                () -> helper.setBlock(new BlockPos(5, 1, 5), Blocks.MAGMA_BLOCK),
+                from -> helper.setBlock(new BlockPos(5, 1, 5), Blocks.MAGMA_BLOCK),
                 new BlockPos(5, 2, 5));
     }
 
     /**
      * Powder snow deals freeze damage (DamageTypeTagsProvider.java:86), and a player takes none
      * while the freeze_damage game rule is off (Player.java:666-667), so a target standing in
-     * powder snow is reachable then.
+     * powder snow is reachable then. The requester turns the drop check off, which refuses a spot
+     * that holds them in powder snow whatever the rule, so this step reaches only the spot check.
      */
     public static void freezeDamageRuleOffAcceptsPowderSnow(GameTestHelper helper) {
         ruleOffAcceptsSpot(
                 helper,
                 GameRules.FREEZE_DAMAGE,
-                () -> {
+                from -> {
                     helper.setBlock(new BlockPos(5, 0, 5), Blocks.STONE);
                     helper.setBlock(new BlockPos(5, 1, 5), Blocks.POWDER_SNOW);
+                    command(from, "tpasafety off");
                 },
                 new BlockPos(5, 1, 5));
     }
 
     private static void ruleOffAcceptsSpot(
-            GameTestHelper helper, GameRule<Boolean> rule, Runnable build, BlockPos targetPos) {
+            GameTestHelper helper,
+            GameRule<Boolean> rule,
+            Consumer<ServerPlayer> build,
+            BlockPos targetPos) {
         pair(
                 helper,
                 players -> {
@@ -1135,7 +1140,7 @@ public final class SimpleTPAGameTests {
                             helper,
                             1,
                             () -> {
-                                build.run();
+                                build.accept(from);
                                 to.setPos(Vec3.atBottomCenterOf(helper.absolutePos(targetPos)));
                                 InstantTpaWhitelist.add(to, from);
                                 MinecraftServer server = helper.getLevel().getServer();
