@@ -132,12 +132,12 @@ public final class Landing {
 
     /**
      * The block whose {@code fallOn} the game calls when {@code from} lands in {@code landed}: the
-     * main supporting block, the block closest to the player's position among those whose
-     * collision reaches a 1e-6 slab under their feet (Entity.java:704-716,
-     * CollisionGetter.java:138-152), taken 0.2 below the feet unless it is a fence, wall or fence
-     * gate, and without a supporting block the block 0.2 below the position (Entity.java:1093-1103,
-     * getOnPosLegacy at 1081-1083). CollisionGetter.findSupportingBlock measures from the player's
-     * present position, not from where they will land, so its choice is repeated here.
+     * main supporting block, the block closest to the player's position among those whose collision
+     * reaches a 1e-6 slab under their feet (Entity.java:704-716, CollisionGetter.java:138-152),
+     * taken 0.2 below the feet unless it is a fence, wall or fence gate, and without a supporting
+     * block the block 0.2 below the position (Entity.java:1093-1103, getOnPosLegacy at 1081-1083).
+     * CollisionGetter.findSupportingBlock measures from the player's present position, not from
+     * where they will land, so its choice is repeated here.
      */
     private static BlockPos landingPos(ServerLevel level, ServerPlayer from, AABB landed) {
         Vec3 position = landed.getBottomCenter();
