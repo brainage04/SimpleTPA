@@ -70,7 +70,8 @@ public final class Landing {
      * on below such a block counts again from that block's bottom, with the same rule. The landing
      * block's own reduction applies (Block.java:486-489), and powder snow underfoot deals no
      * damage: it holds a falling player on top and its {@code fallOn} hurts nobody
-     * (PowderSnowBlock.java:101-107, 116-131). Slow Falling counts as {@link #countedFall} says.
+     * (PowderSnowBlock.java:101-107, 116-131). Slow Falling counts as {@link #countedFall} says,
+     * but only for a fall that crosses no resetting block.
      *
      * <p>A tagged block the player lands on top of does not reset the fall: the game's check casts
      * a ray along the tick's movement (Entity.java:768-775), which ends on that block's top face,
@@ -124,12 +125,15 @@ public final class Landing {
             // No floor within the scan: how much of the fall counts depends on where it ends.
             return true;
         }
-        // Slow Falling and a resetting block each take away the fall above them, so the lower of
-        // the two starts what counts.
+        // A resetting block also slows the fall through it: a climbable to 0.15 a tick
+        // (LivingEntity.java:2690-2693), a cobweb, berry bush or powder snow to a fraction
+        // (WebBlock.java:27, SweetBerryBushBlock.java:79, PowderSnowBlock.java:60), water by its
+        // drag (LivingEntity.java:2497-2498). How long it holds the requester decides where Slow
+        // Falling runs out, which may be inside it, so below one the effect gets no credit.
         double counted =
-                Math.min(
-                        countedFall(from, slowFalling, arrival.minY - support),
-                        fallStart.minY - support);
+                fallStart == arrival
+                        ? countedFall(from, slowFalling, arrival.minY - support)
+                        : fallStart.minY - support;
         double distance = counted * (1.0F - landing.getBlock().getFallDistanceReduction());
         // The game floors the damage after applying the multiplier, not the distance before it
         // (LivingEntity.java:1857).
