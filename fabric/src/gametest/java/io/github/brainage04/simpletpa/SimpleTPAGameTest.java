@@ -165,6 +165,41 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void landingChecksRuleDefaultsOn(GameTestHelper helper) {
+        SimpleTPAGameTests.landingChecksRuleDefaultsOn(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void landingChecksOffAcceptsLava(GameTestHelper helper) {
+        SimpleTPAGameTests.landingChecksOffAcceptsLava(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void landingChecksOffAcceptsTheVoid(GameTestHelper helper) {
+        SimpleTPAGameTests.landingChecksOffAcceptsTheVoid(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void landingChecksOffAcceptsALongDrop(GameTestHelper helper) {
+        SimpleTPAGameTests.landingChecksOffAcceptsALongDrop(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void landingChecksOffAcceptsAGlidingTarget(GameTestHelper helper) {
+        SimpleTPAGameTests.landingChecksOffAcceptsAGlidingTarget(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void landingChecksOffAcceptsAFlyingTarget(GameTestHelper helper) {
+        SimpleTPAGameTests.landingChecksOffAcceptsAFlyingTarget(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void landingChecksOffKeepsTheTargetStateChecks(GameTestHelper helper) {
+        SimpleTPAGameTests.landingChecksOffKeepsTheTargetStateChecks(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void safetyCommandShowsAndSets(GameTestHelper helper) {
         SimpleTPAGameTests.safetyCommandShowsAndSets(helper);
     }

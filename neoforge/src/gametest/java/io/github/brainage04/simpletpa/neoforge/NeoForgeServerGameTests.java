@@ -122,6 +122,34 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::infiniteLevitationAcceptsTheVoidWithNoFallDamage);
         register(
                 event,
+                "landing_checks_rule_defaults_on",
+                SimpleTPAGameTests::landingChecksRuleDefaultsOn);
+        register(
+                event,
+                "landing_checks_off_accepts_lava",
+                SimpleTPAGameTests::landingChecksOffAcceptsLava);
+        register(
+                event,
+                "landing_checks_off_accepts_the_void",
+                SimpleTPAGameTests::landingChecksOffAcceptsTheVoid);
+        register(
+                event,
+                "landing_checks_off_accepts_a_long_drop",
+                SimpleTPAGameTests::landingChecksOffAcceptsALongDrop);
+        register(
+                event,
+                "landing_checks_off_accepts_a_gliding_target",
+                SimpleTPAGameTests::landingChecksOffAcceptsAGlidingTarget);
+        register(
+                event,
+                "landing_checks_off_accepts_a_flying_target",
+                SimpleTPAGameTests::landingChecksOffAcceptsAFlyingTarget);
+        register(
+                event,
+                "landing_checks_off_keeps_the_target_state_checks",
+                SimpleTPAGameTests::landingChecksOffKeepsTheTargetStateChecks);
+        register(
+                event,
                 "safety_command_shows_and_sets",
                 SimpleTPAGameTests::safetyCommandShowsAndSets);
         register(event, "request_buttons", SimpleTPAGameTests::requestButtons);

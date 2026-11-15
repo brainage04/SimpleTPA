@@ -1258,6 +1258,256 @@ public final class SimpleTPAGameTests {
                 });
     }
 
+    private static final String LANDING_CHECKS = "simpletpa:landing_checks";
+
+    /** A target in lava: its box holds a block the player type finds dangerous. */
+    private static final Blocked IN_LAVA =
+            new Blocked(
+                    "somewhere unsafe",
+                    (helper, player) -> {
+                        helper.setBlock(new BlockPos(5, 0, 5), Blocks.STONE);
+                        helper.setBlock(new BlockPos(5, 1, 5), Blocks.LAVA);
+                        player.setPos(
+                                Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(5, 1, 5))));
+                    });
+
+    /**
+     * A target in a column of air from the minimum build height up, far from the structure so
+     * clearing it touches no other test.
+     */
+    private static final Blocked OVER_THE_VOID =
+            new Blocked(
+                    "in the air above the void",
+                    (helper, player) -> {
+                        ServerLevel level = helper.getLevel();
+                        BlockPos column =
+                                helper.absolutePos(new BlockPos(1, 0, 1)).offset(3_000, 0, 3_000);
+                        BlockPos spot = column.atY(level.getMaxY() - 10);
+                        level.getChunkAt(spot);
+                        for (int y = level.getMinY(); y <= spot.getY() + 2; y++) {
+                            level.setBlockAndUpdate(column.atY(y), Blocks.AIR.defaultBlockState());
+                        }
+                        player.setPos(Vec3.atBottomCenterOf(spot));
+                    });
+
+    /** A target four blocks above a stone floor, a drop that hurts. */
+    private static final Blocked ABOVE_A_LONG_DROP =
+            new Blocked(
+                    "in the air above a long drop",
+                    (helper, player) -> {
+                        floorBelow(helper, 1);
+                        player.setPos(
+                                Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 6, 1))));
+                    });
+
+    /** A gliding target away from the requester. */
+    private static final Blocked GLIDING_AWAY =
+            new Blocked(
+                    GLIDING.reason(),
+                    (helper, player) -> {
+                        GLIDING.apply().accept(helper, player);
+                        player.setPos(
+                                Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(5, 5, 5))));
+                    });
+
+    /** A flying target away from the requester. */
+    private static final Blocked FLYING_AWAY =
+            new Blocked(
+                    FLYING.reason(),
+                    (helper, player) -> {
+                        FLYING.apply().accept(helper, player);
+                        player.setPos(
+                                Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 5, 1))));
+                    });
+
+    /** The landing checks rule, looked up by name, or null after failing the test. */
+    private static GameRule<?> landingChecksRule(GameTestHelper helper) {
+        GameRule<?> rule =
+                BuiltInRegistries.GAME_RULE.getValue(
+                        Identifier.fromNamespaceAndPath(SimpleTPA.MOD_ID, "landing_checks"));
+        if (rule == null) {
+            fail(helper, LANDING_CHECKS + " gamerule is not registered");
+        }
+        return rule;
+    }
+
+    private static void setLandingChecks(MinecraftServer server, String value) {
+        server.getCommands()
+                .performPrefixedCommand(
+                        server.createCommandSourceStack(),
+                        "gamerule " + LANDING_CHECKS + " " + value);
+    }
+
+    /**
+     * Runs {@code action} with the landing checks rule set to {@code on}, through the command a
+     * server owner uses, and puts the rule back afterwards so no other test sees it changed. False
+     * after failing the test.
+     */
+    private static boolean withLandingChecks(GameTestHelper helper, boolean on, Runnable action) {
+        GameRule<?> rule = landingChecksRule(helper);
+        if (rule == null) {
+            return false;
+        }
+        MinecraftServer server = helper.getLevel().getServer();
+        String before = server.getGameRules().getAsString(rule);
+        setLandingChecks(server, String.valueOf(on));
+        try {
+            if (!server.getGameRules().getAsString(rule).equals(String.valueOf(on))) {
+                fail(helper, "/gamerule " + LANDING_CHECKS + " " + on + " did not set the rule");
+                return false;
+            }
+            action.run();
+        } finally {
+            setLandingChecks(server, before);
+        }
+        return true;
+    }
+
+    /** The rule exists, and it is on without a server owner having to do anything. */
+    public static void landingChecksRuleDefaultsOn(GameTestHelper helper) {
+        GameRule<?> rule = landingChecksRule(helper);
+        if (rule == null) {
+            return;
+        }
+        if (!Boolean.TRUE.equals(rule.defaultValue())) {
+            fail(helper, LANDING_CHECKS + " defaults to " + rule.defaultValue());
+        } else if (!"true".equals(helper.getLevel().getServer().getGameRules().getAsString(rule))) {
+            fail(helper, LANDING_CHECKS + " is not on in a new world");
+        } else {
+            succeed(helper);
+        }
+    }
+
+    /**
+     * With the rule on (its default) a whitelisted request to a target in {@code blocked}'s state
+     * waits, and with the rule off the same state lets the teleport through, both for an
+     * auto-accept and for /tpaccept of the request that waited.
+     */
+    private static void landingChecksOffLetsItThrough(GameTestHelper helper, Blocked blocked) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        pair(helper, pairs::add);
+        pair(helper, pairs::add);
+        ServerPlayer[] asked = pairs.get(0);
+        ServerPlayer[] automatic = pairs.get(1);
+        Vec3 start = asked[0].position();
+        at(
+                helper,
+                1,
+                () -> {
+                    blocked.apply().accept(helper, asked[1]);
+                    blocked.apply().accept(helper, automatic[1]);
+                    if (asked[0].position().equals(asked[1].position())
+                            || automatic[0].position().equals(automatic[1].position())) {
+                        fail(helper, "a requester started on the target while " + blocked.reason());
+                        return;
+                    }
+                    InstantTpaWhitelist.add(asked[1], asked[0]);
+                    InstantTpaWhitelist.add(automatic[1], automatic[0]);
+                    command(asked[0], "tpa " + asked[1].getScoreboardName());
+                    boolean ran =
+                            withLandingChecks(
+                                    helper,
+                                    false,
+                                    () ->
+                                            command(
+                                                    automatic[0],
+                                                    "tpa " + automatic[1].getScoreboardName()));
+                    if (ran && !automatic[0].position().equals(automatic[1].position())) {
+                        fail(
+                                helper,
+                                "an auto-accept was not let through while "
+                                        + blocked.reason()
+                                        + " with the landing checks off, got "
+                                        + texts(automatic[0]));
+                    }
+                });
+        at(
+                helper,
+                2,
+                () -> {
+                    String expected =
+                            "[SimpleTPA] "
+                                    + asked[1].getScoreboardName()
+                                    + " is "
+                                    + blocked.reason()
+                                    + ", so your TP request was not accepted automatically.";
+                    if (!asked[0].position().equals(start)) {
+                        fail(
+                                helper,
+                                "teleported while " + blocked.reason() + " with the checks on");
+                        return;
+                    }
+                    if (!pending(asked[1], asked[0])) {
+                        fail(helper, "the request closed while " + blocked.reason());
+                        return;
+                    }
+                    if (!received(asked[0], expected)) {
+                        fail(helper, "not told \"" + expected + "\", got " + texts(asked[0]));
+                        return;
+                    }
+                    blocked.apply().accept(helper, asked[1]);
+                    boolean ran =
+                            withLandingChecks(helper, false, () -> command(asked[1], "tpaccept"));
+                    if (!ran) {
+                        return;
+                    }
+                    if (!asked[0].position().equals(asked[1].position())) {
+                        fail(
+                                helper,
+                                "/tpaccept was not let through while "
+                                        + blocked.reason()
+                                        + " with the landing checks off, got "
+                                        + texts(asked[1]));
+                        return;
+                    }
+                    succeed(helper);
+                });
+    }
+
+    public static void landingChecksOffAcceptsLava(GameTestHelper helper) {
+        landingChecksOffLetsItThrough(helper, IN_LAVA);
+    }
+
+    public static void landingChecksOffAcceptsTheVoid(GameTestHelper helper) {
+        landingChecksOffLetsItThrough(helper, OVER_THE_VOID);
+    }
+
+    public static void landingChecksOffAcceptsALongDrop(GameTestHelper helper) {
+        landingChecksOffLetsItThrough(helper, ABOVE_A_LONG_DROP);
+    }
+
+    public static void landingChecksOffAcceptsAGlidingTarget(GameTestHelper helper) {
+        landingChecksOffLetsItThrough(helper, GLIDING_AWAY);
+    }
+
+    public static void landingChecksOffAcceptsAFlyingTarget(GameTestHelper helper) {
+        landingChecksOffLetsItThrough(helper, FLYING_AWAY);
+    }
+
+    /**
+     * The landing checks rule covers only whether the arrival is safe: an auto-accept still waits
+     * for a target who is dead, watching the End credits or in spectator mode with the rule off.
+     */
+    public static void landingChecksOffKeepsTheTargetStateChecks(GameTestHelper helper) {
+        checkBlocked(
+                helper,
+                List.of(DEAD, IN_END_CREDITS, SPECTATOR),
+                (blocked, players) -> {
+                    InstantTpaWhitelist.add(players[1], players[0]);
+                    blocked.apply().accept(helper, players[1]);
+                    withLandingChecks(
+                            helper,
+                            false,
+                            () -> command(players[0], "tpa " + players[1].getScoreboardName()));
+                },
+                (blocked, players) ->
+                        players[1].getScoreboardName()
+                                + " is "
+                                + blocked.reason()
+                                + ", so your TP request was not accepted automatically.",
+                players -> players[0]);
+    }
+
     /**
      * Drops the game does not hurt for go through, and Slow Falling counts only while it lasts.
      * Each target is four blocks above the stone floor, a drop that refuses on its own: over water,
