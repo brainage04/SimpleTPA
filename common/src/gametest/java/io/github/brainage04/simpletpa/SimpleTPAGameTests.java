@@ -1770,6 +1770,65 @@ public final class SimpleTPAGameTests {
                 });
     }
 
+    /**
+     * A requester with an infinite Levitation never falls (LivingEntity.java:3119-3120), so with
+     * the fall_damage game rule off a target over a column empty down to the minimum build height
+     * does not refuse them, as it refuses a requester without the effect. The column lies far from
+     * the structure, so clearing it touches no other test.
+     */
+    public static void infiniteLevitationAcceptsTheVoidWithNoFallDamage(GameTestHelper helper) {
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        for (int index = 0; index < 2; index++) {
+            pair(helper, pairs::add);
+        }
+        List<Vec3> starts = pairs.stream().map(players -> players[0].position()).toList();
+        at(
+                helper,
+                1,
+                () -> {
+                    ServerLevel level = helper.getLevel();
+                    BlockPos column =
+                            helper.absolutePos(new BlockPos(1, 0, 1)).offset(4_000, 0, 4_000);
+                    BlockPos spot = column.atY(level.getMaxY() - 10);
+                    level.getChunkAt(spot);
+                    for (int y = level.getMinY(); y <= spot.getY() + 2; y++) {
+                        level.setBlockAndUpdate(column.atY(y), Blocks.AIR.defaultBlockState());
+                    }
+                    pairs.get(0)[0].addEffect(
+                            new MobEffectInstance(
+                                    MobEffects.LEVITATION, MobEffectInstance.INFINITE_DURATION));
+                    MinecraftServer server = level.getServer();
+                    GameRules rules = server.getGameRules();
+                    boolean fallDamage = rules.get(GameRules.FALL_DAMAGE);
+                    // Set and restored within this call, so no other test sees the rule off.
+                    rules.set(GameRules.FALL_DAMAGE, false, server);
+                    try {
+                        for (ServerPlayer[] players : pairs) {
+                            players[1].setPos(Vec3.atBottomCenterOf(spot));
+                            InstantTpaWhitelist.add(players[1], players[0]);
+                            command(players[0], "tpa " + players[1].getScoreboardName());
+                        }
+                    } finally {
+                        rules.set(GameRules.FALL_DAMAGE, fallDamage, server);
+                    }
+                    ServerPlayer floating = pairs.get(0)[0];
+                    if (!floating.position().equals(pairs.get(0)[1].position())) {
+                        fail(
+                                helper,
+                                "a requester with an infinite Levitation was refused over the"
+                                        + " void, got "
+                                        + texts(floating));
+                        return;
+                    }
+                    ServerPlayer falling = pairs.get(1)[0];
+                    if (!falling.position().equals(starts.get(1))) {
+                        fail(helper, "a requester without Levitation was taken over the void");
+                        return;
+                    }
+                    succeed(helper);
+                });
+    }
+
     /** /tpasafety shows the default, turns the check off and on, and says which it is. */
     public static void safetyCommandShowsAndSets(GameTestHelper helper) {
         pair(

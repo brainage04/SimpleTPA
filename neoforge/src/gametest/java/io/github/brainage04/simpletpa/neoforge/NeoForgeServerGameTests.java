@@ -118,6 +118,10 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::infiniteLevitationSkipsTheDropCheck);
         register(
                 event,
+                "infinite_levitation_accepts_the_void_with_no_fall_damage",
+                SimpleTPAGameTests::infiniteLevitationAcceptsTheVoidWithNoFallDamage);
+        register(
+                event,
                 "safety_command_shows_and_sets",
                 SimpleTPAGameTests::safetyCommandShowsAndSets);
         register(event, "request_buttons", SimpleTPAGameTests::requestButtons);

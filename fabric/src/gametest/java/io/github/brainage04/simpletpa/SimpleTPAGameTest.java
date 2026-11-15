@@ -160,6 +160,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void infiniteLevitationAcceptsTheVoidWithNoFallDamage(GameTestHelper helper) {
+        SimpleTPAGameTests.infiniteLevitationAcceptsTheVoidWithNoFallDamage(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void safetyCommandShowsAndSets(GameTestHelper helper) {
         SimpleTPAGameTests.safetyCommandShowsAndSets(helper);
     }
