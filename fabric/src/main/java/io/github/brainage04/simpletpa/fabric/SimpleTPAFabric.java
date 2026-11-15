@@ -35,6 +35,14 @@ public final class SimpleTPAFabric implements ModInitializer, ServerPlatform {
     }
 
     @Override
+    public GameRule<Boolean> registerLandingChecksGameRule() {
+        return GameRuleBuilder.forBoolean(true)
+                .category(GameRuleCategory.PLAYER)
+                .buildAndRegister(
+                        Identifier.fromNamespaceAndPath(SimpleTPA.MOD_ID, "landing_checks"));
+    }
+
+    @Override
     public void registerCommands(
             java.util.function.Consumer<CommandDispatcher<CommandSourceStack>> registration) {
         CommandRegistrationCallback.EVENT.register(

@@ -21,12 +21,14 @@ public final class SimpleTPA {
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     public static final ModFeedback FEEDBACK = ModFeedback.create(MOD_NAME);
     public static GameRule<Boolean> AUTO_ACCEPT;
+    public static GameRule<Boolean> LANDING_CHECKS;
 
     private SimpleTPA() {}
 
     public static void initialize(ServerPlatform platform) {
         LOGGER.info("{} initializing on {}...", MOD_NAME, platform.loaderName());
         AUTO_ACCEPT = platform.registerAutoAcceptGameRule();
+        LANDING_CHECKS = platform.registerLandingChecksGameRule();
         platform.registerCommands(ModCommands::register);
         platform.registerEndServerTick(ModTickEvents::onEndServerTick);
         platform.registerServerStarting(LegacyGameRule::migrate);

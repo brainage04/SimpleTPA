@@ -28,18 +28,24 @@ public final class SimpleTPANeoForge implements ServerPlatform {
     private static final DeferredRegister<GameRule<?>> GAME_RULES =
             DeferredRegister.create(Registries.GAME_RULE, SimpleTPA.MOD_ID);
     private static final DeferredHolder<GameRule<?>, GameRule<Boolean>> AUTO_ACCEPT =
-            GAME_RULES.register(
-                    "auto_accept",
-                    () ->
-                            new GameRule<>(
-                                    GameRuleCategory.PLAYER,
-                                    GameRuleType.BOOL,
-                                    com.mojang.brigadier.arguments.BoolArgumentType.bool(),
-                                    (visitor, rule) -> visitor.visitBoolean(rule),
-                                    com.mojang.serialization.Codec.BOOL,
-                                    value -> value ? 1 : 0,
-                                    true,
-                                    FeatureFlagSet.of()));
+            booleanGameRule("auto_accept");
+    private static final DeferredHolder<GameRule<?>, GameRule<Boolean>> LANDING_CHECKS =
+            booleanGameRule("landing_checks");
+
+    private static DeferredHolder<GameRule<?>, GameRule<Boolean>> booleanGameRule(String name) {
+        return GAME_RULES.register(
+                name,
+                () ->
+                        new GameRule<>(
+                                GameRuleCategory.PLAYER,
+                                GameRuleType.BOOL,
+                                com.mojang.brigadier.arguments.BoolArgumentType.bool(),
+                                (visitor, rule) -> visitor.visitBoolean(rule),
+                                com.mojang.serialization.Codec.BOOL,
+                                value -> value ? 1 : 0,
+                                true,
+                                FeatureFlagSet.of()));
+    }
 
     public SimpleTPANeoForge(IEventBus modEventBus) {
         GAME_RULES.register(modEventBus);
@@ -54,6 +60,11 @@ public final class SimpleTPANeoForge implements ServerPlatform {
     @Override
     public GameRule<Boolean> registerAutoAcceptGameRule() {
         return AUTO_ACCEPT.get();
+    }
+
+    @Override
+    public GameRule<Boolean> registerLandingChecksGameRule() {
+        return LANDING_CHECKS.get();
     }
 
     @Override

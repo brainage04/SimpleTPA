@@ -10,7 +10,7 @@ A request also waits while the requester could not arrive safely at the acceptin
 
 The drop check also follows the blocks that change the damage of a landing on them: a drop of one or two blocks onto the tip of a stalagmite (pointed dripstone pointing up) hurts, and a landing on hay, a honey block or a slime block takes less damage or none.
 
-Every player chooses for themselves whether the drop check holds their requests (`/tpasafety`). With it off, a request goes through and the requester falls. The player who sent or accepted the request is told why it waited.
+The server can turn all of these landing checks off with the `simpletpa:landing_checks` gamerule (see Configuration). Every player chooses for themselves whether the drop check holds their requests (`/tpasafety`). With it off, a request goes through and the requester falls. The player who sent or accepted the request is told why it waited.
 
 ## Features
 
@@ -40,6 +40,7 @@ Landing checks stop a teleport that would drop the requester. Each player turns 
 - `/tpasafety on` – your requests wait in that case and you are told why.
 - `/tpasafety off` – your requests go through in that case, and you fall when you arrive.
 - `/gamerule simpletpa:auto_accept <true|false>` – when `true`, a player can teleport to another player instantly if that player has them on their "auto-accept" whitelist.
+- `/gamerule simpletpa:landing_checks <true|false>` – when `false`, no request waits for the landing to be safe. See Configuration.
 
 ### BrainageLib commands
 
@@ -49,6 +50,8 @@ Landing checks stop a teleport that would drop the requester. Each player turns 
 ## Configuration
 
 The `simpletpa:auto_accept` gamerule (default `true`) is described under Commands. SimpleTPA 1.1.0 and earlier called it `simpletpa:allow_instant_tpa_accepting`. A world that set the old name keeps its value the first time it starts with a later version.
+
+The `simpletpa:landing_checks` gamerule (default `true`) is the server's switch for every landing check. With `false`, a request is never held for where the requester would arrive: not for a target who is flying or gliding, inside blocks, in or on lava, fire, cactus or powder snow and the other dangerous blocks, outside the world border, or above a drop that would hurt, the void included. The requester teleports there and takes what follows, so players can drop their friends in lava. `/tpasafety` has no effect then. A request still waits for what is not about the landing: a target who is dead, in spectator mode or watching the End credits, and a requester who is dead or watching the End credits. Requests still expire after 60 seconds, and auto-accept is still decided by `simpletpa:auto_accept` and the whitelist.
 
 Each player's choice of the landing check is kept in `simpletpa-safety.json` in the world folder, and each player's auto-accept whitelist in `simpletpa-instant-accept-whitelist.json`. A file the mod cannot read is left as it is, and the choices apply until the server stops.
 

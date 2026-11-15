@@ -139,6 +139,10 @@ public class TPRequestCommand {
      * The drop check is the requester's own choice ({@link SafetyPreference#refusesDangerousDrop}),
      * and it judges the drop below the arrival spot, so a target standing over a one or two block
      * drop still passes ({@link Landing#dropHurts}).
+     *
+     * <p>Everything after the target's own state (removed, dead, spectator) is about the arrival
+     * being safe, and the {@code simpletpa:landing_checks} game rule turns all of it off: the
+     * flight and glide refusals, the spot checks and the drop check, including the void.
      */
     public static @Nullable String blockedReason(ServerPlayer from, ServerPlayer to) {
         if (to.isRemoved()) {
@@ -149,6 +153,9 @@ public class TPRequestCommand {
         }
         if (to.isSpectator()) {
             return "in spectator mode";
+        }
+        if (!to.level().getGameRules().get(SimpleTPA.LANDING_CHECKS)) {
+            return null;
         }
         if (from.getAbilities().invulnerable) {
             return null;

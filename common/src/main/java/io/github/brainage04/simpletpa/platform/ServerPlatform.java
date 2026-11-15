@@ -11,6 +11,8 @@ public interface ServerPlatform {
 
     GameRule<Boolean> registerAutoAcceptGameRule();
 
+    GameRule<Boolean> registerLandingChecksGameRule();
+
     void registerCommands(
             java.util.function.Consumer<CommandDispatcher<CommandSourceStack>> registration);
 
