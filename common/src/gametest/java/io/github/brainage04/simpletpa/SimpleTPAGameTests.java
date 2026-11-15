@@ -4,6 +4,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.authlib.GameProfile;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import io.github.brainage04.brainagelib.gametest.CapturedCommandOutput;
 import io.github.brainage04.brainagelib.gametest.GameTestPlayer;
 import io.github.brainage04.brainagelib.help.ServerModHelpRegistry;
 import io.github.brainage04.simpletpa.command.Landing;
@@ -34,6 +36,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -51,6 +54,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -1509,6 +1513,53 @@ public final class SimpleTPAGameTests {
     }
 
     /**
+     * With the landing checks off, /tpaccept still refuses a requester who cannot be moved: dead,
+     * or watching the End credits.
+     */
+    public static void landingChecksOffKeepsTheRequesterStateChecks(GameTestHelper helper) {
+        List<Blocked> states = List.of(DEAD, IN_END_CREDITS);
+        List<ServerPlayer[]> pairs = new ArrayList<>();
+        states.forEach(ignored -> pair(helper, pairs::add));
+        List<Vec3> starts = pairs.stream().map(players -> players[0].position()).toList();
+        at(
+                helper,
+                1,
+                () -> {
+                    for (int i = 0; i < states.size(); i++) {
+                        ServerPlayer[] players = pairs.get(i);
+                        command(players[0], "tpa " + players[1].getScoreboardName());
+                        states.get(i).apply().accept(helper, players[0]);
+                    }
+                });
+        at(
+                helper,
+                2,
+                () -> {
+                    for (int i = 0; i < states.size(); i++) {
+                        Blocked blocked = states.get(i);
+                        ServerPlayer[] players = pairs.get(i);
+                        if (!withLandingChecks(
+                                helper, false, () -> command(players[1], "tpaccept"))) {
+                            return;
+                        }
+                        String expected =
+                                "[SimpleTPA] "
+                                        + players[0].getScoreboardName()
+                                        + " could not be teleported. Their TP request is still open.";
+                        if (!players[0].position().equals(starts.get(i))) {
+                            fail(helper, "teleported a requester who is " + blocked.reason());
+                            return;
+                        }
+                        if (!received(players[1], expected)) {
+                            fail(helper, "not told \"" + expected + "\", got " + texts(players[1]));
+                            return;
+                        }
+                    }
+                    succeed(helper);
+                });
+    }
+
+    /**
      * Drops the game does not hurt for go through, and Slow Falling counts only while it lasts.
      * Each target is four blocks above the stone floor, a drop that refuses on its own: over water,
      * over a cobweb (tagged as resetting fall damage), over powder snow, and above the plain floor
@@ -2143,6 +2194,74 @@ public final class SimpleTPAGameTests {
                                 succeed(helper);
                             });
                 });
+    }
+
+    /**
+     * With the server's landing checks off, /tpasafety says the server turned them off instead of
+     * promising a wait that will not happen.
+     */
+    public static void safetyCommandNamesTheRuleWhenOff(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                if (!withLandingChecks(
+                                        helper, false, () -> command(from, "tpasafety"))) {
+                                    return;
+                                }
+                                String shown =
+                                        "[SimpleTPA] Your TP requests do not wait: this server has"
+                                                + " turned landing checks off.";
+                                if (!received(from, shown)) {
+                                    fail(helper, "not told \"" + shown + "\", got " + texts(from));
+                                    return;
+                                }
+                                fixture(from).clearMessages();
+                                if (!withLandingChecks(
+                                        helper, false, () -> command(from, "tpasafety off"))) {
+                                    return;
+                                }
+                                String set =
+                                        "[SimpleTPA] Your choice is saved, but this server has"
+                                                + " turned landing checks off, so your TP requests"
+                                                + " do not wait.";
+                                if (!received(from, set)) {
+                                    fail(helper, "not told \"" + set + "\", got " + texts(from));
+                                    return;
+                                }
+                                succeed(helper);
+                            });
+                });
+    }
+
+    /** /servermods config names both of the mod's gamerules, so an operator can find them. */
+    public static void serverModsConfigListsBothGameRules(GameTestHelper helper) {
+        CapturedCommandOutput output = new CapturedCommandOutput();
+        CommandSourceStack source =
+                output.source(helper.getLevel().getServer())
+                        .withPermission(PermissionSet.ALL_PERMISSIONS);
+        try {
+            helper.getLevel()
+                    .getServer()
+                    .getCommands()
+                    .getDispatcher()
+                    .execute("servermods config", source);
+        } catch (CommandSyntaxException exception) {
+            fail(helper, "/servermods config did not run: " + exception.getMessage());
+            return;
+        }
+        String text = output.text();
+        if (!text.contains("/gamerule simpletpa:auto_accept")) {
+            fail(helper, "/servermods config does not name simpletpa:auto_accept, got " + text);
+        } else if (!text.contains("/gamerule simpletpa:landing_checks")) {
+            fail(helper, "/servermods config does not name simpletpa:landing_checks, got " + text);
+        } else {
+            succeed(helper);
+        }
     }
 
     private record Outbound(List<String> messages, int clicks) {}

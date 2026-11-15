@@ -200,8 +200,23 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void landingChecksOffKeepsTheRequesterStateChecks(GameTestHelper helper) {
+        SimpleTPAGameTests.landingChecksOffKeepsTheRequesterStateChecks(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void safetyCommandShowsAndSets(GameTestHelper helper) {
         SimpleTPAGameTests.safetyCommandShowsAndSets(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void safetyCommandNamesTheRuleWhenOff(GameTestHelper helper) {
+        SimpleTPAGameTests.safetyCommandNamesTheRuleWhenOff(helper);
+    }
+
+    @GameTest
+    public void serverModsConfigListsBothGameRules(GameTestHelper helper) {
+        SimpleTPAGameTests.serverModsConfigListsBothGameRules(helper);
     }
 
     @GameTest

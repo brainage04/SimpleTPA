@@ -150,8 +150,20 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::landingChecksOffKeepsTheTargetStateChecks);
         register(
                 event,
+                "landing_checks_off_keeps_the_requester_state_checks",
+                SimpleTPAGameTests::landingChecksOffKeepsTheRequesterStateChecks);
+        register(
+                event,
                 "safety_command_shows_and_sets",
                 SimpleTPAGameTests::safetyCommandShowsAndSets);
+        register(
+                event,
+                "safety_command_names_the_rule_when_off",
+                SimpleTPAGameTests::safetyCommandNamesTheRuleWhenOff);
+        register(
+                event,
+                "server_mods_config_lists_both_game_rules",
+                SimpleTPAGameTests::serverModsConfigListsBothGameRules);
         register(event, "request_buttons", SimpleTPAGameTests::requestButtons);
         register(event, "tpauto_alias", SimpleTPAGameTests::tpautoAlias);
         register(event, "remove_offline_player", SimpleTPAGameTests::removeOfflinePlayer);
