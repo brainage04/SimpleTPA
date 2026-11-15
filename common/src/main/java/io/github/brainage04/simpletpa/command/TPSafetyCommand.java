@@ -16,6 +16,12 @@ public class TPSafetyCommand {
     }
 
     private static int show(ServerPlayer player) {
+        if (landingChecksOff(player)) {
+            SimpleTPA.FEEDBACK.neutral(
+                    player,
+                    "Your TP requests do not wait: this server has turned landing checks off.");
+            return 1;
+        }
         SimpleTPA.FEEDBACK.neutral(
                 player,
                 "Your TP requests %s while the player you teleport to is in the air above a long drop.",
@@ -33,19 +39,32 @@ public class TPSafetyCommand {
             return show(player);
         }
 
+        boolean off = landingChecksOff(player);
         if (!SafetyPreference.save()) {
-            SimpleTPA.FEEDBACK.failure(
-                    source,
-                    refuses
-                            ? "Your TP requests wait for this session, but your choice could not be saved."
-                            : "Your TP requests go through for this session, but your choice could not be saved.");
+            SimpleTPA.FEEDBACK.failure(source, savedMessage(off, refuses, false));
             return -1;
         }
-        SimpleTPA.FEEDBACK.success(
-                player,
-                refuses
-                        ? "Your TP requests wait while the player you teleport to is in the air above a long drop."
-                        : "Your TP requests go through while the player you teleport to is in the air above a long drop, so you will fall when you arrive.");
+        SimpleTPA.FEEDBACK.success(player, savedMessage(off, refuses, true));
         return 1;
+    }
+
+    private static String savedMessage(boolean landingChecksOff, boolean refuses, boolean saved) {
+        if (landingChecksOff) {
+            return saved
+                    ? "Your choice is saved, but this server has turned landing checks off, so your TP requests do not wait."
+                    : "Your choice could not be saved, and this server has turned landing checks off, so your TP requests do not wait.";
+        }
+        if (refuses) {
+            return saved
+                    ? "Your TP requests wait while the player you teleport to is in the air above a long drop."
+                    : "Your TP requests wait for this session, but your choice could not be saved.";
+        }
+        return saved
+                ? "Your TP requests go through while the player you teleport to is in the air above a long drop, so you will fall when you arrive."
+                : "Your TP requests go through for this session, but your choice could not be saved.";
+    }
+
+    private static boolean landingChecksOff(ServerPlayer player) {
+        return !player.level().getGameRules().get(SimpleTPA.LANDING_CHECKS);
     }
 }

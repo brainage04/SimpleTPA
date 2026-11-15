@@ -36,7 +36,7 @@ Landing checks stop a teleport that would drop the requester. Each player turns 
 - `/tpautoaccept clear` – clear your "auto-accept" whitelist.
 - `/tpautoaccept *` – auto-accept requests from everyone (if `simpletpa:auto_accept` is `true`). Run it twice within 30 seconds to turn it on, and again to turn it off. `*` can be left out.
 - `/tpauto` – short for `/tpautoaccept`, with all the same subcommands.
-- `/tpasafety` – prints whether your TP requests wait while the player you teleport to is in the air above a long drop.
+- `/tpasafety` – prints whether your TP requests wait while the player you teleport to is in the air above a long drop, or that the server has turned landing checks off.
 - `/tpasafety on` – your requests wait in that case and you are told why.
 - `/tpasafety off` – your requests go through in that case, and you fall when you arrive.
 - `/gamerule simpletpa:auto_accept <true|false>` – when `true`, a player can teleport to another player instantly if that player has them on their "auto-accept" whitelist.
@@ -45,13 +45,13 @@ Landing checks stop a teleport that would drop the requester. Each player turns 
 ### BrainageLib commands
 
 - `/servermods help` – prints the help lists for all mods which depend on BrainageLib.
-- `/servermods config` – (operators only) prints the settings command for each mod which depends on BrainageLib (for SimpleTPA, the `/gamerule` command above).
+- `/servermods config` – (operators only) prints the settings command for each mod which depends on BrainageLib (for SimpleTPA, the two `/gamerule` commands above).
 
 ## Configuration
 
 The `simpletpa:auto_accept` gamerule (default `true`) is described under Commands. SimpleTPA 1.1.0 and earlier called it `simpletpa:allow_instant_tpa_accepting`. A world that set the old name keeps its value the first time it starts with a later version.
 
-The `simpletpa:landing_checks` gamerule (default `true`) is the server's switch for every landing check. With `false`, a request is never held for where the requester would arrive: not for a target who is flying or gliding, inside blocks, in or on lava, fire, cactus or powder snow and the other dangerous blocks, outside the world border, or above a drop that would hurt, the void included. The requester teleports there and takes what follows, so players can drop their friends in lava. `/tpasafety` has no effect then. A request still waits for what is not about the landing: a target who is dead, in spectator mode or watching the End credits, and a requester who is dead or watching the End credits. Requests still expire after 60 seconds, and auto-accept is still decided by `simpletpa:auto_accept` and the whitelist.
+The `simpletpa:landing_checks` gamerule (default `true`) is the server's switch for every landing check. With `false`, a request is never held for where the requester would arrive: not for a target who is flying or gliding, inside blocks, in or on lava, fire, cactus or powder snow and the other dangerous blocks, outside the world border, or above a drop that would hurt, the void included. The requester teleports there and takes what follows, so players can drop their friends in lava. `/tpasafety` still saves the player's choice, and says the server has turned landing checks off. A request still waits for what is not about the landing: a target who is dead, in spectator mode or watching the End credits, and a requester who is dead or watching the End credits. Requests still expire after 60 seconds, and auto-accept is still decided by `simpletpa:auto_accept` and the whitelist.
 
 Each player's choice of the landing check is kept in `simpletpa-safety.json` in the world folder, and each player's auto-accept whitelist in `simpletpa-instant-accept-whitelist.json`. A file the mod cannot read is left as it is, and the choices apply until the server stops.
 

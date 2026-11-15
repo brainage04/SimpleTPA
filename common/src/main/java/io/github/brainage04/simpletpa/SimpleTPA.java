@@ -53,7 +53,7 @@ public final class SimpleTPA {
                         MOD_NAME,
                         "Adds player-to-player teleport requests with persistent automatic-approval lists.",
                         "/simpletpa help",
-                        "/gamerule simpletpa:auto_accept"));
+                        "/gamerule simpletpa:auto_accept, /gamerule simpletpa:landing_checks"));
         LOGGER.info("{} initialized.", MOD_NAME);
     }
 }
