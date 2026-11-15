@@ -74,6 +74,14 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::landingBlockIsTheOneLandedOn);
         register(
                 event,
+                "fall_damage_rule_off_accepts_a_drop",
+                SimpleTPAGameTests::fallDamageRuleOffAcceptsADrop);
+        register(
+                event,
+                "no_fall_damage_still_refuses_the_void",
+                SimpleTPAGameTests::noFallDamageStillRefusesTheVoid);
+        register(
+                event,
                 "resetting_landings_and_slow_falling_accept_a_drop",
                 SimpleTPAGameTests::resettingLandingsAndSlowFallingAcceptADrop);
         register(

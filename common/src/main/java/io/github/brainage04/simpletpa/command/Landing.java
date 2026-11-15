@@ -26,6 +26,7 @@ import net.minecraft.world.level.block.SlimeBlock;
 import net.minecraft.world.level.block.SpeleothemBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.SpeleothemThickness;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -78,7 +79,8 @@ public final class Landing {
      * {@code fallOn} on ({@link #landingPos}). Its own reduction applies (Block.java:486-489), and
      * powder snow underfoot deals no damage: it holds a falling player on top and its {@code
      * fallOn} hurts nobody (PowderSnowBlock.java:101-107, 116-131). Slow Falling counts as {@link
-     * FallRule#countedFall} says, but only for a fall that crosses no resetting block.
+     * FallRule#countedFall} says, but only for a fall that crosses no resetting block. A drop no
+     * fall can hurt still hurts over the void ({@link #overVoid}).
      *
      * <p>A tagged block the player lands on top of does not reset the fall: the game's check casts
      * a ray along the tick's movement (Entity.java:768-775), which ends on that block's top face,
@@ -89,16 +91,16 @@ public final class Landing {
      * another world's blocks.
      */
     public static boolean dropHurts(ServerLevel level, ServerPlayer from, AABB arrival) {
-        if (from.is(EntityTypeTags.FALL_DAMAGE_IMMUNE)) {
-            return false;
-        }
         double multiplier = from.getAttributeValue(Attributes.FALL_DAMAGE_MULTIPLIER);
-        if (multiplier <= 0.0) {
-            return false;
-        }
         MobEffectInstance slowFalling = from.getEffect(MobEffects.SLOW_FALLING);
-        if (slowFalling != null && slowFalling.isInfiniteDuration()) {
-            return false;
+        // The rule Player.isInvulnerableTo applies to fall damage (Player.java:662-663). Calling it
+        // would also count ServerPlayer's grace while the client loads (ServerPlayer.java:1334),
+        // which can end before the requester lands.
+        if (from.is(EntityTypeTags.FALL_DAMAGE_IMMUNE)
+                || !level.getGameRules().get(GameRules.FALL_DAMAGE)
+                || multiplier <= 0.0
+                || (slowFalling != null && slowFalling.isInfiniteDuration())) {
+            return overVoid(level, from, arrival);
         }
         // Levitation resets the fall every tick it lasts, as Slow Falling does
         // (LivingEntity.java:3119-3120), so an infinite one never lets the requester fall.
@@ -216,6 +218,18 @@ public final class Landing {
             return FallRule.Floor.NO_DAMAGE;
         }
         return FallRule.Floor.of(block.getFallDistanceReduction());
+    }
+
+    /**
+     * Whether nothing below {@code arrival} stops {@code from}'s fall before the level's minimum
+     * build height. Below it the game deals out_of_world damage every tick (Entity.java:599-601,
+     * LivingEntity.java:2179-2180), which is no fall damage (DamageTypeTagsProvider.java:84) and
+     * gets past invulnerability (DamageTypeTagsProvider.java:56), so it kills a requester whom no
+     * fall can hurt.
+     */
+    private static boolean overVoid(ServerLevel level, ServerPlayer from, AABB arrival) {
+        double reach = arrival.minY - level.getMinY();
+        return reach <= 0.0 || support(level, from, arrival, reach) <= arrival.minY - reach;
     }
 
     /** The top of the first block or standable entity within {@code reach} below {@code box}. */
