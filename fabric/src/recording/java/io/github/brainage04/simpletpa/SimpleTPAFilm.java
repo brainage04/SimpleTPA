@@ -273,6 +273,7 @@ public final class SimpleTPAFilm {
                                 friend(minecraftServer), "tpa " + playerName));
         context.waitTicks(25);
         clickChatButton(context, server, "tpdeny");
+        closeChat(context);
         context.waitTicks(30);
     }
 
@@ -289,8 +290,9 @@ public final class SimpleTPAFilm {
                                 friend(minecraftServer), "tpa " + playerName));
         context.waitTicks(25);
         clickChatButton(context, server, "tpaccept");
-        // The server answers the click on the next tick; the friend steps clear in that same tick.
-        context.waitTicks(1);
+        // The server answers the click on a later tick. The friend steps clear in the tick the
+        // arrival lands, so no frame shows the camera inside their head.
+        waitForArrival(context, server, playerName);
         server.runOnServer(
                 minecraftServer -> {
                     afterClickedAccept.accept(
@@ -298,10 +300,36 @@ public final class SimpleTPAFilm {
                     stepAside(friend(minecraftServer));
                 });
         context.waitTicks(15);
+        closeChat(context);
+        context.waitTicks(30);
+    }
+
+    /** Closes the chat screen, so the next stage starts on the world. */
+    private static void closeChat(ClientGameTestContext context) {
         if (context.computeOnClient(client -> client.gui.screen() instanceof ChatScreen)) {
             context.getInput().pressKey(InputConstants.KEY_ESCAPE);
         }
-        context.waitTicks(30);
+    }
+
+    /**
+     * Waits until the client's player stands on the friend, which is where an accepted request puts
+     * them, so the next server call runs in the tick the arrival lands.
+     */
+    private static void waitForArrival(
+            ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+        for (int tick = 0; tick < 40; tick++) {
+            boolean landed =
+                    server.computeOnServer(
+                            minecraftServer ->
+                                    friend(minecraftServer)
+                                            .position()
+                                            .equals(player(minecraftServer, playerName).position()));
+            if (landed) {
+                return;
+            }
+            context.waitTicks(1);
+        }
+        throw new AssertionError("The accepted request never put the player on the friend.");
     }
 
     /**
@@ -466,11 +494,13 @@ public final class SimpleTPAFilm {
         typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
         context.waitTicks(25);
         server.runOnServer(
-                minecraftServer ->
-                        SimpleTPAFakePlayerScenario.executeCommand(
-                                friend(minecraftServer), "tpa " + playerName));
-        context.waitTicks(1);
-        server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
+                minecraftServer -> {
+                    SimpleTPAFakePlayerScenario.executeCommand(
+                            friend(minecraftServer), "tpa " + playerName);
+                    // The whitelist answers the request inside the command, so the arrival has
+                    // already landed and the friend steps clear in the same tick.
+                    stepAside(friend(minecraftServer));
+                });
         context.waitTicks(30);
     }
 
@@ -706,6 +736,9 @@ public final class SimpleTPAFilm {
                     command(player, "gamerule simpletpa:reset_fall true");
                     placeActors(player, target);
                 });
+        // The chat is cleared between stages: a button from an earlier stage would otherwise sit
+        // beside this stage's, and a click would land between the two.
+        context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
         context.waitTicks(6);
     }
 
