@@ -13,12 +13,19 @@ import java.util.function.BiConsumer;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.ActiveTextCollector;
+import net.minecraft.client.gui.TextAlignment;
 import net.minecraft.client.gui.components.ChatComponent;
+import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.renderer.state.gui.GuiTextRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,6 +42,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix3x2f;
+import org.joml.Vector2f;
 
 /**
  * The showcase film: one real client and a second, joined player ({@value #FRIEND_NAME}) on a
@@ -45,47 +54,62 @@ import net.minecraft.world.phys.Vec3;
 public final class SimpleTPAFilm {
     private static final String FRIEND_NAME = "tpaFriend";
 
-    private static final Caption REQUEST =
-            new Caption(
-                    "simpletpa.request",
-                    "Teleport request",
-                    "You ask " + FRIEND_NAME + " if you can teleport to them");
-    private static final Caption ACCEPT =
-            new Caption(
-                    "simpletpa.accept",
-                    "Request accepted",
-                    FRIEND_NAME + " accepts and you arrive at their side");
     private static final Caption DENY =
             new Caption(
                     "simpletpa.deny",
                     "Request denied",
                     FRIEND_NAME + " denies, so you stay where you are");
+    private static final Caption ACCEPT =
+            new Caption(
+                    "simpletpa.accept",
+                    "Request accepted",
+                    FRIEND_NAME + " accepts and you arrive at their side");
+    private static final Caption CLICK_DENY =
+            new Caption(
+                    "simpletpa.clickdeny",
+                    "Deny in chat",
+                    FRIEND_NAME + " asks to teleport to you and you click [DENY]");
     private static final Caption CLICK_ACCEPT =
             new Caption(
                     "simpletpa.clickaccept",
                     "Accept in chat",
                     FRIEND_NAME + " asks to teleport to you and you click [ACCEPT]");
+    private static final Caption WAITING =
+            new Caption(
+                    "simpletpa.waiting",
+                    "Request waits",
+                    FRIEND_NAME + " is not on your list, so their request waits for you");
     private static final Caption AUTO_ACCEPT =
             new Caption(
                     "simpletpa.autoaccept",
                     "Auto-accept",
-                    "You whitelist " + FRIEND_NAME + ", who can now teleport to you instantly");
+                    "You add " + FRIEND_NAME + " to your list, so their next request goes through at once");
 
     private static final Caption NOTHING_TO_LAND_ON =
             new Caption(
                     "simpletpa.nolanding",
                     "No landing spot",
                     "Nothing under " + FRIEND_NAME + ", so your request waits");
-    private static final Caption HAPPY_GHAST =
-            new Caption(
-                    "simpletpa.happyghast",
-                    "Flying happy ghast",
-                    "You arrive on top of the happy ghast " + FRIEND_NAME + " rides");
     private static final Caption LANDING_CHECK_OFF =
             new Caption(
                     "simpletpa.landingoff",
                     "Landing check off",
-                    "With /tpasafety off, you arrive above the drop and fall");
+                    "With /tpasafety off you arrive above the drop and fall");
+    private static final Caption FLYING_TARGET =
+            new Caption(
+                    "simpletpa.flyingtarget",
+                    "Flying target",
+                    FRIEND_NAME + " is flying, so your request waits");
+    private static final Caption HAPPY_GHAST =
+            new Caption(
+                    "simpletpa.happyghast",
+                    "Flying happy ghast",
+                    "The happy ghast " + FRIEND_NAME + " rides holds you, so you arrive on top of it");
+    private static final Caption LONG_DROP =
+            new Caption(
+                    "simpletpa.longdrop",
+                    "Long drop",
+                    "A five-block drop below " + FRIEND_NAME + " would hurt, so your request waits");
     private static final Caption SHORT_DROP =
             new Caption(
                     "simpletpa.shortdrop",
@@ -96,11 +120,31 @@ public final class SimpleTPAFilm {
                     "simpletpa.magma",
                     "Dangerous block",
                     FRIEND_NAME + " stands on magma, so a survival request waits");
+    private static final Caption LANDING_CHECKS_OFF =
+            new Caption(
+                    "simpletpa.landingchecksoff",
+                    "Landing checks off",
+                    "With the landing_checks rule off, the same request goes through");
     private static final Caption CREATIVE =
             new Caption(
                     "simpletpa.creative",
                     "Creative mode",
                     "In creative mode the same request goes through");
+    private static final Caption ON_POWDER_SNOW =
+            new Caption(
+                    "simpletpa.powdersnow",
+                    "Powder snow",
+                    FRIEND_NAME + " stands in powder snow, so a survival request waits");
+    private static final Caption RESET_FALL_OFF =
+            new Caption(
+                    "simpletpa.resetfalloff",
+                    "Fall kept",
+                    "With reset_fall off the fall you already have counts, so your request waits");
+    private static final Caption RESET_FALL_ON =
+            new Caption(
+                    "simpletpa.resetfallon",
+                    "Fall reset",
+                    "With reset_fall on you arrive with no fall and take no damage");
 
     private static final int STAGE_Y = 64;
     private static final Vec3 PLAYER_POSITION = new Vec3(-2.5D, STAGE_Y, 0.5D);
@@ -113,15 +157,34 @@ public final class SimpleTPAFilm {
     /** Frames a stage keeps after its end marker, so a cut never lands on the next scene. */
     private static final int STAGE_HOLD_TICKS = 6;
 
-    /** The stage on screen, for {@link #show}. */
+    /**
+     * Ticks the caption is up before its stage marker. The cut keeps 0.10 s before the marker, so
+     * the caption has to be on screen by then, and the scene behind it is already the stage's.
+     */
+    private static final int CAPTION_LEAD_TICKS = 4;
+
+    /** The stage on screen, for {@link #endStage}. */
     private static String stage;
 
     private static final Vec3 LOOKOUT_POSITION = new Vec3(-11.5D, STAGE_Y, 0.5D);
     private static final Vec3 HIGH_POSITION = new Vec3(2.5D, 78.0D, -5.5D);
     private static final Vec3 GHAST_POSITION = new Vec3(2.5D, 70.0D, 0.5D);
-    private static final Vec3 STEP_POSITION = new Vec3(2.2D, STAGE_Y + 2, 0.5D);
-    private static final Vec3 STEP_BLOCK = new Vec3(1.0D, STAGE_Y + 1, 0.0D);
+    /** Where the ghast waits between its stage and the rest, out of every other shot. */
+    private static final Vec3 GHAST_PARKED = new Vec3(2.5D, 70.0D, -40.0D);
+    /** The step the sneaking target stands on, off the line between the camera and the friend. */
+    private static final Vec3 STEP_POSITION = new Vec3(2.5D, STAGE_Y + 2, -4.5D);
+    private static final Vec3 STEP_BLOCK = new Vec3(2.0D, STAGE_Y + 1, -5.0D);
     private static final Vec3 MAGMA_POSITION = new Vec3(2.5D, STAGE_Y, 4.5D);
+    /** A pillar top five blocks above the floor: a drop that hurts. */
+    private static final Vec3 LEDGE_POSITION = new Vec3(2.5D, STAGE_Y + 5, -8.5D);
+    private static final Vec3 LEDGE_BLOCK = new Vec3(2.0D, STAGE_Y + 4, -9.0D);
+    /** A powder snow block the target stands in: a dangerous block that hurts nobody at once. */
+    private static final Vec3 SNOW_POSITION = new Vec3(2.5D, STAGE_Y, -12.5D);
+    /**
+     * Where the requester is when the request is sent: sixteen blocks up over a pool, already
+     * falling, so the fall they carry is past the safe distance and the pool catches them.
+     */
+    private static final Vec3 FALLING_POSITION = new Vec3(-8.5D, STAGE_Y + 16, 0.5D);
 
     private SimpleTPAFilm() {}
 
@@ -150,9 +213,11 @@ public final class SimpleTPAFilm {
                                 client -> client.gui.hud.getChat().clearMessages(false));
                         // The first frame before the world draws has no terrain yet.
                         context.waitTicks(10);
-                        showAcceptedRequest(context, server, playerName);
                         showDeniedRequest(context, server, playerName);
+                        showAcceptedRequest(context, server, playerName);
+                        showClickedDeny(context, server, playerName);
                         showClickedAccept(context, server, playerName, afterClickedAccept);
+                        showWaitingRequest(context, server, playerName);
                         showAutoAcceptedRequest(context, server, playerName);
                         showLandingChecks(context, server, playerName, friend[0]);
                     } finally {
@@ -165,35 +230,10 @@ public final class SimpleTPAFilm {
                 });
     }
 
-    private static void showAcceptedRequest(
-            ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
-        show(context, REQUEST);
-        context.waitTicks(10);
-        typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(30);
-
-        show(context, ACCEPT);
-        context.waitTicks(10);
-        server.runOnServer(
-                minecraftServer -> {
-                    // The arrival takes the target's facing, so the friend turns to the open stage
-                    // and the camera does not land nose to nose with the stage's gate.
-                    SimpleTPAFakePlayerScenario.place(
-                            friend(minecraftServer), FRIEND_POSITION, EAST, 0.0F);
-                    SimpleTPAFakePlayerScenario.executeCommand(friend(minecraftServer), "tpaccept");
-                });
-        context.waitTicks(8);
-        server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
-        context.waitTicks(30);
-    }
-
     private static void showDeniedRequest(
             ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
-        show(context, DENY);
-        server.runOnServer(
-                minecraftServer ->
-                        placeActors(player(minecraftServer, playerName), friend(minecraftServer)));
-        context.waitTicks(10);
+        reset(context, server, playerName);
+        startStage(context, DENY);
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(25);
         server.runOnServer(
@@ -203,32 +243,54 @@ public final class SimpleTPAFilm {
         context.waitTicks(35);
     }
 
-    private static void showClickedAccept(
-            ClientGameTestContext context,
-            TestDedicatedServerContext server,
-            String playerName,
-            BiConsumer<ServerPlayer, ServerPlayer> afterClickedAccept) {
-        show(context, CLICK_ACCEPT);
+    private static void showAcceptedRequest(
+            ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+        reset(context, server, playerName);
+        startStage(context, ACCEPT);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(25);
         server.runOnServer(
-                minecraftServer ->
-                        placeActors(player(minecraftServer, playerName), friend(minecraftServer)));
-        context.waitTicks(10);
+                minecraftServer -> {
+                    // The arrival takes the target's facing, so the friend turns to the open stage
+                    // and the camera does not land nose to nose with the stage's gate.
+                    SimpleTPAFakePlayerScenario.place(
+                            friend(minecraftServer), FRIEND_POSITION, EAST, 0.0F);
+                    SimpleTPAFakePlayerScenario.executeCommand(friend(minecraftServer), "tpaccept");
+                    // The same tick as the arrival: a later one leaves the camera inside the
+                    // friend's head for the frames in between.
+                    stepAside(friend(minecraftServer));
+                });
+        context.waitTicks(30);
+    }
+
+    private static void showClickedDeny(
+            ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+        reset(context, server, playerName);
+        startStage(context, CLICK_DENY);
         server.runOnServer(
                 minecraftServer ->
                         SimpleTPAFakePlayerScenario.executeCommand(
                                 friend(minecraftServer), "tpa " + playerName));
         context.waitTicks(25);
-        context.setScreen(() -> new ChatScreen("", false));
-        context.waitTicks(10);
-        String acceptCommand =
-                "/tpaccept "
-                        + server.computeOnServer(
-                                minecraftServer -> friend(minecraftServer).getUUID());
-        double[] button = context.computeOnClient(client -> findRunCommand(client, acceptCommand));
-        context.getInput().setCursorPos(button[0], button[1]);
+        clickChatButton(context, server, "tpdeny");
+        context.waitTicks(30);
+    }
+
+    private static void showClickedAccept(
+            ClientGameTestContext context,
+            TestDedicatedServerContext server,
+            String playerName,
+            BiConsumer<ServerPlayer, ServerPlayer> afterClickedAccept) {
+        reset(context, server, playerName);
+        startStage(context, CLICK_ACCEPT);
+        server.runOnServer(
+                minecraftServer ->
+                        SimpleTPAFakePlayerScenario.executeCommand(
+                                friend(minecraftServer), "tpa " + playerName));
         context.waitTicks(25);
-        context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
-        context.waitTicks(5);
+        clickChatButton(context, server, "tpaccept");
+        // The server answers the click on the next tick; the friend steps clear in that same tick.
+        context.waitTicks(1);
         server.runOnServer(
                 minecraftServer -> {
                     afterClickedAccept.accept(
@@ -242,63 +304,178 @@ public final class SimpleTPAFilm {
         context.waitTicks(30);
     }
 
+    /**
+     * Opens the chat and clicks the button that runs {@code command}, the way a player does. The
+     * button's place is found once, before the cursor moves, so no frame is spent searching.
+     */
+    private static void clickChatButton(
+            ClientGameTestContext context, TestDedicatedServerContext server, String command) {
+        String full =
+                "/"
+                        + command
+                        + " "
+                        + server.computeOnServer(
+                                minecraftServer -> friend(minecraftServer).getUUID());
+        context.setScreen(() -> new ChatScreen("", false));
+        context.waitTicks(10);
+        double[] button = context.computeOnClient(client -> findRunCommand(client, full));
+        context.getInput().setCursorPos(button[0], button[1]);
+        context.waitTicks(20);
+        context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+        context.waitTicks(5);
+    }
+
+    private static void showWaitingRequest(
+            ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+        reset(context, server, playerName);
+        startStage(context, WAITING);
+        server.runOnServer(
+                minecraftServer ->
+                        SimpleTPAFakePlayerScenario.executeCommand(
+                                friend(minecraftServer), "tpa " + playerName));
+        context.waitTicks(35);
+    }
+
+    /**
+     * The middle of the chat text that runs {@code command}, in screen pixels. One pass over the
+     * chat's glyphs, not a hit test per pixel: the per-pixel scan this replaces called {@code
+     * captureClickableText} 115,200 times and froze the client for 1.43 s on camera.
+     */
     private static double[] findRunCommand(Minecraft client, String command) {
         Window window = client.getWindow();
-        ChatComponent chat = client.gui.hud.getChat();
-        int guiWidth = window.getGuiScaledWidth();
         int guiHeight = window.getGuiScaledHeight();
-        long sumX = 0;
-        long sumY = 0;
-        int hits = 0;
-        for (int y = guiHeight / 2; y < guiHeight; y++) {
-            for (int x = 0; x < guiWidth; x++) {
-                ActiveTextCollector.ClickableStyleFinder finder =
-                        new ActiveTextCollector.ClickableStyleFinder(client.font, x, y);
-                chat.captureClickableText(
+        CommandGlyphFinder finder = new CommandGlyphFinder(client, command);
+        client.gui.hud
+                .getChat()
+                .captureClickableText(
                         finder,
                         guiHeight,
                         client.gui.hud.getGuiTicks(),
                         ChatComponent.DisplayMode.FOREGROUND);
-                Style style = finder.result();
-                if (style != null
-                        && style.getClickEvent() instanceof ClickEvent.RunCommand(String run)
-                        && run.equals(command)) {
-                    sumX += x;
-                    sumY += y;
-                    hits++;
-                }
-            }
-        }
-        if (hits == 0) {
+        if (finder.hits == 0) {
             throw new AssertionError("No chat text runs " + command);
         }
-        double scaleX = (double) window.getScreenWidth() / guiWidth;
+        double scaleX = (double) window.getScreenWidth() / window.getGuiScaledWidth();
         double scaleY = (double) window.getScreenHeight() / guiHeight;
         return new double[] {
-            (sumX / (double) hits + 0.5D) * scaleX, (sumY / (double) hits + 0.5D) * scaleY
+            (finder.sumX / finder.hits + 0.5D) * scaleX,
+            (finder.sumY / finder.hits + 0.5D) * scaleY
         };
+    }
+
+    /** Collects the glyphs of the chat text whose click event runs one command. */
+    private static final class CommandGlyphFinder implements ActiveTextCollector {
+        private final Minecraft client;
+        private final String command;
+        private Parameters parameters = new Parameters(new Matrix3x2f());
+        private double sumX;
+        private double sumY;
+        private int hits;
+
+        private CommandGlyphFinder(Minecraft client, String command) {
+            this.client = client;
+            this.command = command;
+        }
+
+        @Override
+        public Parameters defaultParameters() {
+            return parameters;
+        }
+
+        @Override
+        public void defaultParameters(Parameters newParameters) {
+            parameters = newParameters;
+        }
+
+        @Override
+        public void accept(
+                TextAlignment alignment,
+                int anchorX,
+                int y,
+                Parameters textParameters,
+                FormattedCharSequence text) {
+            int leftX = alignment.calculateLeft(anchorX, client.font, text);
+            GuiTextRenderState state =
+                    new GuiTextRenderState(
+                            client.font,
+                            text,
+                            textParameters.pose(),
+                            leftX,
+                            y,
+                            ARGB.white(textParameters.opacity()),
+                            0,
+                            true,
+                            true,
+                            textParameters.scissor());
+            state.ensurePrepared()
+                    .visit(
+                            new Font.GlyphVisitor() {
+                                @Override
+                                public void acceptGlyph(TextRenderable.Styled glyph) {
+                                    Style style = glyph.style();
+                                    if (style.getClickEvent()
+                                            instanceof ClickEvent.RunCommand(String run)
+                                            && run.equals(command)) {
+                                        Vector2f middle =
+                                                textParameters
+                                                        .pose()
+                                                        .transformPosition(
+                                                                new Vector2f(
+                                                                        (glyph.activeLeft()
+                                                                                        + glyph
+                                                                                                .activeRight())
+                                                                                / 2.0F,
+                                                                        (glyph.activeTop()
+                                                                                        + glyph
+                                                                                                .activeBottom())
+                                                                                / 2.0F));
+                                        sumX += middle.x;
+                                        sumY += middle.y;
+                                        hits++;
+                                    }
+                                }
+                            });
+        }
+
+        @Override
+        public void acceptScrolling(
+                Component message,
+                int centerX,
+                int left,
+                int right,
+                int top,
+                int bottom,
+                Parameters textParameters) {
+            defaultScrollingHelper(
+                    message,
+                    centerX,
+                    left,
+                    right,
+                    top,
+                    bottom,
+                    client.font.width(message),
+                    9,
+                    textParameters);
+        }
     }
 
     private static void showAutoAcceptedRequest(
             ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
-        show(context, AUTO_ACCEPT);
-        server.runOnServer(
-                minecraftServer ->
-                        placeActors(player(minecraftServer, playerName), friend(minecraftServer)));
-        context.waitTicks(10);
+        reset(context, server, playerName);
+        startStage(context, AUTO_ACCEPT);
         typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
         context.waitTicks(25);
         server.runOnServer(
                 minecraftServer ->
                         SimpleTPAFakePlayerScenario.executeCommand(
                                 friend(minecraftServer), "tpa " + playerName));
-        context.waitTicks(8);
+        context.waitTicks(1);
         server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
         context.waitTicks(30);
     }
 
     /**
-     * The landing checks, one scenario at a time: a request that waits, then a request that goes
+     * The landing checks, one scenario at a time, each a refusal and then the same request going
      * through. The friend's whitelist entry from the auto-accept scenario answers each request at
      * once, so the reason a request waits is the message the player sees.
      */
@@ -307,117 +484,238 @@ public final class SimpleTPAFilm {
             TestDedicatedServerContext server,
             String playerName,
             GameTestPlayer friend) {
-        show(context, NOTHING_TO_LAND_ON);
+        endStage(context);
+        reset(context, server, playerName);
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
-                    clearRequests(friend(minecraftServer), player);
                     // The friend approves the client's requests, so each one is answered at once.
                     InstantTpaWhitelist.add(friend(minecraftServer), player);
-                    friend(minecraftServer).stopRiding();
                     SimpleTPAFakePlayerScenario.place(
                             friend(minecraftServer), HIGH_POSITION, WEST, 0.0F);
                     look(player, LOOKOUT_POSITION, HIGH_POSITION);
                 });
-        context.waitTicks(10);
+        startStage(context, NOTHING_TO_LAND_ON);
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(30);
 
-        show(context, LANDING_CHECK_OFF);
+        endStage(context);
+        reset(context, server, playerName);
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
-                    ServerPlayer rider = friend(minecraftServer);
-                    clearRequests(rider, player);
-                    rider.setXRot(45.0F);
-                    SimpleTPAFakePlayerScenario.place(rider, HIGH_POSITION, WEST, 45.0F);
+                    SimpleTPAFakePlayerScenario.place(
+                            friend(minecraftServer), HIGH_POSITION, WEST, 45.0F);
                     look(player, LOOKOUT_POSITION, HIGH_POSITION);
-                    minecraftServer
-                            .getCommands()
-                            .performPrefixedCommand(
-                                    player.createCommandSourceStack(), "tpasafety off");
+                    command(player, "tpasafety off");
                 });
-        context.waitTicks(10);
+        startStage(context, LANDING_CHECK_OFF);
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(45);
+
+        endStage(context);
+        reset(context, server, playerName);
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
-                    player.setHealth(20.0F);
-                    player.getFoodData().setFoodLevel(20);
+                    ServerPlayer target = friend(minecraftServer);
+                    // A target in the air with nothing to stand on: the same refusal as above, for
+                    // a target who is flying rather than one above a drop.
+                    target.getAbilities().flying = true;
+                    target.onUpdateAbilities();
+                    SimpleTPAFakePlayerScenario.place(target, HIGH_POSITION, WEST, 0.0F);
+                    look(player, LOOKOUT_POSITION, HIGH_POSITION);
                 });
+        startStage(context, FLYING_TARGET);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(30);
 
-        show(context, HAPPY_GHAST);
+        endStage(context);
+        reset(context, server, playerName);
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
                     ServerPlayer rider = friend(minecraftServer);
-                    clearRequests(rider, player);
-                    rider.startRiding(filmGhast(minecraftServer, rider), true, false);
+                    rider.getAbilities().flying = false;
+                    rider.onUpdateAbilities();
+                    HappyGhast ghast = filmGhast(minecraftServer, rider);
+                    ghast.setPos(GHAST_POSITION.x, GHAST_POSITION.y, GHAST_POSITION.z);
+                    rider.startRiding(ghast, true, false);
                     rider.setYRot(WEST);
                     rider.setYHeadRot(WEST);
                     rider.setXRot(30.0F);
                     look(player, LOOKOUT_POSITION, rider.position());
                 });
-        context.waitTicks(10);
+        startStage(context, HAPPY_GHAST);
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(25);
         assertOnGhast(context, server, friend);
         context.waitTicks(20);
 
-        show(context, SHORT_DROP);
+        endStage(context);
+        reset(context, server, playerName);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    ServerPlayer target = friend(minecraftServer);
+                    target.stopRiding();
+                    SimpleTPAFakePlayerScenario.place(target, LEDGE_POSITION, WEST, 20.0F);
+                    look(player, PLAYER_POSITION, LEDGE_POSITION);
+                });
+        startStage(context, LONG_DROP);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(30);
+
+        endStage(context);
+        reset(context, server, playerName);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    ServerPlayer target = friend(minecraftServer);
+                    target.setShiftKeyDown(true);
+                    SimpleTPAFakePlayerScenario.place(target, STEP_POSITION, WEST, 20.0F);
+                    look(player, PLAYER_POSITION, STEP_POSITION);
+                });
+        startStage(context, SHORT_DROP);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(1);
+        server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
+        context.waitTicks(30);
+
+        endStage(context);
+        reset(context, server, playerName);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    SimpleTPAFakePlayerScenario.place(
+                            friend(minecraftServer), MAGMA_POSITION, WEST, 0.0F);
+                    look(player, PLAYER_POSITION, MAGMA_POSITION);
+                });
+        startStage(context, ON_MAGMA);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(35);
+
+        endStage(context);
+        reset(context, server, playerName);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    player.setGameMode(GameType.CREATIVE);
+                    look(player, PLAYER_POSITION, MAGMA_POSITION);
+                });
+        startStage(context, CREATIVE);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(1);
+        server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
+        context.waitTicks(30);
+
+        endStage(context);
+        reset(context, server, playerName);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    SimpleTPAFakePlayerScenario.place(
+                            friend(minecraftServer), SNOW_POSITION, WEST, 0.0F);
+                    look(player, PLAYER_POSITION, SNOW_POSITION);
+                });
+        startStage(context, ON_POWDER_SNOW);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(30);
+
+        endStage(context);
+        reset(context, server, playerName);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    SimpleTPAFakePlayerScenario.place(
+                            friend(minecraftServer), SNOW_POSITION, WEST, 0.0F);
+                    command(player, "gamerule simpletpa:landing_checks false");
+                    look(player, PLAYER_POSITION, SNOW_POSITION);
+                });
+        startStage(context, LANDING_CHECKS_OFF);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(1);
+        server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
+        context.waitTicks(30);
+
+        endStage(context);
+        reset(context, server, playerName);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    command(player, "gamerule simpletpa:reset_fall false");
+                    look(player, PLAYER_POSITION, FRIEND_POSITION);
+                });
+        startStage(context, RESET_FALL_OFF);
+        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
+        server.runOnServer(
+                minecraftServer ->
+                        look(
+                                player(minecraftServer, playerName),
+                                FALLING_POSITION,
+                                FRIEND_POSITION));
+        context.waitTicks(16);
+        context.getInput().pressKey(InputConstants.KEY_RETURN);
+        context.waitTicks(8);
+
+        endStage(context);
+        reset(context, server, playerName);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    command(player, "gamerule simpletpa:reset_fall true");
+                    look(player, PLAYER_POSITION, FRIEND_POSITION);
+                });
+        startStage(context, RESET_FALL_ON);
+        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
+        server.runOnServer(
+                minecraftServer ->
+                        look(
+                                player(minecraftServer, playerName),
+                                FALLING_POSITION,
+                                FRIEND_POSITION));
+        context.waitTicks(16);
+        context.getInput().pressKey(InputConstants.KEY_RETURN);
+        context.waitTicks(30);
+    }
+
+    /**
+     * Puts the scene back the way every stage starts: both players on the floor, full health, the
+     * landing checks and the fall reset on, the friend's request list clear and the ghast parked
+     * out of shot. Runs between stages, so the reset is never on camera.
+     */
+    private static void reset(
+            ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
                     ServerPlayer target = friend(minecraftServer);
                     clearRequests(target, player);
                     target.stopRiding();
-                    target.setShiftKeyDown(true);
-                    SimpleTPAFakePlayerScenario.place(target, STEP_POSITION, WEST, 20.0F);
-                    look(player, PLAYER_POSITION, STEP_POSITION);
-                    // The check is on again here, so the short drop passes on its length.
-                    minecraftServer
-                            .getCommands()
-                            .performPrefixedCommand(
-                                    player.createCommandSourceStack(), "tpasafety on");
-                });
-        context.waitTicks(10);
-        typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(8);
-        server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
-        context.waitTicks(30);
-
-        show(context, ON_MAGMA);
-        server.runOnServer(
-                minecraftServer -> {
-                    ServerPlayer player = player(minecraftServer, playerName);
-                    ServerPlayer target = friend(minecraftServer);
-                    clearRequests(target, player);
                     target.setShiftKeyDown(false);
-                    SimpleTPAFakePlayerScenario.place(target, MAGMA_POSITION, WEST, 0.0F);
-                    look(player, PLAYER_POSITION, MAGMA_POSITION);
+                    target.getAbilities().flying = false;
+                    target.onUpdateAbilities();
+                    filmGhast(minecraftServer, target)
+                            .setPos(GHAST_PARKED.x, GHAST_PARKED.y, GHAST_PARKED.z);
+                    player.setGameMode(GameType.SURVIVAL);
+                    player.setHealth(20.0F);
+                    player.getFoodData().setFoodLevel(20);
+                    player.resetFallDistance();
+                    command(player, "tpasafety on");
+                    command(player, "gamerule simpletpa:landing_checks true");
+                    command(player, "gamerule simpletpa:reset_fall true");
+                    placeActors(player, target);
                 });
-        context.waitTicks(10);
-        typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(35);
+        context.waitTicks(6);
+    }
 
-        show(context, CREATIVE);
-        server.runOnServer(
-                minecraftServer -> {
-                    ServerPlayer player = player(minecraftServer, playerName);
-                    clearRequests(friend(minecraftServer), player);
-                    player.setGameMode(GameType.CREATIVE);
-                    look(player, PLAYER_POSITION, MAGMA_POSITION);
-                });
-        context.waitTicks(10);
-        typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(8);
-        server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
-        context.waitTicks(30);
-        server.runOnServer(
-                minecraftServer ->
-                        player(minecraftServer, playerName).setGameMode(GameType.SURVIVAL));
-        context.waitTicks(10);
+    /** Runs {@code command} as {@code player}, without printing its answer in the chat. */
+    private static void command(ServerPlayer player, String command) {
+        player.level()
+                .getServer()
+                .getCommands()
+                .performPrefixedCommand(
+                        player.createCommandSourceStack().withSuppressedOutput(), command);
     }
 
     /**
@@ -483,7 +781,9 @@ public final class SimpleTPAFilm {
     /** Forgets the client's pending request, so the next scenario starts from a clean slate. */
     private static void clearRequests(ServerPlayer friend, ServerPlayer player) {
         TPRequestCommand.TP_REQUESTS.removeIf(
-                request -> request.matches(friend.getUUID(), player.getUUID()));
+                request ->
+                        request.matches(friend.getUUID(), player.getUUID())
+                                || request.matches(player.getUUID(), friend.getUUID()));
     }
 
     /** The happy ghast the film spawns before the client joins. */
@@ -500,25 +800,40 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Typed one character at a time, the partial command shows a parse error above it, so the
-     * command is entered whole.
+     * Types the command into the chat box and sends it. Typed one character at a time, the partial
+     * command shows a parse error above it, so the command is entered whole.
      */
     private static void typeCommand(ClientGameTestContext context, String command) {
-        context.setScreen(() -> new ChatScreen("", false));
-        context.getInput().typeChars("/" + command);
-        context.waitTicks(COMMAND_VISIBLE_TICKS);
+        typeCommandWithoutEnter(context, command);
         context.getInput().pressKey(InputConstants.KEY_RETURN);
     }
 
-    /** Shows a caption and films it as one stage, ending the one before it. */
-    private static void show(ClientGameTestContext context, Caption caption) {
-        if (stage != null) {
-            ClientGameTestStages.endStage(context, stage, STAGE_HOLD_TICKS);
-        }
-        ClientGameTestStages.markStage(caption.id());
-        stage = caption.id();
+    /** Types the command into the chat box and leaves it there, unsent. */
+    private static void typeCommandWithoutEnter(ClientGameTestContext context, String command) {
+        context.setScreen(() -> new ChatScreen("", false));
+        context.getInput().typeChars("/" + command);
+        context.waitTicks(COMMAND_VISIBLE_TICKS);
+    }
+
+    /**
+     * Starts a filmed stage. The scene is already in place: every stage resets the actors and the
+     * camera before this call, so the caption never appears over the stage before it. The caption
+     * goes up a few ticks before the marker, because the cut keeps a little picture before it.
+     */
+    private static void startStage(ClientGameTestContext context, Caption caption) {
         ClientGameTestRecorder.showStep(
                 context, caption.id(), caption.title(), caption.description());
+        context.waitTicks(CAPTION_LEAD_TICKS);
+        ClientGameTestStages.markStage(caption.id());
+        stage = caption.id();
+    }
+
+    /** Ends the stage on screen and holds its last frames, so a cut never lands on the next scene. */
+    private static void endStage(ClientGameTestContext context) {
+        if (stage != null) {
+            ClientGameTestStages.endStage(context, stage, STAGE_HOLD_TICKS);
+            stage = null;
+        }
     }
 
     private static GameTestPlayer prepareWorld(
@@ -573,13 +888,32 @@ public final class SimpleTPAFilm {
                 BlockPos.containing(FRIEND_POSITION).below(),
                 Blocks.GOLD_BLOCK.defaultBlockState(),
                 3);
-        // The step the sneaking target stands on, two blocks above the stage floor, and the magma
-        // block a survival requester is refused on.
+        // The step the sneaking target stands on, two blocks above the stage floor, the pillar top
+        // a five-block drop starts from, the magma block a survival requester is refused on, the
+        // powder snow a target stands in, and the pool that catches a falling requester.
         level.setBlock(BlockPos.containing(STEP_BLOCK), Blocks.STONE.defaultBlockState(), 3);
+        for (int y = STAGE_Y; y <= STAGE_Y + 4; y++) {
+            for (int x = 1; x <= 3; x++) {
+                for (int z = -10; z <= -8; z++) {
+                    level.setBlock(
+                            new BlockPos(x, y, z), Blocks.STONE.defaultBlockState(), 3);
+                }
+            }
+        }
         level.setBlock(
                 BlockPos.containing(MAGMA_POSITION).below(),
                 Blocks.MAGMA_BLOCK.defaultBlockState(),
                 3);
+        level.setBlock(
+                BlockPos.containing(SNOW_POSITION).below(),
+                Blocks.POWDER_SNOW.defaultBlockState(),
+                3);
+        for (int x = -10; x <= -7; x++) {
+            for (int z = -1; z <= 2; z++) {
+                level.setBlock(
+                        new BlockPos(x, STAGE_Y - 1, z), Blocks.WATER.defaultBlockState(), 3);
+            }
+        }
     }
 
     private static void spawnGhast(ServerLevel level) {
