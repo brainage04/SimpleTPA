@@ -10,7 +10,9 @@ import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
 import java.util.Properties;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -198,6 +200,14 @@ public final class SimpleTPAFilm {
         String playerName = context.computeOnClient(client -> client.getUser().getName());
         // Command suggestions would cover the chat while a command sits in the chat box.
         context.runOnClient(client -> client.options.autoSuggestions().set(false));
+        ServerTickEvents.END_SERVER_TICK.register(
+                minecraftServer -> {
+                    Consumer<MinecraftServer> stepBack = pendingStepBack;
+                    if (stepBack != null) {
+                        pendingStepBack = null;
+                        stepBack.accept(minecraftServer);
+                    }
+                });
         Properties serverProperties = ClientGameTestServers.flatServerProperties();
         // The friend joins first and takes a slot, so the client needs a second one.
         serverProperties.setProperty("max-players", "2");
@@ -293,20 +303,25 @@ public final class SimpleTPAFilm {
                         SimpleTPAFakePlayerScenario.executeCommand(
                                 friend(minecraftServer), "tpa " + playerName));
         context.waitTicks(25);
-        clickChatButton(context, server, "tpaccept");
-        // The click's command packet and this task are handled in the same server tick, so the
-        // step back is in the same tick as the arrival and no frame is rendered from inside the
-        // friend's head.
-        server.runOnServer(
+        // The click's command is handled during the server tick, before its end-of-tick event, so
+        // the step back runs in the same tick as the arrival: the client never renders a frame
+        // from inside the friend's head.
+        pendingStepBack =
                 minecraftServer -> {
-                    afterClickedAccept.accept(
-                            friend(minecraftServer), player(minecraftServer, playerName));
-                    stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer));
-                });
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    ServerPlayer target = friend(minecraftServer);
+                    afterClickedAccept.accept(target, player);
+                    stepBackFrom(player, target);
+                };
+        clickChatButton(context, server, "tpaccept");
+        context.waitTicks(2);
         context.waitTicks(15);
         closeChat(context);
         context.waitTicks(30);
     }
+
+    /** The step back to run at the end of the server tick that handles the click, if any. */
+    private static Consumer<MinecraftServer> pendingStepBack;
 
     /** Closes the chat screen, so the next stage starts on the world. */
     private static void closeChat(ClientGameTestContext context) {
