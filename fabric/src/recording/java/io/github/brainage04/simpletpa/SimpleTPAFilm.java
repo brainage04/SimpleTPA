@@ -107,11 +107,6 @@ public final class SimpleTPAFilm {
                     "simpletpa.happyghast",
                     "Flying happy ghast",
                     "The happy ghast " + FRIEND_NAME + " rides holds you, so you arrive on top of it");
-    private static final Caption LONG_DROP =
-            new Caption(
-                    "simpletpa.longdrop",
-                    "Long drop",
-                    "A five-block drop below " + FRIEND_NAME + " would hurt, so your request waits");
     private static final Caption SHORT_DROP =
             new Caption(
                     "simpletpa.shortdrop",
@@ -177,9 +172,6 @@ public final class SimpleTPAFilm {
     private static final Vec3 STEP_POSITION = new Vec3(2.5D, STAGE_Y + 2, -4.5D);
     private static final Vec3 STEP_BLOCK = new Vec3(2.0D, STAGE_Y + 1, -5.0D);
     private static final Vec3 MAGMA_POSITION = new Vec3(2.5D, STAGE_Y, 4.5D);
-    /** A pillar top five blocks above the floor: a drop that hurts. */
-    private static final Vec3 LEDGE_POSITION = new Vec3(2.5D, STAGE_Y + 5, -8.5D);
-    private static final Vec3 LEDGE_BLOCK = new Vec3(2.0D, STAGE_Y + 4, -9.0D);
     /** A powder snow block the target stands in: a dangerous block that hurts nobody at once. */
     private static final Vec3 SNOW_POSITION = new Vec3(2.5D, STAGE_Y, -12.5D);
     /**
@@ -543,6 +535,13 @@ public final class SimpleTPAFilm {
                     command(player, "tpasafety off");
                 });
         startStage(context, LANDING_CHECK_OFF);
+        // The arrival is on the friend's head, so the player steps back in the tick it lands and
+        // falls from there, with the friend in shot.
+        pendingStepBack =
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    stepBackFrom(player, friend(minecraftServer));
+                };
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(45);
 
@@ -584,20 +583,6 @@ public final class SimpleTPAFilm {
         context.waitTicks(25);
         assertOnGhast(context, server, friend);
         context.waitTicks(20);
-
-        endStage(context);
-        reset(context, server, playerName);
-        server.runOnServer(
-                minecraftServer -> {
-                    ServerPlayer player = player(minecraftServer, playerName);
-                    ServerPlayer target = friend(minecraftServer);
-                    target.stopRiding();
-                    SimpleTPAFakePlayerScenario.place(target, LEDGE_POSITION, WEST, 20.0F);
-                    look(player, PLAYER_POSITION, LEDGE_POSITION);
-                });
-        startStage(context, LONG_DROP);
-        typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(30);
 
         endStage(context);
         reset(context, server, playerName);
@@ -934,18 +919,10 @@ public final class SimpleTPAFilm {
                 BlockPos.containing(FRIEND_POSITION).below(),
                 Blocks.GOLD_BLOCK.defaultBlockState(),
                 3);
-        // The step the sneaking target stands on, two blocks above the stage floor, the pillar top
-        // a five-block drop starts from, the magma block a survival requester is refused on, the
-        // powder snow a target stands in, and the pool that catches a falling requester.
+        // The step the sneaking target stands on, two blocks above the stage floor, the magma
+        // block a survival requester is refused on, the powder snow a target stands in, and the
+        // pool that catches a falling requester.
         level.setBlock(BlockPos.containing(STEP_BLOCK), Blocks.STONE.defaultBlockState(), 3);
-        for (int y = STAGE_Y; y <= STAGE_Y + 4; y++) {
-            for (int x = 1; x <= 3; x++) {
-                for (int z = -10; z <= -8; z++) {
-                    level.setBlock(
-                            new BlockPos(x, y, z), Blocks.STONE.defaultBlockState(), 3);
-                }
-            }
-        }
         level.setBlock(
                 BlockPos.containing(MAGMA_POSITION).below(),
                 Blocks.MAGMA_BLOCK.defaultBlockState(),
