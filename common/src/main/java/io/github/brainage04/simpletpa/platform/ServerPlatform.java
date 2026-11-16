@@ -13,6 +13,8 @@ public interface ServerPlatform {
 
     GameRule<Boolean> registerLandingChecksGameRule();
 
+    GameRule<Boolean> registerResetFallGameRule();
+
     void registerCommands(
             java.util.function.Consumer<CommandDispatcher<CommandSourceStack>> registration);
 

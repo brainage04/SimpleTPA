@@ -215,8 +215,8 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest
-    public void serverModsConfigListsBothGameRules(GameTestHelper helper) {
-        SimpleTPAGameTests.serverModsConfigListsBothGameRules(helper);
+    public void serverModsConfigListsEveryGameRule(GameTestHelper helper) {
+        SimpleTPAGameTests.serverModsConfigListsEveryGameRule(helper);
     }
 
     @GameTest
@@ -307,6 +307,26 @@ public class SimpleTPAGameTest {
     @GameTest
     public void gameruleRegistration(GameTestHelper helper) {
         SimpleTPAGameTests.gameruleRegistration(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void resetFallRuleDefaultsOn(GameTestHelper helper) {
+        SimpleTPAGameTests.resetFallRuleDefaultsOn(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void fallResetOnArrival(GameTestHelper helper) {
+        SimpleTPAGameTests.fallResetOnArrival(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void fallKeptOnArrivalWhenTheRuleIsOff(GameTestHelper helper) {
+        SimpleTPAGameTests.fallKeptOnArrivalWhenTheRuleIsOff(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void dropCheckCountsTheCarriedFallWhenTheRuleIsOff(GameTestHelper helper) {
+        SimpleTPAGameTests.dropCheckCountsTheCarriedFallWhenTheRuleIsOff(helper);
     }
 
     @GameTest

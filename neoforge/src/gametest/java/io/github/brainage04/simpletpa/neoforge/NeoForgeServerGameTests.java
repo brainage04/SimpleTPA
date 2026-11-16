@@ -162,8 +162,8 @@ public final class NeoForgeServerGameTests {
                 SimpleTPAGameTests::safetyCommandNamesTheRuleWhenOff);
         register(
                 event,
-                "server_mods_config_lists_both_game_rules",
-                SimpleTPAGameTests::serverModsConfigListsBothGameRules);
+                "server_mods_config_lists_every_game_rule",
+                SimpleTPAGameTests::serverModsConfigListsEveryGameRule);
         register(event, "request_buttons", SimpleTPAGameTests::requestButtons);
         register(event, "tpauto_alias", SimpleTPAGameTests::tpautoAlias);
         register(event, "remove_offline_player", SimpleTPAGameTests::removeOfflinePlayer);
@@ -206,6 +206,16 @@ public final class NeoForgeServerGameTests {
         register(event, "add_wildcard_rejected", SimpleTPAGameTests::addWildcardRejected);
         register(event, "combined_server_help", SimpleTPAGameTests::combinedServerHelp);
         register(event, "gamerule_registration", SimpleTPAGameTests::gameruleRegistration);
+        register(event, "reset_fall_rule_defaults_on", SimpleTPAGameTests::resetFallRuleDefaultsOn);
+        register(event, "fall_reset_on_arrival", SimpleTPAGameTests::fallResetOnArrival);
+        register(
+                event,
+                "fall_kept_on_arrival_when_the_rule_is_off",
+                SimpleTPAGameTests::fallKeptOnArrivalWhenTheRuleIsOff);
+        register(
+                event,
+                "drop_check_counts_the_carried_fall_when_the_rule_is_off",
+                SimpleTPAGameTests::dropCheckCountsTheCarriedFallWhenTheRuleIsOff);
         register(event, "legacy_game_rule_migrates", SimpleTPAGameTests::legacyGameRuleMigrates);
         register(
                 event,

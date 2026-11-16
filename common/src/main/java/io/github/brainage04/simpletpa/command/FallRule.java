@@ -67,14 +67,18 @@ record FallRule(
     }
 
     /**
-     * Whether a fall of {@code drop} blocks from rest onto {@code floor} hurts. {@code scanned} is
-     * the part of it below the lowest block that resets the fall on the way down, or all of it when
-     * there is none; a {@code scanned} of {@link #MAX_SCAN} or more means no floor was found within
-     * the deepest scan, and the fall may go on to any depth. A shorter reach needs no such rule: a
-     * plain landing at the reach already hurts. {@code restarted} is the fall that still counts
-     * below that block ({@link #restartAbove}), or NaN when the fall crosses none.
+     * Whether a fall of {@code drop} blocks from rest onto {@code floor} hurts, on top of the
+     * {@code carried} fall distance the requester already has when they arrive. {@code scanned} is
+     * the part of the drop below the lowest block that resets the fall on the way down, or all of
+     * it when there is none; a {@code scanned} of {@link #MAX_SCAN} or more means no floor was
+     * found within the deepest scan, and the fall may go on to any depth. A shorter reach needs no
+     * such rule: a plain landing at the reach already hurts. {@code restarted} is the fall that
+     * still counts below that block ({@link #restartAbove}), or NaN when the fall crosses none.
+     *
+     * <p>A carried fall counts only when the drop crosses no resetting block: one resets the fall
+     * distance (Entity.java:768-775, 1680-1684, 3030-3032), the carried part included.
      */
-    boolean hurts(double drop, double scanned, double restarted, Floor floor) {
+    boolean hurts(double drop, double carried, double scanned, double restarted, Floor floor) {
         if (scanned >= MAX_SCAN) {
             return true;
         }
@@ -83,7 +87,7 @@ record FallRule(
         // (WebBlock.java:27, SweetBerryBushBlock.java:79, PowderSnowBlock.java:60), water by its
         // drag (LivingEntity.java:2497-2498). How long it holds the requester decides where Slow
         // Falling runs out, which may be inside it, so below one the effect gets no credit.
-        double counted = Double.isNaN(restarted) ? countedFall(drop) : restarted;
+        double counted = Double.isNaN(restarted) ? carried + countedFall(drop) : restarted;
         // The game deals no fall damage for a landing without a fall (Entity.java:1590), whatever
         // the safe distance or the block.
         if (counted <= 0.0) {

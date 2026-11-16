@@ -89,8 +89,15 @@ public final class Landing {
      * <p>{@code level} holds {@code arrival}: a cross-dimension request arrives in the target's
      * level, not the requester's, and reading the requester's level would judge the drop against
      * another world's blocks.
+     *
+     * <p>{@code carried} is the fall distance the requester already has when they arrive, which the
+     * game keeps through a teleport (TeleportCommand.java:241-248 resets only the vertical velocity
+     * and the ground flag; only the ender pearl and the chorus fruit reset the fall,
+     * ThrownEnderpearl.java:123,135 and TeleportRandomlyConsumeEffect.java:83). It is zero when the
+     * server resets the fall on arrival ({@code simpletpa:reset_fall}).
      */
-    public static boolean dropHurts(ServerLevel level, ServerPlayer from, AABB arrival) {
+    public static boolean dropHurts(
+            ServerLevel level, ServerPlayer from, AABB arrival, double carried) {
         double multiplier = from.getAttributeValue(Attributes.FALL_DAMAGE_MULTIPLIER);
         MobEffectInstance slowFalling = from.getEffect(MobEffects.SLOW_FALLING);
         // Levitation resets the fall every tick it lasts, as Slow Falling does
@@ -149,6 +156,7 @@ public final class Landing {
         }
         return rule.hurts(
                 arrival.minY - support,
+                carried,
                 fallStart.minY - support,
                 fallStart == arrival ? Double.NaN : countFrom - support,
                 floor(landing));

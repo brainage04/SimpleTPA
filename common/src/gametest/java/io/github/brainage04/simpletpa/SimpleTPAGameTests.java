@@ -684,7 +684,7 @@ public final class SimpleTPAGameTests {
                                 AABB seat =
                                         from.getBoundingBox()
                                                 .move(to.position().subtract(from.position()));
-                                if (!Landing.dropHurts(to.level(), from, seat)) {
+                                if (!Landing.dropHurts(to.level(), from, seat, 0.0)) {
                                     fail(helper, "the drop from the rider's seat was too short");
                                     return;
                                 }
@@ -1211,7 +1211,7 @@ public final class SimpleTPAGameTests {
                                     command(from, "tpa " + to.getScoreboardName());
                                     level.setBlockAndUpdate(
                                             bottom, Blocks.STONE.defaultBlockState());
-                                    floorHurts = Landing.dropHurts(level, from, arrival);
+                                    floorHurts = Landing.dropHurts(level, from, arrival, 0.0);
                                     level.setBlockAndUpdate(bottom, Blocks.AIR.defaultBlockState());
                                 } finally {
                                     rules.set(GameRules.FALL_DAMAGE, fallDamage, server);
@@ -1250,7 +1250,7 @@ public final class SimpleTPAGameTests {
                                     return;
                                 }
                                 multiplier.setBaseValue(0.0);
-                                if (!Landing.dropHurts(level, from, arrival)) {
+                                if (!Landing.dropHurts(level, from, arrival, 0.0)) {
                                     fail(
                                             helper,
                                             "a drop into the void passed for a fall damage"
@@ -1263,6 +1263,7 @@ public final class SimpleTPAGameTests {
     }
 
     private static final String LANDING_CHECKS = "simpletpa:landing_checks";
+    private static final String RESET_FALL = "simpletpa:reset_fall";
 
     /** A target in lava: its box holds a block the player type finds dangerous. */
     private static final Blocked IN_LAVA =
@@ -1380,6 +1381,234 @@ public final class SimpleTPAGameTests {
         } else {
             succeed(helper);
         }
+    }
+
+    /** The fall reset rule, looked up by name, or null after failing the test. */
+    private static GameRule<?> resetFallRule(GameTestHelper helper) {
+        GameRule<?> rule =
+                BuiltInRegistries.GAME_RULE.getValue(
+                        Identifier.fromNamespaceAndPath(SimpleTPA.MOD_ID, "reset_fall"));
+        if (rule == null) {
+            fail(helper, RESET_FALL + " gamerule is not registered");
+        }
+        return rule;
+    }
+
+    /**
+     * Runs {@code action} with the fall reset rule set to {@code on}, through the command a server
+     * owner uses, and puts the rule back afterwards so no other test sees it changed. False after
+     * failing the test.
+     */
+    private static boolean withResetFall(GameTestHelper helper, boolean on, Runnable action) {
+        GameRule<?> rule = resetFallRule(helper);
+        if (rule == null) {
+            return false;
+        }
+        MinecraftServer server = helper.getLevel().getServer();
+        String before = server.getGameRules().getAsString(rule);
+        server.getCommands()
+                .performPrefixedCommand(
+                        server.createCommandSourceStack(), "gamerule " + RESET_FALL + " " + on);
+        try {
+            if (!server.getGameRules().getAsString(rule).equals(String.valueOf(on))) {
+                fail(helper, "/gamerule " + RESET_FALL + " " + on + " did not set the rule");
+                return false;
+            }
+            action.run();
+        } finally {
+            server.getCommands()
+                    .performPrefixedCommand(
+                            server.createCommandSourceStack(),
+                            "gamerule " + RESET_FALL + " " + before);
+        }
+        return true;
+    }
+
+    /** The rule exists, and it is on without a server owner having to do anything. */
+    public static void resetFallRuleDefaultsOn(GameTestHelper helper) {
+        GameRule<?> rule = resetFallRule(helper);
+        if (rule == null) {
+            return;
+        }
+        if (!Boolean.TRUE.equals(rule.defaultValue())) {
+            fail(helper, RESET_FALL + " defaults to " + rule.defaultValue());
+        } else if (!"true".equals(helper.getLevel().getServer().getGameRules().getAsString(rule))) {
+            fail(helper, RESET_FALL + " is not on in a new world");
+        } else {
+            succeed(helper);
+        }
+    }
+
+    /**
+     * A requester who is already falling arrives with the fall reset, as an ender pearl's teleport
+     * resets it (ThrownEnderpearl.java:123,135), so the landing below the arrival deals no damage.
+     * Vanilla's own teleport keeps the fall (TeleportCommand.java:241-248 resets only the vertical
+     * velocity and the ground flag), which is what the rule off does.
+     */
+    public static void fallResetOnArrival(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    ServerPlayer to = players[1];
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                fixture(from).markLoaded();
+                                standOnStone(helper, to, new Vec3(10.25, 10, 10.75));
+                                InstantTpaWhitelist.add(to, from);
+                                // A fall that would hurt if it landed: 8 blocks is 5 damage.
+                                from.fallDistance = 8.0F;
+                                command(from, "tpa " + to.getScoreboardName());
+                                if (!from.position().equals(to.position())) {
+                                    fail(
+                                            helper,
+                                            "the request did not go through, got " + texts(from));
+                                    return;
+                                }
+                                if (from.fallDistance != 0.0F) {
+                                    fail(
+                                            helper,
+                                            "the arrival kept a fall of "
+                                                    + from.fallDistance
+                                                    + " blocks");
+                                    return;
+                                }
+                                land(from);
+                                if (from.getHealth() < from.getMaxHealth()) {
+                                    fail(
+                                            helper,
+                                            "the arrival took "
+                                                    + (from.getMaxHealth() - from.getHealth())
+                                                    + " damage from a fall that was reset");
+                                    return;
+                                }
+                                succeed(helper);
+                            });
+                });
+    }
+
+    /**
+     * With the rule off the requester keeps the fall they had, as vanilla's /tp does, and the
+     * landing deals its damage. The requester's own drop check is off here, because with the rule
+     * off it counts that fall and refuses the request ({@link
+     * #dropCheckCountsTheCarriedFallWhenTheRuleIsOff}).
+     */
+    public static void fallKeptOnArrivalWhenTheRuleIsOff(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    ServerPlayer to = players[1];
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                fixture(from).markLoaded();
+                                standOnStone(helper, to, new Vec3(10.25, 10, 10.75));
+                                InstantTpaWhitelist.add(to, from);
+                                command(from, "tpasafety off");
+                                boolean ran =
+                                        withResetFall(
+                                                helper,
+                                                false,
+                                                () -> {
+                                                    from.fallDistance = 8.0F;
+                                                    command(from, "tpa " + to.getScoreboardName());
+                                                    if (!from.position().equals(to.position())) {
+                                                        fail(
+                                                                helper,
+                                                                "the request did not go through,"
+                                                                        + " got "
+                                                                        + texts(from));
+                                                        return;
+                                                    }
+                                                    if (from.fallDistance != 8.0F) {
+                                                        fail(
+                                                                helper,
+                                                                "the arrival changed the fall to "
+                                                                        + from.fallDistance
+                                                                        + " blocks");
+                                                        return;
+                                                    }
+                                                    land(from);
+                                                    if (from.getHealth() >= from.getMaxHealth()) {
+                                                        fail(
+                                                                helper,
+                                                                "the arrival took no damage from"
+                                                                        + " the fall it kept");
+                                                    }
+                                                });
+                                if (ran) {
+                                    succeed(helper);
+                                }
+                            });
+                });
+    }
+
+    /**
+     * With the rule off the drop check counts the fall the requester already has, so a request to a
+     * target standing on the ground is refused when that fall alone would hurt. With the rule on
+     * (its default) the same request goes through, because the arrival resets the fall.
+     */
+    public static void dropCheckCountsTheCarriedFallWhenTheRuleIsOff(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    ServerPlayer to = players[1];
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                standOnStone(helper, to, new Vec3(10.25, 10, 10.75));
+                                InstantTpaWhitelist.add(to, from);
+                                boolean ran =
+                                        withResetFall(
+                                                helper,
+                                                false,
+                                                () -> {
+                                                    from.fallDistance = 8.0F;
+                                                    command(from, "tpa " + to.getScoreboardName());
+                                                    String expected =
+                                                            "[SimpleTPA] "
+                                                                    + to.getScoreboardName()
+                                                                    + " is in the air above a long"
+                                                                    + " drop, so your TP request"
+                                                                    + " was not accepted"
+                                                                    + " automatically.";
+                                                    if (from.position().equals(to.position())) {
+                                                        fail(
+                                                                helper,
+                                                                "a carried fall that would hurt was"
+                                                                        + " not counted");
+                                                        return;
+                                                    }
+                                                    if (!received(from, expected)) {
+                                                        fail(
+                                                                helper,
+                                                                "not told \""
+                                                                        + expected
+                                                                        + "\", got "
+                                                                        + texts(from));
+                                                    }
+                                                });
+                                if (ran) {
+                                    succeed(helper);
+                                }
+                            });
+                });
+    }
+
+    /**
+     * Lands {@code player} where they are, as the server does from a client's movement packet
+     * (ServerGamePacketListenerImpl.java:1216): a tick's small downward move that ends on the
+     * ground, which adds that move to the fall distance and then deals the fall's damage
+     * (Entity.java:1584-1601).
+     */
+    private static void land(ServerPlayer player) {
+        player.doCheckFallDamage(0.0, -0.1, 0.0, true);
     }
 
     /**
@@ -2238,8 +2467,8 @@ public final class SimpleTPAGameTests {
                 });
     }
 
-    /** /servermods config names both of the mod's gamerules, so an operator can find them. */
-    public static void serverModsConfigListsBothGameRules(GameTestHelper helper) {
+    /** /servermods config names every one of the mod's gamerules, so an operator can find them. */
+    public static void serverModsConfigListsEveryGameRule(GameTestHelper helper) {
         CapturedCommandOutput output = new CapturedCommandOutput();
         CommandSourceStack source =
                 output.source(helper.getLevel().getServer())
@@ -2259,6 +2488,8 @@ public final class SimpleTPAGameTests {
             fail(helper, "/servermods config does not name simpletpa:auto_accept, got " + text);
         } else if (!text.contains("/gamerule simpletpa:landing_checks")) {
             fail(helper, "/servermods config does not name simpletpa:landing_checks, got " + text);
+        } else if (!text.contains("/gamerule simpletpa:reset_fall")) {
+            fail(helper, "/servermods config does not name simpletpa:reset_fall, got " + text);
         } else {
             succeed(helper);
         }

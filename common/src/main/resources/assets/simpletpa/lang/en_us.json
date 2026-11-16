@@ -2,5 +2,7 @@
 	"gamerule.simpletpa.auto_accept": "Auto-accept teleport requests",
 	"gamerule.simpletpa.auto_accept.description": "Lets players' /tpautoaccept whitelist and accept-all teleport requesters to them without asking",
 	"gamerule.simpletpa.landing_checks": "Landing checks for teleport requests",
-	"gamerule.simpletpa.landing_checks.description": "Makes a teleport request wait while the requester could not arrive safely: inside blocks, in lava, fire, powder snow, cactus or another dangerous block, outside the world border, above a drop that would hurt or the void, or beside a target who is flying or gliding. Turn it off to teleport players there anyway"
+	"gamerule.simpletpa.landing_checks.description": "Makes a teleport request wait while the requester could not arrive safely: inside blocks, in lava, fire, powder snow, cactus or another dangerous block, outside the world border, above a drop that would hurt or the void, or beside a target who is flying or gliding. Turn it off to teleport players there anyway",
+	"gamerule.simpletpa.reset_fall": "Reset the fall on arrival",
+	"gamerule.simpletpa.reset_fall.description": "Resets a teleporting player's fall distance when they arrive, as an ender pearl does, so only the drop below the arrival can hurt them. Turn it off to keep the fall they had, as vanilla's /tp does"
 }

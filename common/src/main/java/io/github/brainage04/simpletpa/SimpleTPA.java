@@ -22,6 +22,7 @@ public final class SimpleTPA {
     public static final ModFeedback FEEDBACK = ModFeedback.create(MOD_NAME);
     public static GameRule<Boolean> AUTO_ACCEPT;
     public static GameRule<Boolean> LANDING_CHECKS;
+    public static GameRule<Boolean> RESET_FALL;
 
     private SimpleTPA() {}
 
@@ -29,6 +30,7 @@ public final class SimpleTPA {
         LOGGER.info("{} initializing on {}...", MOD_NAME, platform.loaderName());
         AUTO_ACCEPT = platform.registerAutoAcceptGameRule();
         LANDING_CHECKS = platform.registerLandingChecksGameRule();
+        RESET_FALL = platform.registerResetFallGameRule();
         platform.registerCommands(ModCommands::register);
         platform.registerEndServerTick(ModTickEvents::onEndServerTick);
         platform.registerServerStarting(LegacyGameRule::migrate);
@@ -53,7 +55,7 @@ public final class SimpleTPA {
                         MOD_NAME,
                         "Adds player-to-player teleport requests with persistent automatic-approval lists.",
                         "/simpletpa help",
-                        "/gamerule simpletpa:auto_accept, /gamerule simpletpa:landing_checks"));
+                        "/gamerule simpletpa:auto_accept, /gamerule simpletpa:landing_checks, /gamerule simpletpa:reset_fall"));
         LOGGER.info("{} initialized.", MOD_NAME);
     }
 }

@@ -31,6 +31,8 @@ public final class SimpleTPANeoForge implements ServerPlatform {
             booleanGameRule("auto_accept");
     private static final DeferredHolder<GameRule<?>, GameRule<Boolean>> LANDING_CHECKS =
             booleanGameRule("landing_checks");
+    private static final DeferredHolder<GameRule<?>, GameRule<Boolean>> RESET_FALL =
+            booleanGameRule("reset_fall");
 
     private static DeferredHolder<GameRule<?>, GameRule<Boolean>> booleanGameRule(String name) {
         return GAME_RULES.register(
@@ -65,6 +67,11 @@ public final class SimpleTPANeoForge implements ServerPlatform {
     @Override
     public GameRule<Boolean> registerLandingChecksGameRule() {
         return LANDING_CHECKS.get();
+    }
+
+    @Override
+    public GameRule<Boolean> registerResetFallGameRule() {
+        return RESET_FALL.get();
     }
 
     @Override

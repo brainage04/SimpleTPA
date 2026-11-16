@@ -179,7 +179,7 @@ public class TPRequestCommand {
         }
         if (SafetyPreference.refusesDangerousDrop(from)
                 && !from.getAbilities().mayfly
-                && Landing.dropHurts(level, from, arrival)) {
+                && Landing.dropHurts(level, from, arrival, carriedFall(level, from))) {
             return Landing.overVoid(level, from, arrival)
                     ? "in the air above the void"
                     : "in the air above a long drop";
@@ -213,11 +213,27 @@ public class TPRequestCommand {
         return !from.isDeadOrDying() && !from.isRemoved();
     }
 
-    /** Puts {@code from} on {@code to}; false when {@code from} cannot be moved. */
+    /**
+     * The fall distance {@code from} carries into the arrival, which the drop check adds to the
+     * drop below it. Zero while {@code simpletpa:reset_fall} is on, the default: the teleport then
+     * resets the fall on arrival as an ender pearl does (ThrownEnderpearl.java:123,135), so only
+     * the drop below the arrival counts.
+     */
+    public static double carriedFall(ServerLevel level, ServerPlayer from) {
+        return level.getGameRules().get(SimpleTPA.RESET_FALL) ? 0.0 : from.fallDistance;
+    }
+
+    /**
+     * Puts {@code from} on {@code to}; false when {@code from} cannot be moved. With {@code
+     * simpletpa:reset_fall} on, the fall they had is reset on arrival, as an ender pearl's teleport
+     * does (ThrownEnderpearl.java:123,135); vanilla's own teleport keeps it
+     * (TeleportCommand.java:241-248).
+     */
     public static boolean teleport(ServerPlayer from, ServerPlayer to) {
         Vec3 arrival = Landing.arrival(from, to);
-        return canBeMoved(from)
-                && from.teleportTo(
+        boolean resetFall = to.level().getGameRules().get(SimpleTPA.RESET_FALL);
+        if (!canBeMoved(from)
+                || !from.teleportTo(
                         to.level(),
                         arrival.x,
                         arrival.y,
@@ -225,7 +241,13 @@ public class TPRequestCommand {
                         Set.of(),
                         to.getYRot(),
                         to.getXRot(),
-                        true);
+                        true)) {
+            return false;
+        }
+        if (resetFall) {
+            from.resetFallDistance();
+        }
+        return true;
     }
 
     public record TPRequest(UUID toId, String toName, UUID fromId, String fromName, long created) {

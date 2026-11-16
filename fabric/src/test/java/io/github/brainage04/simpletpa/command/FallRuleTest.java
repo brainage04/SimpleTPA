@@ -159,7 +159,7 @@ class FallRuleTest {
         FallRule rule = new FallRule(safeDistance, multiplier, OptionalInt.empty(), GRAVITY, DRAG);
         assertEquals(
                 plainFallOn(drop, reduction, safeDistance, multiplier) > 0,
-                rule.hurts(drop, drop, Double.NaN, FallRule.Floor.of(reduction)));
+                rule.hurts(drop, 0.0, drop, Double.NaN, FallRule.Floor.of(reduction)));
     }
 
     @Property
@@ -201,7 +201,7 @@ class FallRuleTest {
         double restarted = drop * share;
         assertEquals(
                 plainFallOn(restarted, reduction, safeDistance, multiplier) > 0,
-                rule.hurts(drop, restarted, restarted, FallRule.Floor.of(reduction)));
+                rule.hurts(drop, 0.0, restarted, restarted, FallRule.Floor.of(reduction)));
     }
 
     /**
@@ -211,8 +211,8 @@ class FallRuleTest {
     @Test
     void aRestartAtTheScanLimitHurtsWhateverTheSafeDistance() {
         FallRule rule = new FallRule(200.0, 1.0, OptionalInt.empty(), GRAVITY, DRAG);
-        assertTrue(rule.hurts(FallRule.MAX_SCAN, FallRule.MAX_SCAN, FallRule.MAX_SCAN, PLAIN));
-        assertFalse(rule.hurts(FallRule.MAX_SCAN - 1.0E-6, 127.0, 127.0, PLAIN));
+        assertTrue(rule.hurts(FallRule.MAX_SCAN, 0.0, FallRule.MAX_SCAN, FallRule.MAX_SCAN, PLAIN));
+        assertFalse(rule.hurts(FallRule.MAX_SCAN - 1.0E-6, 0.0, 127.0, 127.0, PLAIN));
     }
 
     @Property
@@ -330,7 +330,7 @@ class FallRuleTest {
         double reach = rule.reach();
         assertTrue(reach > 0.0 && reach <= FallRule.MAX_SCAN, "reach " + reach);
         assertTrue(plainFallOn(reach, 0.0F, safeDistance, multiplier) > 0, "reach " + reach);
-        assertTrue(rule.hurts(reach, reach, Double.NaN, PLAIN), "reach " + reach);
+        assertTrue(rule.hurts(reach, 0.0, reach, Double.NaN, PLAIN), "reach " + reach);
     }
 
     @Property
@@ -340,7 +340,7 @@ class FallRuleTest {
         FallRule rule = player(OptionalInt.of(duration));
         assertEquals(FallRule.MAX_SCAN, rule.reach());
         double drop = rule.reach() + extra;
-        assertTrue(rule.hurts(drop, drop, Double.NaN, PLAIN));
+        assertTrue(rule.hurts(drop, 0.0, drop, Double.NaN, PLAIN));
     }
 
     /**
@@ -356,7 +356,8 @@ class FallRuleTest {
         double reach = rule.reach();
         // Landing looks for a floor down to the reach and no further.
         assertTrue(reach > 0.0 && reach <= FallRule.MAX_SCAN, "reach " + reach);
-        assertTrue(rule.hurts(reach + extra, reach + extra, Double.NaN, PLAIN), "reach " + reach);
+        assertTrue(
+                rule.hurts(reach + extra, 0.0, reach + extra, Double.NaN, PLAIN), "reach " + reach);
     }
 
     /** The game calls fallOn only for a fall above zero (Entity.java:1590). */
@@ -371,22 +372,35 @@ class FallRuleTest {
         OptionalInt slowFalling = duration > 0 ? OptionalInt.of(duration) : OptionalInt.empty();
         FallRule rule = new FallRule(safeDistance, multiplier, slowFalling, GRAVITY, DRAG);
         FallRule.Floor floor = floor(kind, reduction);
-        assertFalse(rule.hurts(0.0, 0.0, Double.NaN, floor), "no drop");
-        assertFalse(rule.hurts(drop, 0.0, 0.0, floor), "nothing below a resetting block");
+        assertFalse(rule.hurts(0.0, 0.0, 0.0, Double.NaN, floor), "no drop");
+        assertFalse(rule.hurts(drop, 0.0, 0.0, 0.0, floor), "nothing below a resetting block");
     }
 
     @Test
     void aPlayerTakesDamageFromFourBlocksDown() {
         FallRule rule = player(OptionalInt.empty());
         assertEquals(5.0, rule.reach());
-        assertFalse(rule.hurts(3.0, 3.0, Double.NaN, PLAIN));
-        assertFalse(rule.hurts(3.99, 3.99, Double.NaN, PLAIN));
-        assertTrue(rule.hurts(4.0, 4.0, Double.NaN, PLAIN));
+        assertFalse(rule.hurts(3.0, 0.0, 3.0, Double.NaN, PLAIN));
+        assertFalse(rule.hurts(3.99, 0.0, 3.99, Double.NaN, PLAIN));
+        assertTrue(rule.hurts(4.0, 0.0, 4.0, Double.NaN, PLAIN));
         // A bed halves the distance (Blocks.java:715-721, Block.java:487).
-        assertFalse(rule.hurts(7.99, 7.99, Double.NaN, FallRule.Floor.of(0.5F)));
-        assertTrue(rule.hurts(8.0, 8.0, Double.NaN, FallRule.Floor.of(0.5F)));
+        assertFalse(rule.hurts(7.99, 0.0, 7.99, Double.NaN, FallRule.Floor.of(0.5F)));
+        assertTrue(rule.hurts(8.0, 0.0, 8.0, Double.NaN, FallRule.Floor.of(0.5F)));
         // Below a resetting block only the three blocks under its bottom count.
-        assertFalse(rule.hurts(20.0, 3.0, 3.0, PLAIN));
+        assertFalse(rule.hurts(20.0, 0.0, 3.0, 3.0, PLAIN));
+    }
+
+    /**
+     * A fall the requester already has when they arrive adds to the drop below the arrival, so a
+     * drop that would not hurt on its own does once the carried fall is counted. A resetting block
+     * on the way down resets the carried fall too, so it counts for nothing there.
+     */
+    @Test
+    void aCarriedFallAddsToTheDrop() {
+        FallRule rule = player(OptionalInt.empty());
+        assertFalse(rule.hurts(2.0, 0.0, 2.0, Double.NaN, PLAIN));
+        assertTrue(rule.hurts(2.0, 2.0, 2.0, Double.NaN, PLAIN));
+        assertFalse(rule.hurts(2.0, 2.0, 2.0, 2.0, PLAIN));
     }
 
     @Test
@@ -404,8 +418,8 @@ class FallRuleTest {
     void theFallDamageMultiplierAppliesBeforeTheDamageIsFloored() {
         FallRule half = new FallRule(SAFE_DISTANCE, 0.5, OptionalInt.empty(), GRAVITY, DRAG);
         assertEquals(6.0, half.reach());
-        assertFalse(half.hurts(4.99, 4.99, Double.NaN, PLAIN));
-        assertTrue(half.hurts(5.0, 5.0, Double.NaN, PLAIN));
+        assertFalse(half.hurts(4.99, 0.0, 4.99, Double.NaN, PLAIN));
+        assertTrue(half.hurts(5.0, 0.0, 5.0, Double.NaN, PLAIN));
     }
 
     @Test
@@ -414,14 +428,14 @@ class FallRuleTest {
         FallRule rule = player(OptionalInt.of(21));
         double counted = rule.countedFall(10.0);
         assertTrue(counted > 8.0 && counted < 9.0, "counted " + counted);
-        assertTrue(rule.hurts(10.0, 10.0, Double.NaN, PLAIN));
+        assertTrue(rule.hurts(10.0, 0.0, 10.0, Double.NaN, PLAIN));
         // A long effect lands the player before it ends: only the last tick's step counts.
         FallRule longEffect = player(OptionalInt.of(1200));
         assertTrue(longEffect.countedFall(10.0) < 0.5);
-        assertFalse(longEffect.hurts(10.0, 10.0, Double.NaN, PLAIN));
+        assertFalse(longEffect.hurts(10.0, 0.0, 10.0, Double.NaN, PLAIN));
         assertEquals(FallRule.MAX_SCAN, longEffect.reach());
         // Below a resetting block the effect gets no credit.
-        assertTrue(longEffect.hurts(30.0, 10.0, 10.0, PLAIN));
+        assertTrue(longEffect.hurts(30.0, 0.0, 10.0, 10.0, PLAIN));
     }
 
     /**
