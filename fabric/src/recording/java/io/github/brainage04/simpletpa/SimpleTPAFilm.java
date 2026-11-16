@@ -86,7 +86,7 @@ public final class SimpleTPAFilm {
             new Caption(
                     "simpletpa.autoaccept",
                     "Auto-accept",
-                    "You add " + FRIEND_NAME + " to your list, so their next request goes through at once");
+                    "You add " + FRIEND_NAME + " to your list, so their request goes through");
 
     private static final Caption NOTHING_TO_LAND_ON =
             new Caption(
@@ -107,12 +107,12 @@ public final class SimpleTPAFilm {
             new Caption(
                     "simpletpa.happyghast",
                     "Flying happy ghast",
-                    "The happy ghast " + FRIEND_NAME + " rides holds you, so you arrive on top of it");
+                    "You arrive on top of the happy ghast " + FRIEND_NAME + " rides");
     private static final Caption LONG_DROP =
             new Caption(
                     "simpletpa.longdrop",
                     "Long drop",
-                    "A six-block drop below " + FRIEND_NAME + " would hurt, so your request waits");
+                    FRIEND_NAME + " is above a six-block drop, so your request waits");
     private static final Caption SHORT_DROP =
             new Caption(
                     "simpletpa.shortdrop",
@@ -127,7 +127,7 @@ public final class SimpleTPAFilm {
             new Caption(
                     "simpletpa.landingchecksoff",
                     "Landing checks off",
-                    "With the landing_checks rule off, the same request goes through");
+                    "With landing_checks off, the same request goes through");
     private static final Caption CREATIVE =
             new Caption(
                     "simpletpa.creative",
@@ -142,7 +142,7 @@ public final class SimpleTPAFilm {
             new Caption(
                     "simpletpa.resetfalloff",
                     "Fall kept",
-                    "With reset_fall off the fall you already have counts, so your request waits");
+                    "With reset_fall off, the fall you carry stops the request");
     private static final Caption RESET_FALL_ON =
             new Caption(
                     "simpletpa.resetfallon",
@@ -254,7 +254,7 @@ public final class SimpleTPAFilm {
                 minecraftServer ->
                         SimpleTPAFakePlayerScenario.executeCommand(
                                 friend(minecraftServer), "tpdeny"));
-        context.waitTicks(35);
+        context.waitTicks(16);
     }
 
     private static void showAcceptedRequest(
@@ -279,7 +279,7 @@ public final class SimpleTPAFilm {
                     // friend's head for the frames in between.
                     stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer));
                 });
-        context.waitTicks(30);
+        context.waitTicks(16);
     }
 
     private static void showClickedDeny(
@@ -294,7 +294,7 @@ public final class SimpleTPAFilm {
         context.waitTicks(25);
         clickChatButton(context, server, "tpdeny");
         closeChat(context);
-        context.waitTicks(30);
+        context.waitTicks(16);
     }
 
     private static void showClickedAccept(
@@ -322,9 +322,9 @@ public final class SimpleTPAFilm {
                 };
         clickChatButton(context, server, "tpaccept");
         context.waitTicks(2);
-        context.waitTicks(15);
+        context.waitTicks(16);
         closeChat(context);
-        context.waitTicks(30);
+        context.waitTicks(16);
     }
 
     /** The step back to run at the end of the server tick that handles the click, if any. */
@@ -383,11 +383,14 @@ public final class SimpleTPAFilm {
         endStage(context);
         reset(context, server, playerName);
         startStage(context, WAITING);
+        // The request lands a moment into the stage, so the caption is up before the chat line and
+        // the stage is not one long still.
+        context.waitTicks(12);
         server.runOnServer(
                 minecraftServer ->
                         SimpleTPAFakePlayerScenario.executeCommand(
                                 friend(minecraftServer), "tpa " + playerName));
-        context.waitTicks(35);
+        context.waitTicks(16);
     }
 
     /**
@@ -529,7 +532,7 @@ public final class SimpleTPAFilm {
                     // already landed and the friend steps clear in the same tick.
                     stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer));
                 });
-        context.waitTicks(30);
+        context.waitTicks(16);
     }
 
     /**
@@ -555,15 +558,18 @@ public final class SimpleTPAFilm {
                 });
         startStage(context, NOTHING_TO_LAND_ON);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(30);
+        context.waitTicks(16);
 
         endStage(context);
         reset(context, server, playerName);
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
-                    SimpleTPAFakePlayerScenario.place(
-                            friend(minecraftServer), HIGH_POSITION, WEST, 45.0F);
+                    ServerPlayer target = friend(minecraftServer);
+                    SimpleTPAFakePlayerScenario.place(target, HIGH_POSITION, WEST, 45.0F);
+                    // Hidden before the caption, so the cut never shows the friend at the spot the
+                    // last stage left them in.
+                    target.setInvisible(true);
                     look(player, LOOKOUT_POSITION, HIGH_POSITION);
                     command(player, "tpasafety off");
                 });
@@ -575,7 +581,6 @@ public final class SimpleTPAFilm {
                     ServerPlayer player = player(minecraftServer, playerName);
                     stepBackFrom(player, friend(minecraftServer));
                 };
-        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(45);
 
@@ -594,7 +599,7 @@ public final class SimpleTPAFilm {
                 });
         startStage(context, FLYING_TARGET);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(30);
+        context.waitTicks(16);
 
         endStage(context);
         reset(context, server, playerName);
@@ -612,11 +617,14 @@ public final class SimpleTPAFilm {
                     rider.setXRot(30.0F);
                     look(player, LOOKOUT_POSITION, rider.position());
                 });
+        // The client slides a moved entity into place over three ticks, so the ghast is given them
+        // before the caption: the cut then opens on the ghast already in shot.
+        context.waitTicks(4);
         startStage(context, HAPPY_GHAST);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(25);
+        context.waitTicks(16);
         assertOnGhast(context, server, friend);
-        context.waitTicks(20);
+        context.waitTicks(12);
 
         endStage(context);
         reset(context, server, playerName);
@@ -629,7 +637,7 @@ public final class SimpleTPAFilm {
                 });
         startStage(context, LONG_DROP);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(30);
+        context.waitTicks(16);
 
         endStage(context);
         reset(context, server, playerName);
@@ -639,17 +647,17 @@ public final class SimpleTPAFilm {
                     ServerPlayer target = friend(minecraftServer);
                     target.setShiftKeyDown(true);
                     SimpleTPAFakePlayerScenario.place(target, STEP_POSITION, WEST, 20.0F);
+                    target.setInvisible(true);
                     look(player, PLAYER_POSITION, STEP_POSITION);
                 });
         startStage(context, SHORT_DROP);
-        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(1);
         server.runOnServer(
                 minecraftServer ->
                         stepBackFrom(
                                 player(minecraftServer, playerName), friend(minecraftServer)));
-        context.waitTicks(30);
+        context.waitTicks(16);
 
         endStage(context);
         reset(context, server, playerName);
@@ -662,25 +670,29 @@ public final class SimpleTPAFilm {
                 });
         startStage(context, ON_MAGMA);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(35);
+        context.waitTicks(16);
 
         endStage(context);
         reset(context, server, playerName);
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
+                    // The same target on the same block as the stage before, in shot: only the
+                    // requester's game mode differs, so the pair shows what the mode changes.
+                    SimpleTPAFakePlayerScenario.place(
+                            friend(minecraftServer), MAGMA_POSITION, WEST, 0.0F);
                     player.setGameMode(GameType.CREATIVE);
                     look(player, PLAYER_POSITION, MAGMA_POSITION);
                 });
         startStage(context, CREATIVE);
-        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
+        // The arrival lands on the friend's head, so the step back runs in the tick it lands.
+        pendingStepBack =
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    stepBackFrom(player, friend(minecraftServer));
+                };
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(1);
-        server.runOnServer(
-                minecraftServer ->
-                        stepBackFrom(
-                                player(minecraftServer, playerName), friend(minecraftServer)));
-        context.waitTicks(30);
+        context.waitTicks(16);
 
         endStage(context);
         reset(context, server, playerName);
@@ -693,33 +705,34 @@ public final class SimpleTPAFilm {
                 });
         startStage(context, ON_POWDER_SNOW);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(30);
+        context.waitTicks(16);
 
         endStage(context);
         reset(context, server, playerName);
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
-                    SimpleTPAFakePlayerScenario.place(
-                            friend(minecraftServer), SNOW_POSITION, WEST, 0.0F);
+                    ServerPlayer target = friend(minecraftServer);
+                    SimpleTPAFakePlayerScenario.place(target, SNOW_POSITION, WEST, 0.0F);
+                    target.setInvisible(true);
                     gamerule(player, "gamerule simpletpa:landing_checks false");
                     look(player, PLAYER_POSITION, SNOW_POSITION);
                 });
         startStage(context, LANDING_CHECKS_OFF);
-        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(1);
         server.runOnServer(
                 minecraftServer ->
                         stepBackFrom(
                                 player(minecraftServer, playerName), friend(minecraftServer)));
-        context.waitTicks(30);
+        context.waitTicks(16);
 
         endStage(context);
         reset(context, server, playerName);
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
+                    friend(minecraftServer).setInvisible(true);
                     gamerule(player, "gamerule simpletpa:reset_fall false");
                     look(player, PLAYER_POSITION, FRIEND_POSITION);
                 });
@@ -739,7 +752,6 @@ public final class SimpleTPAFilm {
                     ServerPlayer player = player(minecraftServer, playerName);
                     stepBackFrom(player, friend(minecraftServer));
                 };
-        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
         context.getInput().pressKey(InputConstants.KEY_RETURN);
         context.waitTicks(8);
 
@@ -748,6 +760,7 @@ public final class SimpleTPAFilm {
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
+                    friend(minecraftServer).setInvisible(true);
                     gamerule(player, "gamerule simpletpa:reset_fall true");
                     look(player, PLAYER_POSITION, FRIEND_POSITION);
                 });
@@ -765,9 +778,8 @@ public final class SimpleTPAFilm {
                     ServerPlayer player = player(minecraftServer, playerName);
                     stepBackFrom(player, friend(minecraftServer));
                 };
-        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
         context.getInput().pressKey(InputConstants.KEY_RETURN);
-        context.waitTicks(30);
+        context.waitTicks(16);
     }
 
     /**
