@@ -812,11 +812,10 @@ public final class SimpleTPAFilm {
                         -Math.sin(Math.toRadians(friend.getYRot())),
                         0.0D,
                         Math.cos(Math.toRadians(friend.getYRot())));
-        Vec3 side = new Vec3(-facing.z, 0.0D, facing.x);
-        Vec3 friendAt = friend.position().add(side.scale(3.0D));
-        SimpleTPAFakePlayerScenario.place(
-                friend, friendAt, friend.getYRot(), friend.getXRot());
-        look(player, friendAt.add(facing.scale(3.0D)), friendAt);
+        look(
+                player,
+                friend.position().add(facing.scale(4.0D)),
+                friend.position().add(0.0D, 1.4D, 0.0D));
     }
 
     /** Places {@code player} at {@code position} looking at {@code target}. */
