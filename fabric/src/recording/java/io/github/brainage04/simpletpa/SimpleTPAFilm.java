@@ -232,6 +232,7 @@ public final class SimpleTPAFilm {
 
     private static void showDeniedRequest(
             ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+        endStage(context);
         reset(context, server, playerName);
         startStage(context, DENY);
         typeCommand(context, "tpa " + FRIEND_NAME);
@@ -245,6 +246,7 @@ public final class SimpleTPAFilm {
 
     private static void showAcceptedRequest(
             ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+        endStage(context);
         reset(context, server, playerName);
         startStage(context, ACCEPT);
         typeCommand(context, "tpa " + FRIEND_NAME);
@@ -265,6 +267,7 @@ public final class SimpleTPAFilm {
 
     private static void showClickedDeny(
             ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+        endStage(context);
         reset(context, server, playerName);
         startStage(context, CLICK_DENY);
         server.runOnServer(
@@ -282,6 +285,7 @@ public final class SimpleTPAFilm {
             TestDedicatedServerContext server,
             String playerName,
             BiConsumer<ServerPlayer, ServerPlayer> afterClickedAccept) {
+        endStage(context);
         reset(context, server, playerName);
         startStage(context, CLICK_ACCEPT);
         server.runOnServer(
@@ -355,6 +359,7 @@ public final class SimpleTPAFilm {
 
     private static void showWaitingRequest(
             ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+        endStage(context);
         reset(context, server, playerName);
         startStage(context, WAITING);
         server.runOnServer(
@@ -489,6 +494,7 @@ public final class SimpleTPAFilm {
 
     private static void showAutoAcceptedRequest(
             ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+        endStage(context);
         reset(context, server, playerName);
         startStage(context, AUTO_ACCEPT);
         typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
