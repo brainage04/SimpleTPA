@@ -160,6 +160,9 @@ public final class SimpleTPAFilm {
     /** Frames a stage keeps after its end marker, so a cut never lands on the next scene. */
     private static final int STAGE_HOLD_TICKS = 6;
 
+    /** Ticks a stage's scene is given to settle before its caption, so no cut opens mid-move. */
+    private static final int SCENE_SETTLE_TICKS = 8;
+
     /**
      * Ticks the caption is up before its stage marker. The cut keeps 0.10 s before the marker, so
      * the caption has to be on screen by then, and the scene behind it is already the stage's.
@@ -621,10 +624,6 @@ public final class SimpleTPAFilm {
                     rider.setXRot(30.0F);
                     look(player, LOOKOUT_POSITION, rider.position());
                 });
-        // The client slides a moved entity into place over three ticks, and the server sends the
-        // move on its next tracker tick, so the ghast is given ten ticks before the caption: the
-        // cut then opens on the ghast already in shot.
-        context.waitTicks(10);
         startStage(context, HAPPY_GHAST);
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(16);
@@ -952,8 +951,13 @@ public final class SimpleTPAFilm {
      * Starts a filmed stage. The scene is already in place: every stage resets the actors and the
      * camera before this call, so the caption never appears over the stage before it. The caption
      * goes up a few ticks before the marker, because the cut keeps a little picture before it.
+     *
+     * <p>The scene is given {@value #SCENE_SETTLE_TICKS} ticks first: the client slides a moved
+     * entity into place over three ticks, and the cut keeps the frames just before the marker, so
+     * without the wait the first frames of a stage show the friend still on the way to their mark.
      */
     private static void startStage(ClientGameTestContext context, Caption caption) {
+        context.waitTicks(SCENE_SETTLE_TICKS);
         ClientGameTestRecorder.showStep(
                 context, caption.id(), caption.title(), caption.description());
         context.waitTicks(CAPTION_LEAD_TICKS);
