@@ -712,6 +712,14 @@ public final class SimpleTPAFilm {
                                 FALLING_POSITION,
                                 FRIEND_POSITION));
         waitForFall(context, server, playerName);
+        // The request is answered inside the command, so the arrival lands in this tick and the
+        // step back runs in it too.
+        pendingStepBack =
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    stepBackFrom(player, friend(minecraftServer));
+                };
+        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
         context.getInput().pressKey(InputConstants.KEY_RETURN);
         context.waitTicks(8);
 
@@ -732,6 +740,12 @@ public final class SimpleTPAFilm {
                                 FALLING_POSITION,
                                 FRIEND_POSITION));
         waitForFall(context, server, playerName);
+        pendingStepBack =
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    stepBackFrom(player, friend(minecraftServer));
+                };
+        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
         context.getInput().pressKey(InputConstants.KEY_RETURN);
         context.waitTicks(30);
     }
