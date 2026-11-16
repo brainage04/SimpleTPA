@@ -260,7 +260,7 @@ public final class SimpleTPAFilm {
                     SimpleTPAFakePlayerScenario.executeCommand(friend(minecraftServer), "tpaccept");
                     // The same tick as the arrival: a later one leaves the camera inside the
                     // friend's head for the frames in between.
-                    stepAside(friend(minecraftServer));
+                    stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer));
                 });
         context.waitTicks(30);
     }
@@ -301,7 +301,7 @@ public final class SimpleTPAFilm {
                 minecraftServer -> {
                     afterClickedAccept.accept(
                             friend(minecraftServer), player(minecraftServer, playerName));
-                    stepAside(friend(minecraftServer));
+                    stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer));
                 });
         context.waitTicks(15);
         closeChat(context);
@@ -505,7 +505,7 @@ public final class SimpleTPAFilm {
                             friend(minecraftServer), "tpa " + playerName);
                     // The whitelist answers the request inside the command, so the arrival has
                     // already landed and the friend steps clear in the same tick.
-                    stepAside(friend(minecraftServer));
+                    stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer));
                 });
         context.waitTicks(30);
     }
@@ -615,7 +615,10 @@ public final class SimpleTPAFilm {
         startStage(context, SHORT_DROP);
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(1);
-        server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
+        server.runOnServer(
+                minecraftServer ->
+                        stepBackFrom(
+                                player(minecraftServer, playerName), friend(minecraftServer)));
         context.waitTicks(30);
 
         endStage(context);
@@ -642,7 +645,10 @@ public final class SimpleTPAFilm {
         startStage(context, CREATIVE);
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(1);
-        server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
+        server.runOnServer(
+                minecraftServer ->
+                        stepBackFrom(
+                                player(minecraftServer, playerName), friend(minecraftServer)));
         context.waitTicks(30);
 
         endStage(context);
@@ -671,7 +677,10 @@ public final class SimpleTPAFilm {
         startStage(context, LANDING_CHECKS_OFF);
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(1);
-        server.runOnServer(minecraftServer -> stepAside(friend(minecraftServer)));
+        server.runOnServer(
+                minecraftServer ->
+                        stepBackFrom(
+                                player(minecraftServer, playerName), friend(minecraftServer)));
         context.waitTicks(30);
 
         endStage(context);
@@ -792,20 +801,18 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Moves the friend three blocks the way they face, out of the camera of a player who has just
-     * arrived on them, so the shot shows both of them instead of the inside of the friend's head.
+     * Moves the player who has just arrived on the friend three blocks back, looking at them, so
+     * the shot shows both of them instead of the inside of the friend's head. The player moves
+     * rather than the friend: the client applies a player's own teleport at once, while another
+     * player's move is interpolated over three ticks, which is the face filling the screen.
      */
-    private static void stepAside(ServerPlayer friend) {
+    private static void stepBackFrom(ServerPlayer player, ServerPlayer friend) {
         Vec3 facing =
                 new Vec3(
                         -Math.sin(Math.toRadians(friend.getYRot())),
                         0.0D,
                         Math.cos(Math.toRadians(friend.getYRot())));
-        SimpleTPAFakePlayerScenario.place(
-                friend,
-                friend.position().add(facing.scale(3.0D)),
-                friend.getYRot(),
-                friend.getXRot());
+        look(player, friend.position().add(facing.scale(3.0D)), friend.position());
     }
 
     /** Places {@code player} at {@code position} looking at {@code target}. */
