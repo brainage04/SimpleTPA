@@ -682,7 +682,7 @@ public final class SimpleTPAFilm {
                     ServerPlayer player = player(minecraftServer, playerName);
                     SimpleTPAFakePlayerScenario.place(
                             friend(minecraftServer), SNOW_POSITION, WEST, 0.0F);
-                    command(player, "gamerule simpletpa:landing_checks false");
+                    gamerule(player, "gamerule simpletpa:landing_checks false");
                     look(player, PLAYER_POSITION, SNOW_POSITION);
                 });
         startStage(context, LANDING_CHECKS_OFF);
@@ -700,7 +700,7 @@ public final class SimpleTPAFilm {
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
-                    command(player, "gamerule simpletpa:reset_fall false");
+                    gamerule(player, "gamerule simpletpa:reset_fall false");
                     look(player, PLAYER_POSITION, FRIEND_POSITION);
                 });
         startStage(context, RESET_FALL_OFF);
@@ -728,7 +728,7 @@ public final class SimpleTPAFilm {
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
-                    command(player, "gamerule simpletpa:reset_fall true");
+                    gamerule(player, "gamerule simpletpa:reset_fall true");
                     look(player, PLAYER_POSITION, FRIEND_POSITION);
                 });
         startStage(context, RESET_FALL_ON);
@@ -774,8 +774,8 @@ public final class SimpleTPAFilm {
                     player.getFoodData().setFoodLevel(20);
                     player.resetFallDistance();
                     command(player, "tpasafety on");
-                    command(player, "gamerule simpletpa:landing_checks true");
-                    command(player, "gamerule simpletpa:reset_fall true");
+                    gamerule(player, "gamerule simpletpa:landing_checks true");
+                    gamerule(player, "gamerule simpletpa:reset_fall true");
                     placeActors(player, target);
                 });
         // The chat is cleared between stages: a button from an earlier stage would otherwise sit
@@ -788,7 +788,7 @@ public final class SimpleTPAFilm {
      * Runs {@code command} as the server, without printing its answer in the chat. A gamerule
      * command needs permissions a survival player does not have, so the source is the server's.
      */
-    private static void command(ServerPlayer player, String command) {
+    private static void gamerule(ServerPlayer player, String command) {
         MinecraftServer server = player.level().getServer();
         server.getCommands()
                 .performPrefixedCommand(
@@ -798,6 +798,18 @@ public final class SimpleTPAFilm {
                                 .withPermission(PermissionSet.ALL_PERMISSIONS)
                                 .withSuppressedOutput(),
                         command);
+    }
+
+    /**
+     * Runs {@code command} as {@code player}, without printing its answer in the chat. A player
+     * command such as {@code tpasafety} needs the player as its source.
+     */
+    private static void command(ServerPlayer player, String command) {
+        player.level()
+                .getServer()
+                .getCommands()
+                .performPrefixedCommand(
+                        player.createCommandSourceStack().withSuppressedOutput(), command);
     }
 
     /**
