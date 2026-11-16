@@ -262,6 +262,10 @@ public final class SimpleTPAFilm {
                     // and the camera does not land nose to nose with the stage's gate.
                     SimpleTPAFakePlayerScenario.place(
                             friend(minecraftServer), FRIEND_POSITION, EAST, 0.0F);
+                    // The camera lands inside the friend's head for the tick the arrival is
+                    // rendered, before the step back reaches the client, so the friend is out of
+                    // sight for that tick.
+                    friend(minecraftServer).setInvisible(true);
                     SimpleTPAFakePlayerScenario.executeCommand(friend(minecraftServer), "tpaccept");
                     // The same tick as the arrival: a later one leaves the camera inside the
                     // friend's head for the frames in between.
@@ -490,6 +494,7 @@ public final class SimpleTPAFilm {
         context.waitTicks(25);
         server.runOnServer(
                 minecraftServer -> {
+                    friend(minecraftServer).setInvisible(true);
                     SimpleTPAFakePlayerScenario.executeCommand(
                             friend(minecraftServer), "tpa " + playerName);
                     // The whitelist answers the request inside the command, so the arrival has
@@ -542,6 +547,7 @@ public final class SimpleTPAFilm {
                     ServerPlayer player = player(minecraftServer, playerName);
                     stepBackFrom(player, friend(minecraftServer));
                 };
+        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(45);
 
@@ -595,6 +601,7 @@ public final class SimpleTPAFilm {
                     look(player, PLAYER_POSITION, STEP_POSITION);
                 });
         startStage(context, SHORT_DROP);
+        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(1);
         server.runOnServer(
@@ -625,6 +632,7 @@ public final class SimpleTPAFilm {
                     look(player, PLAYER_POSITION, MAGMA_POSITION);
                 });
         startStage(context, CREATIVE);
+        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(1);
         server.runOnServer(
@@ -657,6 +665,7 @@ public final class SimpleTPAFilm {
                     look(player, PLAYER_POSITION, SNOW_POSITION);
                 });
         startStage(context, LANDING_CHECKS_OFF);
+        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(1);
         server.runOnServer(
@@ -720,6 +729,7 @@ public final class SimpleTPAFilm {
                     clearRequests(target, player);
                     target.stopRiding();
                     target.setShiftKeyDown(false);
+                    target.setInvisible(false);
                     target.getAbilities().flying = false;
                     target.onUpdateAbilities();
                     filmGhast(minecraftServer, target)
@@ -789,6 +799,7 @@ public final class SimpleTPAFilm {
      * player's move is interpolated over three ticks, which is the face filling the screen.
      */
     private static void stepBackFrom(ServerPlayer player, ServerPlayer friend) {
+        friend.setInvisible(false);
         Vec3 facing =
                 new Vec3(
                         -Math.sin(Math.toRadians(friend.getYRot())),
