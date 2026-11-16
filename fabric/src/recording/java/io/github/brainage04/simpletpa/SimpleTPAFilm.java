@@ -621,9 +621,10 @@ public final class SimpleTPAFilm {
                     rider.setXRot(30.0F);
                     look(player, LOOKOUT_POSITION, rider.position());
                 });
-        // The client slides a moved entity into place over three ticks, so the ghast is given them
-        // before the caption: the cut then opens on the ghast already in shot.
-        context.waitTicks(4);
+        // The client slides a moved entity into place over three ticks, and the server sends the
+        // move on its next tracker tick, so the ghast is given ten ticks before the caption: the
+        // cut then opens on the ghast already in shot.
+        context.waitTicks(10);
         startStage(context, HAPPY_GHAST);
         typeCommand(context, "tpa " + FRIEND_NAME);
         context.waitTicks(16);
