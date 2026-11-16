@@ -294,9 +294,15 @@ public final class SimpleTPAFilm {
                                 friend(minecraftServer), "tpa " + playerName));
         context.waitTicks(25);
         clickChatButton(context, server, "tpaccept");
-        // The server answers the click on a later tick. The step back runs in the same server task
-        // that sees the arrival, so the client never renders a frame from inside the friend's head.
-        stepBackOnArrival(context, server, playerName, afterClickedAccept);
+        // The click's command packet and this task are handled in the same server tick, so the
+        // step back is in the same tick as the arrival and no frame is rendered from inside the
+        // friend's head.
+        server.runOnServer(
+                minecraftServer -> {
+                    afterClickedAccept.accept(
+                            friend(minecraftServer), player(minecraftServer, playerName));
+                    stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer));
+                });
         context.waitTicks(15);
         closeChat(context);
         context.waitTicks(30);
@@ -307,37 +313,6 @@ public final class SimpleTPAFilm {
         if (context.computeOnClient(client -> client.gui.screen() instanceof ChatScreen)) {
             context.getInput().pressKey(InputConstants.KEY_ESCAPE);
         }
-    }
-
-    /**
-     * Steps the player back in the server task that first sees them standing on the friend, which
-     * is where an accepted request puts them. The check and the step share one task, so the client
-     * never renders a frame from inside the friend's head.
-     */
-    private static void stepBackOnArrival(
-            ClientGameTestContext context,
-            TestDedicatedServerContext server,
-            String playerName,
-            BiConsumer<ServerPlayer, ServerPlayer> afterClickedAccept) {
-        for (int tick = 0; tick < 40; tick++) {
-            boolean landed =
-                    server.computeOnServer(
-                            minecraftServer -> {
-                                ServerPlayer player = player(minecraftServer, playerName);
-                                ServerPlayer target = friend(minecraftServer);
-                                if (!target.position().equals(player.position())) {
-                                    return false;
-                                }
-                                afterClickedAccept.accept(target, player);
-                                stepBackFrom(player, target);
-                                return true;
-                            });
-            if (landed) {
-                return;
-            }
-            context.waitTicks(1);
-        }
-        throw new AssertionError("The accepted request never put the player on the friend.");
     }
 
     /**
