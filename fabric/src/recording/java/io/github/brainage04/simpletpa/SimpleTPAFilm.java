@@ -203,10 +203,14 @@ public final class SimpleTPAFilm {
         ServerTickEvents.END_SERVER_TICK.register(
                 minecraftServer -> {
                     Consumer<MinecraftServer> stepBack = pendingStepBack;
+                    // Within a block, not exactly on the spot: the game pushes a player who lands
+                    // inside the friend's box apart in the same tick, so an exact match can miss
+                    // the arrival tick and leave the camera in the friend's head for a frame.
                     if (stepBack != null
                             && friend(minecraftServer)
-                                    .position()
-                                    .equals(player(minecraftServer, playerName).position())) {
+                                            .position()
+                                            .distanceToSqr(player(minecraftServer, playerName).position())
+                                    < 1.0D) {
                         pendingStepBack = null;
                         stepBack.accept(minecraftServer);
                     }
