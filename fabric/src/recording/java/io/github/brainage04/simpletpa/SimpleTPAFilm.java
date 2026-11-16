@@ -108,6 +108,11 @@ public final class SimpleTPAFilm {
                     "simpletpa.happyghast",
                     "Flying happy ghast",
                     "The happy ghast " + FRIEND_NAME + " rides holds you, so you arrive on top of it");
+    private static final Caption LONG_DROP =
+            new Caption(
+                    "simpletpa.longdrop",
+                    "Long drop",
+                    "A six-block drop below " + FRIEND_NAME + " would hurt, so your request waits");
     private static final Caption SHORT_DROP =
             new Caption(
                     "simpletpa.shortdrop",
@@ -173,6 +178,8 @@ public final class SimpleTPAFilm {
     private static final Vec3 STEP_POSITION = new Vec3(2.5D, STAGE_Y + 2, -4.5D);
     private static final Vec3 STEP_BLOCK = new Vec3(2.0D, STAGE_Y + 1, -5.0D);
     private static final Vec3 MAGMA_POSITION = new Vec3(2.5D, STAGE_Y, 4.5D);
+    /** A target in the air six blocks up: a drop that hurts, but a short one. */
+    private static final Vec3 LOW_AIR_POSITION = new Vec3(2.5D, STAGE_Y + 6, 0.5D);
     /** A powder snow block the target stands in: a dangerous block that hurts nobody at once. */
     private static final Vec3 SNOW_POSITION = new Vec3(2.5D, STAGE_Y, -12.5D);
     /**
@@ -610,6 +617,19 @@ public final class SimpleTPAFilm {
         context.waitTicks(25);
         assertOnGhast(context, server, friend);
         context.waitTicks(20);
+
+        endStage(context);
+        reset(context, server, playerName);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    SimpleTPAFakePlayerScenario.place(
+                            friend(minecraftServer), LOW_AIR_POSITION, WEST, 0.0F);
+                    look(player, PLAYER_POSITION, LOW_AIR_POSITION);
+                });
+        startStage(context, LONG_DROP);
+        typeCommand(context, "tpa " + FRIEND_NAME);
+        context.waitTicks(30);
 
         endStage(context);
         reset(context, server, playerName);
