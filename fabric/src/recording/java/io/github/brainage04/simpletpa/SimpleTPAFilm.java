@@ -29,6 +29,7 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -769,13 +770,20 @@ public final class SimpleTPAFilm {
         context.waitTicks(6);
     }
 
-    /** Runs {@code command} as {@code player}, without printing its answer in the chat. */
+    /**
+     * Runs {@code command} as the server, without printing its answer in the chat. A gamerule
+     * command needs permissions a survival player does not have, so the source is the server's.
+     */
     private static void command(ServerPlayer player, String command) {
-        player.level()
-                .getServer()
-                .getCommands()
+        MinecraftServer server = player.level().getServer();
+        server.getCommands()
                 .performPrefixedCommand(
-                        player.createCommandSourceStack().withSuppressedOutput(), command);
+                        server.createCommandSourceStack()
+                                .withLevel(player.level())
+                                .withPosition(player.position())
+                                .withPermission(PermissionSet.ALL_PERMISSIONS)
+                                .withSuppressedOutput(),
+                        command);
     }
 
     /**
