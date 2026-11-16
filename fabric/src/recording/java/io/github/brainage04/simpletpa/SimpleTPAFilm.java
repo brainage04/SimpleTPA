@@ -203,7 +203,10 @@ public final class SimpleTPAFilm {
         ServerTickEvents.END_SERVER_TICK.register(
                 minecraftServer -> {
                     Consumer<MinecraftServer> stepBack = pendingStepBack;
-                    if (stepBack != null) {
+                    if (stepBack != null
+                            && friend(minecraftServer)
+                                    .position()
+                                    .equals(player(minecraftServer, playerName).position())) {
                         pendingStepBack = null;
                         stepBack.accept(minecraftServer);
                     }
