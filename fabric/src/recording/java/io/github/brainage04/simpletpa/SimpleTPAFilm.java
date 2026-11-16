@@ -294,15 +294,9 @@ public final class SimpleTPAFilm {
                                 friend(minecraftServer), "tpa " + playerName));
         context.waitTicks(25);
         clickChatButton(context, server, "tpaccept");
-        // The server answers the click on a later tick. The friend steps clear in the tick the
-        // arrival lands, so no frame shows the camera inside their head.
-        waitForArrival(context, server, playerName);
-        server.runOnServer(
-                minecraftServer -> {
-                    afterClickedAccept.accept(
-                            friend(minecraftServer), player(minecraftServer, playerName));
-                    stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer));
-                });
+        // The server answers the click on a later tick. The step back runs in the same server task
+        // that sees the arrival, so the client never renders a frame from inside the friend's head.
+        stepBackOnArrival(context, server, playerName, afterClickedAccept);
         context.waitTicks(15);
         closeChat(context);
         context.waitTicks(30);
@@ -316,18 +310,28 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Waits until the client's player stands on the friend, which is where an accepted request puts
-     * them, so the next server call runs in the tick the arrival lands.
+     * Steps the player back in the server task that first sees them standing on the friend, which
+     * is where an accepted request puts them. The check and the step share one task, so the client
+     * never renders a frame from inside the friend's head.
      */
-    private static void waitForArrival(
-            ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+    private static void stepBackOnArrival(
+            ClientGameTestContext context,
+            TestDedicatedServerContext server,
+            String playerName,
+            BiConsumer<ServerPlayer, ServerPlayer> afterClickedAccept) {
         for (int tick = 0; tick < 40; tick++) {
             boolean landed =
                     server.computeOnServer(
-                            minecraftServer ->
-                                    friend(minecraftServer)
-                                            .position()
-                                            .equals(player(minecraftServer, playerName).position()));
+                            minecraftServer -> {
+                                ServerPlayer player = player(minecraftServer, playerName);
+                                ServerPlayer target = friend(minecraftServer);
+                                if (!target.position().equals(player.position())) {
+                                    return false;
+                                }
+                                afterClickedAccept.accept(target, player);
+                                stepBackFrom(player, target);
+                                return true;
+                            });
             if (landed) {
                 return;
             }
