@@ -322,6 +322,26 @@ public final class SimpleTPAFilm {
     /** The step back to run at the end of the server tick that handles the click, if any. */
     private static Consumer<MinecraftServer> pendingStepBack;
 
+    /**
+     * Waits until the server has the client's player falling far enough to hurt, so the request is
+     * sent with a real fall behind it. The server learns a client player's fall from their movement
+     * packets, so the fall is read there rather than assumed from the tick count.
+     */
+    private static void waitForFall(
+            ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+        for (int tick = 0; tick < 40; tick++) {
+            double fallen =
+                    server.computeOnServer(
+                            minecraftServer ->
+                                    (double) player(minecraftServer, playerName).fallDistance);
+            if (fallen > 6.0D) {
+                return;
+            }
+            context.waitTicks(1);
+        }
+        throw new AssertionError("The player never fell far enough to carry a hurtful fall.");
+    }
+
     /** Closes the chat screen, so the next stage starts on the world. */
     private static void closeChat(ClientGameTestContext context) {
         if (context.computeOnClient(client -> client.gui.screen() instanceof ChatScreen)) {
@@ -690,7 +710,7 @@ public final class SimpleTPAFilm {
                                 player(minecraftServer, playerName),
                                 FALLING_POSITION,
                                 FRIEND_POSITION));
-        context.waitTicks(16);
+        waitForFall(context, server, playerName);
         context.getInput().pressKey(InputConstants.KEY_RETURN);
         context.waitTicks(8);
 
@@ -710,7 +730,7 @@ public final class SimpleTPAFilm {
                                 player(minecraftServer, playerName),
                                 FALLING_POSITION,
                                 FRIEND_POSITION));
-        context.waitTicks(16);
+        waitForFall(context, server, playerName);
         context.getInput().pressKey(InputConstants.KEY_RETURN);
         context.waitTicks(30);
     }
