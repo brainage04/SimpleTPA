@@ -925,9 +925,9 @@ public final class SimpleTPAGameTests {
     }
 
     /**
-     * A confirmation for a long drop does not carry over to another refusal. Each requester makes
-     * a real first request over a long drop, which records the confirmation; the pending request
-     * is then dropped as an expiry would drop it, so the repeat reaches the refusal instead of the
+     * A confirmation for a long drop does not carry over to another refusal. Each requester makes a
+     * real first request over a long drop, which records the confirmation; the pending request is
+     * then dropped as an expiry would drop it, so the repeat reaches the refusal instead of the
      * duplicate check. The target moves into lava, over the void, inside a block, into flight or
      * into a glide, and the repeat is refused with that reason.
      */
@@ -944,8 +944,7 @@ public final class SimpleTPAGameTests {
                     floorBelow(helper, 1);
                     for (ServerPlayer[] players : pairs) {
                         players[1].setPos(
-                                Vec3.atBottomCenterOf(
-                                        helper.absolutePos(new BlockPos(1, 6, 1))));
+                                Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 6, 1))));
                         InstantTpaWhitelist.add(players[1], players[0]);
                         command(players[0], "tpa " + players[1].getScoreboardName());
                     }
