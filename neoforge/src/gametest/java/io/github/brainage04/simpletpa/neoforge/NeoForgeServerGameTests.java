@@ -72,6 +72,10 @@ public final class NeoForgeServerGameTests {
                 event,
                 "long_drop_deny_cancels_the_confirmation",
                 SimpleTPAGameTests::longDropDenyCancelsTheConfirmation);
+        register(
+                event,
+                "long_drop_accept_cancels_the_confirmation",
+                SimpleTPAGameTests::longDropAcceptCancelsTheConfirmation);
         register(event, "accepts_short_drop", SimpleTPAGameTests::acceptsShortDrop);
         register(
                 event,

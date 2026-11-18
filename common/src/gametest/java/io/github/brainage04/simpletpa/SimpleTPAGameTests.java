@@ -929,7 +929,8 @@ public final class SimpleTPAGameTests {
      * real first request over a long drop, which records the confirmation; the pending request is
      * then dropped as an expiry would drop it, so the repeat reaches the refusal instead of the
      * duplicate check. The target moves into lava, over the void, inside a block, into flight or
-     * into a glide, and the repeat is refused with that reason.
+     * into a glide, and the repeat is refused with that reason. The target then returns to the long
+     * drop: the third request must warn again, which is what the cancel on the other refusal buys.
      */
     public static void longDropConfirmationDoesNotCoverOtherRefusals(GameTestHelper helper) {
         List<Blocked> others =
@@ -996,6 +997,35 @@ public final class SimpleTPAGameTests {
                             fail(helper, "not told \"" + expected + "\", got " + texts(from));
                             return;
                         }
+                        // Back over the long drop: the confirmation from the first request must be
+                        // gone, or this third request teleports without a warning. The refused
+                        // repeat left a pending request, which is dropped as an expiry would, and
+                        // the target's flight or glide is cleared so the drop is what refuses.
+                        TPRequestCommand.TP_REQUESTS.removeIf(
+                                pending -> pending.matches(to.getUUID(), from.getUUID()));
+                        to.stopFallFlying();
+                        to.getAbilities().flying = false;
+                        to.onUpdateAbilities();
+                        to.setPos(Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 6, 1))));
+                        fixture(from).clearMessages();
+                        command(from, "tpa " + to.getScoreboardName());
+                    }
+                });
+        at(
+                helper,
+                4,
+                () -> {
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer from = pairs.get(index)[0];
+                        ServerPlayer to = pairs.get(index)[1];
+                        if (!from.position().equals(starts.get(index))) {
+                            fail(helper, "the confirmation carried over to a later long drop");
+                            return;
+                        }
+                        if (!receivedAll(from, longDropWarning(to))) {
+                            fail(helper, "the later long drop did not warn, got " + texts(from));
+                            return;
+                        }
                     }
                     succeed(helper);
                 });
@@ -1048,6 +1078,78 @@ public final class SimpleTPAGameTests {
                                             helper,
                                             "a repeat after a denial did not warn, got "
                                                     + texts(from));
+                                    return;
+                                }
+                                succeed(helper);
+                            });
+                });
+    }
+
+    /**
+     * An accepted request is not the one the requester was told to run again either: after the
+     * target lands and accepts, a later request over a long drop warns afresh.
+     */
+    public static void longDropAcceptCancelsTheConfirmation(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    ServerPlayer to = players[1];
+                    Vec3 start = from.position();
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                floorBelow(helper, 1);
+                                to.setPos(
+                                        Vec3.atBottomCenterOf(
+                                                helper.absolutePos(new BlockPos(1, 6, 1))));
+                                InstantTpaWhitelist.add(to, from);
+                                command(from, "tpa " + to.getScoreboardName());
+                            });
+                    at(
+                            helper,
+                            2,
+                            () -> {
+                                if (!receivedAll(from, longDropWarning(to))) {
+                                    fail(helper, "the first request did not warn");
+                                    return;
+                                }
+                                // The target lands, so the accept is allowed, and the request is
+                                // answered.
+                                standOnStone(helper, to, new Vec3(10.25, 10, 10.75));
+                                command(to, "tpaccept");
+                                if (!from.position().equals(to.position())) {
+                                    fail(helper, "the accept did not teleport, got " + texts(to));
+                                    return;
+                                }
+                                from.teleportTo(
+                                        from.level(),
+                                        start.x,
+                                        start.y,
+                                        start.z,
+                                        Set.of(),
+                                        0.0F,
+                                        0.0F,
+                                        true);
+                                to.setPos(
+                                        Vec3.atBottomCenterOf(
+                                                helper.absolutePos(new BlockPos(1, 6, 1))));
+                                fixture(from).clearMessages();
+                                command(from, "tpa " + to.getScoreboardName());
+                            });
+                    at(
+                            helper,
+                            3,
+                            () -> {
+                                if (!from.position().equals(start)) {
+                                    fail(helper, "a confirmation survived an accepted request");
+                                    return;
+                                }
+                                if (!receivedAll(from, longDropWarning(to))) {
+                                    fail(
+                                            helper,
+                                            "a later long drop did not warn, got " + texts(from));
                                     return;
                                 }
                                 succeed(helper);

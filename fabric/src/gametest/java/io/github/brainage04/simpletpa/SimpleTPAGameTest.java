@@ -105,6 +105,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void longDropAcceptCancelsTheConfirmation(GameTestHelper helper) {
+        SimpleTPAGameTests.longDropAcceptCancelsTheConfirmation(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void acceptsShortDrop(GameTestHelper helper) {
         SimpleTPAGameTests.acceptsShortDrop(helper);
     }
