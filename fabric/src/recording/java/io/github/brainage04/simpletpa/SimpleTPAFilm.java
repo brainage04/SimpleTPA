@@ -145,7 +145,7 @@ public final class SimpleTPAFilm {
             new Caption(
                     "simpletpa.resetfalloff",
                     "Fall kept",
-                    "With reset_fall off, the fall you carry stops the request");
+                    "With reset_fall off, the fall you carry makes the drop hurt");
     private static final Caption RESET_FALL_ON =
             new Caption(
                     "simpletpa.resetfallon",
@@ -192,6 +192,11 @@ public final class SimpleTPAFilm {
     private static final Vec3 MAGMA_POSITION = new Vec3(2.5D, STAGE_Y, 4.5D);
     /** A target in the air six blocks up: a drop that hurts, but a short one. */
     private static final Vec3 LOW_AIR_POSITION = new Vec3(2.5D, STAGE_Y + 6, 0.5D);
+    /**
+     * A target in the air over a shaft cut through the stage floor to the bottom of the world, so
+     * the arrival spot has nothing under it at all: the one refusal that is not a drop.
+     */
+    private static final Vec3 VOID_POSITION = new Vec3(2.5D, 78.0D, -16.5D);
     /** A powder snow block the target stands in: a dangerous block that hurts nobody at once. */
     private static final Vec3 SNOW_POSITION = new Vec3(2.5D, STAGE_Y, -12.5D);
     /**
@@ -581,8 +586,9 @@ public final class SimpleTPAFilm {
                     ServerPlayer player = player(minecraftServer, playerName);
                     // The friend approves the client's requests, so each one is answered at once.
                     InstantTpaWhitelist.add(friend(minecraftServer), player);
-                    placeTarget(friend(minecraftServer), HIGH_POSITION, WEST, 0.0F);
-                    look(player, LOOKOUT_POSITION, HIGH_POSITION);
+                    voidShaft(player.level(), true);
+                    placeTarget(friend(minecraftServer), VOID_POSITION, WEST, 0.0F);
+                    look(player, LOOKOUT_POSITION, VOID_POSITION);
                 });
         startStage(context, NOTHING_TO_LAND_ON);
         typeCommand(context, "tpa " + FRIEND_NAME);
@@ -874,6 +880,7 @@ public final class SimpleTPAFilm {
                     target.setInvisible(false);
                     target.setNoGravity(false);
                     magmaBlock(target.level(), false);
+                    voidShaft(target.level(), false);
                     target.getAbilities().flying = false;
                     target.onUpdateAbilities();
                     filmGhast(minecraftServer, target)
@@ -1150,6 +1157,22 @@ public final class SimpleTPAFilm {
                 BlockPos.containing(MAGMA_POSITION).below(),
                 present ? Blocks.MAGMA_BLOCK.defaultBlockState() : Blocks.AIR.defaultBlockState(),
                 3);
+    }
+
+    /**
+     * Cuts a one-block shaft from the stage floor to the bottom of the world under the void stage's
+     * target, and fills it back in after, so no other stage's shot shows a hole.
+     */
+    private static void voidShaft(ServerLevel level, boolean open) {
+        BlockPos column = BlockPos.containing(VOID_POSITION);
+        for (int y = level.getMinY(); y < STAGE_Y; y++) {
+            level.setBlock(
+                    new BlockPos(column.getX(), y, column.getZ()),
+                    open
+                            ? Blocks.AIR.defaultBlockState()
+                            : Blocks.POLISHED_DEEPSLATE.defaultBlockState(),
+                    3);
+        }
     }
 
     private static void spawnGhast(ServerLevel level) {
