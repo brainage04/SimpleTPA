@@ -671,6 +671,8 @@ public final class SimpleTPAFilm {
         // The repeat goes through. The arrival lands inside the friend's head, so the friend is
         // hidden and the step back runs in the same server block as the command: both teleports go
         // out in one flush, as the creative stage does, and no frame is drawn from inside the head.
+        // The overlay's typed line is cleared first, so it shows the repeat rather than both runs.
+        context.runOnClient(client -> InputOverlay.clear());
         typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
         server.runOnServer(
                 minecraftServer -> {
