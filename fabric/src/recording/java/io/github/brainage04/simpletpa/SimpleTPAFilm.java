@@ -304,7 +304,7 @@ public final class SimpleTPAFilm {
                     SimpleTPAFakePlayerScenario.executeCommand(friend(minecraftServer), "tpaccept");
                     // The same tick as the arrival: a later one leaves the camera inside the
                     // friend's head for the frames in between.
-                    stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer));
+                    stepAside(player(minecraftServer, playerName), friend(minecraftServer));
                 });
         context.waitTicks(16);
     }
@@ -345,7 +345,7 @@ public final class SimpleTPAFilm {
                     ServerPlayer player = player(minecraftServer, playerName);
                     ServerPlayer target = friend(minecraftServer);
                     afterClickedAccept.accept(target, player);
-                    stepBackFrom(player, target);
+                    stepAside(player, target);
                 };
         clickChatButton(context, server, "tpaccept");
         context.waitTicks(2);
@@ -940,6 +940,25 @@ public final class SimpleTPAFilm {
                 player,
                 friend.position().add(facing.scale(4.0D)),
                 friend.position().add(0.0D, 1.4D, 0.0D));
+    }
+
+    /**
+     * Moves the friend four blocks along their own facing, away from the player who has just
+     * arrived on them, and turns the player to follow. The player stays where the arrival put
+     * them: a player's own teleport is applied by the client at once and reads as a jump, while
+     * another player's move is interpolated over three ticks, so the friend slides out of the
+     * shot's centre instead.
+     */
+    private static void stepAside(ServerPlayer player, ServerPlayer friend) {
+        friend.setInvisible(false);
+        Vec3 facing =
+                new Vec3(
+                        -Math.sin(Math.toRadians(friend.getYRot())),
+                        0.0D,
+                        Math.cos(Math.toRadians(friend.getYRot())));
+        Vec3 away = friend.position().add(facing.scale(4.0D));
+        SimpleTPAFakePlayerScenario.place(friend, away, friend.getYRot(), friend.getXRot());
+        look(player, player.position(), away.add(0.0D, 1.4D, 0.0D));
     }
 
     /** Places {@code player} at {@code position} looking at {@code target}. */
