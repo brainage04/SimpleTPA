@@ -694,23 +694,19 @@ public final class SimpleTPAFilm {
                 });
         startStage(context, CREATIVE);
         typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
-        // The arrival lands inside the friend's head. A step back from the end-of-tick event goes
-        // out in a later flush than the arrival, so the client draws the arrival first. Hiding the
-        // friend and stepping back in the same server block as the request puts both teleports in
-        // one flush, as the accept stage does, so no frame is drawn from inside the friend's head.
-        server.runOnServer(
+        // The arrival lands inside the friend's head, and the step back reaches the client a tick
+        // after the arrival, so the friend is out of sight for the frame the arrival is drawn in,
+        // as in the accept stage. The hide goes in after the command is typed, so the stage keeps
+        // the friend on the magma block until the request is sent.
+        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
+        // The step back runs in the tick the arrival lands, so the friend is back in shot on the
+        // next frame.
+        pendingStepBack =
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
-                    ServerPlayer target = friend(minecraftServer);
-                    target.setInvisible(true);
-                    player.level()
-                            .getServer()
-                            .getCommands()
-                            .performPrefixedCommand(
-                                    player.createCommandSourceStack(), "tpa " + FRIEND_NAME);
-                    stepBackFrom(player, target);
-                });
-        closeChat(context);
+                    stepBackFrom(player, friend(minecraftServer));
+                };
+        context.getInput().pressKey(InputConstants.KEY_RETURN);
         context.waitTicks(16);
 
         endStage(context);
