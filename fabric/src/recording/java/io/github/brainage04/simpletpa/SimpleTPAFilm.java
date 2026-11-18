@@ -180,9 +180,12 @@ public final class SimpleTPAFilm {
      * look east, so no stage's shot can reach it.
      */
     private static final Vec3 GHAST_PARKED = new Vec3(-30.0D, 100.0D, 0.5D);
-    /** The step the sneaking target stands on, off the line between the camera and the friend. */
-    private static final Vec3 STEP_POSITION = new Vec3(2.5D, STAGE_Y + 2, -4.5D);
-    private static final Vec3 STEP_BLOCK = new Vec3(2.0D, STAGE_Y + 1, -5.0D);
+    /**
+     * Where the short drop's target hovers: two blocks above the stage floor, over open air, so
+     * the arrival spot has a real two-block drop under it. The target is invisible and held
+     * without gravity, so the drop stays under the arrival for the whole stage.
+     */
+    private static final Vec3 SHORT_DROP_POSITION = new Vec3(2.5D, STAGE_Y + 2, -4.5D);
     private static final Vec3 MAGMA_POSITION = new Vec3(2.5D, STAGE_Y, 4.5D);
     /** A target in the air six blocks up: a drop that hurts, but a short one. */
     private static final Vec3 LOW_AIR_POSITION = new Vec3(2.5D, STAGE_Y + 6, 0.5D);
@@ -652,11 +655,13 @@ public final class SimpleTPAFilm {
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
                     ServerPlayer target = friend(minecraftServer);
-                    stepBlock(player.level(), true);
-                    target.setShiftKeyDown(true);
-                    SimpleTPAFakePlayerScenario.place(target, STEP_POSITION, WEST, 20.0F);
+                    // The target hovers two blocks up over open air, so the arrival spot has a
+                    // real two-block drop under it. Without gravity the target stays there for
+                    // the whole stage, and being invisible it does not read as flying.
+                    target.setNoGravity(true);
+                    SimpleTPAFakePlayerScenario.place(target, SHORT_DROP_POSITION, WEST, 20.0F);
                     target.setInvisible(true);
-                    look(player, PLAYER_POSITION, STEP_POSITION);
+                    look(player, PLAYER_POSITION, SHORT_DROP_POSITION);
                 });
         startStage(context, SHORT_DROP);
         typeCommand(context, "tpa " + FRIEND_NAME);
@@ -818,7 +823,7 @@ public final class SimpleTPAFilm {
                     target.stopRiding();
                     target.setShiftKeyDown(false);
                     target.setInvisible(false);
-                    stepBlock(target.level(), false);
+                    target.setNoGravity(false);
                     magmaBlock(target.level(), false);
                     target.getAbilities().flying = false;
                     target.onUpdateAbilities();
@@ -1058,14 +1063,6 @@ public final class SimpleTPAFilm {
                         new BlockPos(x, STAGE_Y - 1, z), Blocks.WATER.defaultBlockState(), 3);
             }
         }
-    }
-
-    /** Puts the stone step in place for the short drop stage, and takes it away after. */
-    private static void stepBlock(ServerLevel level, boolean present) {
-        level.setBlock(
-                BlockPos.containing(STEP_BLOCK),
-                present ? Blocks.STONE.defaultBlockState() : Blocks.AIR.defaultBlockState(),
-                3);
     }
 
     /** Puts the magma block in place for the two stages that stand a target on it. */
