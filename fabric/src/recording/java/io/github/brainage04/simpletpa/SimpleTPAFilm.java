@@ -1131,11 +1131,11 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Places the friend somewhere other than their mark, and takes the mark away: the gold block
-     * only belongs under the friend in the stages that stand them on it.
+     * Places the friend, and keeps the gold block only when they stand on their own mark: the
+     * block marks where the friend is, so it does not belong under a stage that moves them.
      */
     private static void placeTarget(ServerPlayer target, Vec3 position, float yaw, float pitch) {
-        friendMark(target.level(), false);
+        friendMark(target.level(), position.equals(FRIEND_POSITION));
         SimpleTPAFakePlayerScenario.place(target, position, yaw, pitch);
     }
 
