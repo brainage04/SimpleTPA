@@ -655,7 +655,12 @@ public final class SimpleTPAFilm {
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
-                    placeTarget(friend(minecraftServer), LOW_AIR_POSITION, WEST, 0.0F);
+                    ServerPlayer target = friend(minecraftServer);
+                    // Without gravity the target stays six blocks up while the warning is read, so
+                    // the repeat is still answered over the drop rather than over the floor they
+                    // would have fallen to.
+                    target.setNoGravity(true);
+                    placeTarget(target, LOW_AIR_POSITION, WEST, 0.0F);
                     look(player, PLAYER_POSITION, LOW_AIR_POSITION);
                 });
         startStage(context, LONG_DROP);
