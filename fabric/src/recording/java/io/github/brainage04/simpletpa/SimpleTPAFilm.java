@@ -8,6 +8,7 @@ import io.github.brainage04.minecraftmodconventions.ClientGameTestServers;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestStages;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
+import io.github.brainage04.simpletpa.data.SafetyPreference;
 import java.util.Properties;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -823,7 +824,10 @@ public final class SimpleTPAFilm {
                     player.setHealth(20.0F);
                     player.getFoodData().setFoodLevel(20);
                     player.resetFallDistance();
-                    command(player, "tpasafety on");
+                    // Set through the data, not the command: the command answers the player
+                    // directly, so a suppressed source still prints its line in the chat, and the
+                    // line would open every stage.
+                    SafetyPreference.setRefusesDangerousDrop(player, true);
                     gamerule(player, "gamerule simpletpa:landing_checks true");
                     gamerule(player, "gamerule simpletpa:reset_fall true");
                     placeActors(player, target);
