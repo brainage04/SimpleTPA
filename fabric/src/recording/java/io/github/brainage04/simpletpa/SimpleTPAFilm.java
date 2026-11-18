@@ -175,8 +175,11 @@ public final class SimpleTPAFilm {
     private static final Vec3 LOOKOUT_POSITION = new Vec3(-11.5D, STAGE_Y, 0.5D);
     private static final Vec3 HIGH_POSITION = new Vec3(2.5D, 78.0D, -5.5D);
     private static final Vec3 GHAST_POSITION = new Vec3(2.5D, 70.0D, 0.5D);
-    /** Where the ghast waits between its stage and the rest, out of every other shot. */
-    private static final Vec3 GHAST_PARKED = new Vec3(2.5D, 70.0D, -40.0D);
+    /**
+     * Where the ghast waits between its stage and the rest: west of every camera, all of which
+     * look east, so no stage's shot can reach it.
+     */
+    private static final Vec3 GHAST_PARKED = new Vec3(-30.0D, 100.0D, 0.5D);
     /** The step the sneaking target stands on, off the line between the camera and the friend. */
     private static final Vec3 STEP_POSITION = new Vec3(2.5D, STAGE_Y + 2, -4.5D);
     private static final Vec3 STEP_BLOCK = new Vec3(2.0D, STAGE_Y + 1, -5.0D);
