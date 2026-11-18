@@ -179,10 +179,11 @@ public final class SimpleTPAFilm {
     private static final Vec3 HIGH_POSITION = new Vec3(2.5D, 78.0D, -5.5D);
     private static final Vec3 GHAST_POSITION = new Vec3(2.5D, 70.0D, 0.5D);
     /**
-     * Where the ghast waits between its stage and the rest: west of every camera, all of which
-     * look east, so no stage's shot can reach it.
+     * Where the ghast waits between its stage and the rest: under the stage floor, which no camera
+     * can see through. West of the cameras was not enough: the stages that look up at a target in
+     * the air put it in the top of the frame.
      */
-    private static final Vec3 GHAST_PARKED = new Vec3(-30.0D, 100.0D, 0.5D);
+    private static final Vec3 GHAST_PARKED = new Vec3(-30.0D, 0.0D, 0.5D);
     /**
      * Where the short drop's target hovers: two blocks above the stage floor, over open air, so
      * the arrival spot has a real two-block drop under it. The target is invisible and held
