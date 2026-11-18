@@ -295,8 +295,7 @@ public final class SimpleTPAFilm {
                 minecraftServer -> {
                     // The arrival takes the target's facing, so the friend turns to the open stage
                     // and the camera does not land nose to nose with the stage's gate.
-                    SimpleTPAFakePlayerScenario.place(
-                            friend(minecraftServer), FRIEND_POSITION, EAST, 0.0F);
+                    placeTarget(friend(minecraftServer), FRIEND_POSITION, EAST, 0.0F);
                     // The camera lands inside the friend's head for the tick the arrival is
                     // rendered, before the step back reaches the client, so the friend is out of
                     // sight for that tick.
@@ -579,8 +578,7 @@ public final class SimpleTPAFilm {
                     ServerPlayer player = player(minecraftServer, playerName);
                     // The friend approves the client's requests, so each one is answered at once.
                     InstantTpaWhitelist.add(friend(minecraftServer), player);
-                    SimpleTPAFakePlayerScenario.place(
-                            friend(minecraftServer), HIGH_POSITION, WEST, 0.0F);
+                    placeTarget(friend(minecraftServer), HIGH_POSITION, WEST, 0.0F);
                     look(player, LOOKOUT_POSITION, HIGH_POSITION);
                 });
         startStage(context, NOTHING_TO_LAND_ON);
@@ -593,7 +591,7 @@ public final class SimpleTPAFilm {
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
                     ServerPlayer target = friend(minecraftServer);
-                    SimpleTPAFakePlayerScenario.place(target, HIGH_POSITION, WEST, 45.0F);
+                    placeTarget(target, HIGH_POSITION, WEST, 45.0F);
                     // Hidden before the caption, so the cut never shows the friend at the spot the
                     // last stage left them in.
                     target.setInvisible(true);
@@ -621,7 +619,7 @@ public final class SimpleTPAFilm {
                     // a target who is flying rather than one above a drop.
                     target.getAbilities().flying = true;
                     target.onUpdateAbilities();
-                    SimpleTPAFakePlayerScenario.place(target, HIGH_POSITION, WEST, 0.0F);
+                    placeTarget(target, HIGH_POSITION, WEST, 0.0F);
                     look(player, LOOKOUT_POSITION, HIGH_POSITION);
                 });
         startStage(context, FLYING_TARGET);
@@ -655,8 +653,7 @@ public final class SimpleTPAFilm {
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
-                    SimpleTPAFakePlayerScenario.place(
-                            friend(minecraftServer), LOW_AIR_POSITION, WEST, 0.0F);
+                    placeTarget(friend(minecraftServer), LOW_AIR_POSITION, WEST, 0.0F);
                     look(player, PLAYER_POSITION, LOW_AIR_POSITION);
                 });
         startStage(context, LONG_DROP);
@@ -673,7 +670,7 @@ public final class SimpleTPAFilm {
                     // real two-block drop under it. Without gravity the target stays there for
                     // the whole stage, and being invisible it does not read as flying.
                     target.setNoGravity(true);
-                    SimpleTPAFakePlayerScenario.place(target, SHORT_DROP_POSITION, WEST, 20.0F);
+                    placeTarget(target, SHORT_DROP_POSITION, WEST, 20.0F);
                     target.setInvisible(true);
                     look(player, PLAYER_POSITION, SHORT_DROP_POSITION);
                 });
@@ -692,8 +689,7 @@ public final class SimpleTPAFilm {
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
                     magmaBlock(player.level(), true);
-                    SimpleTPAFakePlayerScenario.place(
-                            friend(minecraftServer), MAGMA_POSITION, WEST, 0.0F);
+                    placeTarget(friend(minecraftServer), MAGMA_POSITION, WEST, 0.0F);
                     look(player, PLAYER_POSITION, MAGMA_POSITION);
                 });
         startStage(context, ON_MAGMA);
@@ -708,8 +704,7 @@ public final class SimpleTPAFilm {
                     // The same target on the same block as the stage before, in shot: only the
                     // requester's game mode differs, so the pair shows what the mode changes.
                     magmaBlock(player.level(), true);
-                    SimpleTPAFakePlayerScenario.place(
-                            friend(minecraftServer), MAGMA_POSITION, WEST, 0.0F);
+                    placeTarget(friend(minecraftServer), MAGMA_POSITION, WEST, 0.0F);
                     player.setGameMode(GameType.CREATIVE);
                     look(player, PLAYER_POSITION, MAGMA_POSITION);
                 });
@@ -739,8 +734,7 @@ public final class SimpleTPAFilm {
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
-                    SimpleTPAFakePlayerScenario.place(
-                            friend(minecraftServer), SNOW_POSITION, WEST, 0.0F);
+                    placeTarget(friend(minecraftServer), SNOW_POSITION, WEST, 0.0F);
                     look(player, PLAYER_POSITION, SNOW_POSITION);
                 });
         startStage(context, ON_POWDER_SNOW);
@@ -753,7 +747,7 @@ public final class SimpleTPAFilm {
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
                     ServerPlayer target = friend(minecraftServer);
-                    SimpleTPAFakePlayerScenario.place(target, SNOW_POSITION, WEST, 0.0F);
+                    placeTarget(target, SNOW_POSITION, WEST, 0.0F);
                     target.setInvisible(true);
                     setupCommand(player, "gamerule simpletpa:landing_checks false");
                     look(player, PLAYER_POSITION, SNOW_POSITION);
@@ -1081,10 +1075,6 @@ public final class SimpleTPAFilm {
                 BlockPos.containing(PLAYER_POSITION).below(),
                 Blocks.DIAMOND_BLOCK.defaultBlockState(),
                 3);
-        level.setBlock(
-                BlockPos.containing(FRIEND_POSITION).below(),
-                Blocks.GOLD_BLOCK.defaultBlockState(),
-                3);
         // The powder snow a target stands in and the pool that catches a falling requester stay
         // for the whole film: neither is in shot in a stage it does not belong to. The stone step
         // and the magma block are placed by the stages that use them, so no other stage shows
@@ -1127,7 +1117,25 @@ public final class SimpleTPAFilm {
     }
 
     private static void placeFriend(ServerPlayer friend) {
+        friendMark(friend.level(), true);
         SimpleTPAFakePlayerScenario.place(friend, FRIEND_POSITION, WEST, 0.0F);
+    }
+
+    /**
+     * Places the friend somewhere other than their mark, and takes the mark away: the gold block
+     * only belongs under the friend in the stages that stand them on it.
+     */
+    private static void placeTarget(ServerPlayer target, Vec3 position, float yaw, float pitch) {
+        friendMark(target.level(), false);
+        SimpleTPAFakePlayerScenario.place(target, position, yaw, pitch);
+    }
+
+    /** The gold block under the friend's mark, which shows where the friend stands. */
+    private static void friendMark(ServerLevel level, boolean present) {
+        level.setBlock(
+                BlockPos.containing(FRIEND_POSITION).below(),
+                present ? Blocks.GOLD_BLOCK.defaultBlockState() : Blocks.AIR.defaultBlockState(),
+                3);
     }
 
     private static ServerPlayer friend(MinecraftServer server) {
