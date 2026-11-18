@@ -23,9 +23,7 @@ public class TPSafetyCommand {
             return 1;
         }
         SimpleTPA.FEEDBACK.neutral(
-                player,
-                "Your TP requests %s while the player you teleport to is in the air above a long drop.",
-                SafetyPreference.refusesDangerousDrop(player) ? "wait" : "do not wait");
+                player, waitingMessage(SafetyPreference.refusesDangerousDrop(player)));
         return 1;
     }
 
@@ -48,19 +46,25 @@ public class TPSafetyCommand {
         return 1;
     }
 
+    private static String waitingMessage(boolean refuses) {
+        return refuses
+                ? "Your TP requests warn you while the player you teleport to is in the air above a long drop, and go through if you run the command again within "
+                        + TPRequestCommand.LONG_DROP_CONFIRM_WINDOW_TICKS / 20
+                        + " seconds."
+                : "Your TP requests go through while the player you teleport to is in the air above a long drop, so you will fall when you arrive.";
+    }
+
     private static String savedMessage(boolean landingChecksOff, boolean refuses, boolean saved) {
         if (landingChecksOff) {
             return saved
                     ? "Your choice is saved, but this server has turned landing checks off, so your TP requests do not wait."
                     : "Your choice could not be saved, and this server has turned landing checks off, so your TP requests do not wait.";
         }
-        if (refuses) {
-            return saved
-                    ? "Your TP requests wait while the player you teleport to is in the air above a long drop."
-                    : "Your TP requests wait for this session, but your choice could not be saved.";
+        if (saved) {
+            return waitingMessage(refuses);
         }
-        return saved
-                ? "Your TP requests go through while the player you teleport to is in the air above a long drop, so you will fall when you arrive."
+        return refuses
+                ? "Your TP requests warn you for this session, but your choice could not be saved."
                 : "Your TP requests go through for this session, but your choice could not be saved.";
     }
 
