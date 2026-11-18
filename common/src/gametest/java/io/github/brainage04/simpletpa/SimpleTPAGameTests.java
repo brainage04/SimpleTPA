@@ -925,27 +925,28 @@ public final class SimpleTPAGameTests {
     }
 
     /**
-     * A confirmation for a long drop does not carry over to another refusal: with one open, a
-     * request to a target in lava or over the void is still refused.
+     * A confirmation for a long drop does not carry over to another refusal. Each requester makes
+     * a real first request over a long drop, which records the confirmation; the pending request
+     * is then dropped as an expiry would drop it, so the repeat reaches the refusal instead of the
+     * duplicate check. The target moves into lava, over the void, inside a block, into flight or
+     * into a glide, and the repeat is refused with that reason.
      */
     public static void longDropConfirmationDoesNotCoverOtherRefusals(GameTestHelper helper) {
+        List<Blocked> others =
+                List.of(IN_LAVA, OVER_THE_VOID, INSIDE_A_BLOCK, FLYING_AWAY, GLIDING_AWAY);
         List<ServerPlayer[]> pairs = new ArrayList<>();
-        pair(helper, pairs::add);
-        pair(helper, pairs::add);
+        others.forEach(ignored -> pair(helper, pairs::add));
         List<Vec3> starts = pairs.stream().map(players -> players[0].position()).toList();
         at(
                 helper,
                 1,
                 () -> {
-                    IN_LAVA.apply().accept(helper, pairs.get(0)[1]);
-                    OVER_THE_VOID.apply().accept(helper, pairs.get(1)[1]);
+                    floorBelow(helper, 1);
                     for (ServerPlayer[] players : pairs) {
+                        players[1].setPos(
+                                Vec3.atBottomCenterOf(
+                                        helper.absolutePos(new BlockPos(1, 6, 1))));
                         InstantTpaWhitelist.add(players[1], players[0]);
-                        // What a first request over a long drop leaves open.
-                        TPRequestCommand.LONG_DROP_CONFIRMATION.requestOrConfirm(
-                                new TPRequestCommand.LongDropKey(
-                                        players[0].getUUID(), players[1].getUUID()),
-                                helper.getLevel().getServer().getTickCount());
                         command(players[0], "tpa " + players[1].getScoreboardName());
                     }
                 });
@@ -953,18 +954,43 @@ public final class SimpleTPAGameTests {
                 helper,
                 2,
                 () -> {
-                    String[] reasons = {"somewhere unsafe", "in the air above the void"};
+                    for (int index = 0; index < pairs.size(); index++) {
+                        ServerPlayer[] players = pairs.get(index);
+                        if (!players[0].position().equals(starts.get(index))) {
+                            fail(helper, "the first request teleported into a long drop");
+                            return;
+                        }
+                        if (!receivedAll(players[0], longDropWarning(players[1]))) {
+                            fail(
+                                    helper,
+                                    "the first request did not warn, got " + texts(players[0]));
+                            return;
+                        }
+                        TPRequestCommand.TP_REQUESTS.removeIf(
+                                pending ->
+                                        pending.matches(
+                                                players[1].getUUID(), players[0].getUUID()));
+                        others.get(index).apply().accept(helper, players[1]);
+                        fixture(players[0]).clearMessages();
+                        command(players[0], "tpa " + players[1].getScoreboardName());
+                    }
+                });
+        at(
+                helper,
+                3,
+                () -> {
                     for (int index = 0; index < pairs.size(); index++) {
                         ServerPlayer from = pairs.get(index)[0];
                         ServerPlayer to = pairs.get(index)[1];
+                        String reason = others.get(index).reason();
                         String expected =
                                 "[SimpleTPA] "
                                         + to.getScoreboardName()
                                         + " is "
-                                        + reasons[index]
+                                        + reason
                                         + ", so your TP request was not accepted automatically.";
                         if (!from.position().equals(starts.get(index))) {
-                            fail(helper, "a confirmation teleported while " + reasons[index]);
+                            fail(helper, "a confirmation teleported while " + reason);
                             return;
                         }
                         if (!received(from, expected)) {
@@ -973,6 +999,60 @@ public final class SimpleTPAGameTests {
                         }
                     }
                     succeed(helper);
+                });
+    }
+
+    /**
+     * A denied request is not the one the requester was told to run again: the repeat after a
+     * denial warns afresh and does not teleport.
+     */
+    public static void longDropDenyCancelsTheConfirmation(GameTestHelper helper) {
+        pair(
+                helper,
+                players -> {
+                    ServerPlayer from = players[0];
+                    ServerPlayer to = players[1];
+                    Vec3 start = from.position();
+                    at(
+                            helper,
+                            1,
+                            () -> {
+                                floorBelow(helper, 1);
+                                to.setPos(
+                                        Vec3.atBottomCenterOf(
+                                                helper.absolutePos(new BlockPos(1, 6, 1))));
+                                InstantTpaWhitelist.add(to, from);
+                                command(from, "tpa " + to.getScoreboardName());
+                            });
+                    at(
+                            helper,
+                            2,
+                            () -> {
+                                if (!receivedAll(from, longDropWarning(to))) {
+                                    fail(helper, "the first request did not warn");
+                                    return;
+                                }
+                                command(to, "tpdeny");
+                                fixture(from).clearMessages();
+                                command(from, "tpa " + to.getScoreboardName());
+                            });
+                    at(
+                            helper,
+                            3,
+                            () -> {
+                                if (!from.position().equals(start)) {
+                                    fail(helper, "a repeat after a denial teleported");
+                                    return;
+                                }
+                                if (!receivedAll(from, longDropWarning(to))) {
+                                    fail(
+                                            helper,
+                                            "a repeat after a denial did not warn, got "
+                                                    + texts(from));
+                                    return;
+                                }
+                                succeed(helper);
+                            });
                 });
     }
 

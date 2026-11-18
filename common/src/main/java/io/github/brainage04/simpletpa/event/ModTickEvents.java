@@ -39,5 +39,6 @@ public class ModTickEvents {
 
                     return true;
                 });
+        TPRequestCommand.LONG_DROP_CONFIRMATION.expire(server.getTickCount(), key -> {});
     }
 }

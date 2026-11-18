@@ -121,6 +121,12 @@ public final class TPResponseCommand {
                 return -1;
             }
         }
+        if (response == Response.DENY) {
+            // A denied request is not the one the requester was told to run again, so the repeat
+            // must warn afresh rather than teleport.
+            TPRequestCommand.LONG_DROP_CONFIRMATION.cancel(
+                    new TPRequestCommand.LongDropKey(request.fromId(), request.toId()));
+        }
         tell(to, response, "You %s %s's TP request.", response.pastTense, from.getScoreboardName());
         tell(from, response, "%s %s your TP request.", to.getScoreboardName(), response.pastTense);
         SimpleTPA.FEEDBACK.click(from);

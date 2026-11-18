@@ -100,6 +100,11 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void longDropDenyCancelsTheConfirmation(GameTestHelper helper) {
+        SimpleTPAGameTests.longDropDenyCancelsTheConfirmation(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void acceptsShortDrop(GameTestHelper helper) {
         SimpleTPAGameTests.acceptsShortDrop(helper);
     }

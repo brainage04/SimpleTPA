@@ -286,7 +286,6 @@ public class TPRequestCommand {
         return true;
     }
 
-    /** The requester and the target of a request whose long drop the requester confirmed. */
     public record LongDropKey(UUID fromId, UUID toId) {}
 
     public record TPRequest(UUID toId, String toName, UUID fromId, String fromName, long created) {
