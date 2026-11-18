@@ -652,6 +652,7 @@ public final class SimpleTPAFilm {
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
                     ServerPlayer target = friend(minecraftServer);
+                    stepBlock(player.level(), true);
                     target.setShiftKeyDown(true);
                     SimpleTPAFakePlayerScenario.place(target, STEP_POSITION, WEST, 20.0F);
                     target.setInvisible(true);
@@ -671,6 +672,7 @@ public final class SimpleTPAFilm {
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
+                    magmaBlock(player.level(), true);
                     SimpleTPAFakePlayerScenario.place(
                             friend(minecraftServer), MAGMA_POSITION, WEST, 0.0F);
                     look(player, PLAYER_POSITION, MAGMA_POSITION);
@@ -686,6 +688,7 @@ public final class SimpleTPAFilm {
                     ServerPlayer player = player(minecraftServer, playerName);
                     // The same target on the same block as the stage before, in shot: only the
                     // requester's game mode differs, so the pair shows what the mode changes.
+                    magmaBlock(player.level(), true);
                     SimpleTPAFakePlayerScenario.place(
                             friend(minecraftServer), MAGMA_POSITION, WEST, 0.0F);
                     player.setGameMode(GameType.CREATIVE);
@@ -815,6 +818,8 @@ public final class SimpleTPAFilm {
                     target.stopRiding();
                     target.setShiftKeyDown(false);
                     target.setInvisible(false);
+                    stepBlock(target.level(), false);
+                    magmaBlock(target.level(), false);
                     target.getAbilities().flying = false;
                     target.onUpdateAbilities();
                     filmGhast(minecraftServer, target)
@@ -1039,14 +1044,10 @@ public final class SimpleTPAFilm {
                 BlockPos.containing(FRIEND_POSITION).below(),
                 Blocks.GOLD_BLOCK.defaultBlockState(),
                 3);
-        // The step the sneaking target stands on, two blocks above the stage floor, the magma
-        // block a survival requester is refused on, the powder snow a target stands in, and the
-        // pool that catches a falling requester.
-        level.setBlock(BlockPos.containing(STEP_BLOCK), Blocks.STONE.defaultBlockState(), 3);
-        level.setBlock(
-                BlockPos.containing(MAGMA_POSITION).below(),
-                Blocks.MAGMA_BLOCK.defaultBlockState(),
-                3);
+        // The powder snow a target stands in and the pool that catches a falling requester stay
+        // for the whole film: neither is in shot in a stage it does not belong to. The stone step
+        // and the magma block are placed by the stages that use them, so no other stage shows
+        // them.
         level.setBlock(
                 BlockPos.containing(SNOW_POSITION).below(),
                 Blocks.POWDER_SNOW.defaultBlockState(),
@@ -1057,6 +1058,22 @@ public final class SimpleTPAFilm {
                         new BlockPos(x, STAGE_Y - 1, z), Blocks.WATER.defaultBlockState(), 3);
             }
         }
+    }
+
+    /** Puts the stone step in place for the short drop stage, and takes it away after. */
+    private static void stepBlock(ServerLevel level, boolean present) {
+        level.setBlock(
+                BlockPos.containing(STEP_BLOCK),
+                present ? Blocks.STONE.defaultBlockState() : Blocks.AIR.defaultBlockState(),
+                3);
+    }
+
+    /** Puts the magma block in place for the two stages that stand a target on it. */
+    private static void magmaBlock(ServerLevel level, boolean present) {
+        level.setBlock(
+                BlockPos.containing(MAGMA_POSITION).below(),
+                present ? Blocks.MAGMA_BLOCK.defaultBlockState() : Blocks.AIR.defaultBlockState(),
+                3);
     }
 
     private static void spawnGhast(ServerLevel level) {
