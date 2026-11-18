@@ -6,6 +6,7 @@ import io.github.brainage04.brainagelib.gametest.GameTestPlayer;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestRecorder;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestServers;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestStages;
+import io.github.brainage04.minecraftmodconventions.InputOverlay;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
 import io.github.brainage04.simpletpa.data.SafetyPreference;
@@ -684,7 +685,19 @@ public final class SimpleTPAFilm {
                     stepBackFrom(player, target);
                 });
         closeChat(context);
-        context.waitTicks(30);
+        // The arrival is six blocks up, so the player falls to the floor. The camera is turned back
+        // up to the friend once the fall has landed, so the stage ends on them rather than on the
+        // floor; the turn waits for the landing because a teleport mid-fall would stop the fall.
+        context.waitTicks(20);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    look(
+                            player,
+                            player.position(),
+                            friend(minecraftServer).position().add(0.0D, 1.4D, 0.0D));
+                });
+        context.waitTicks(10);
 
         endStage(context);
         reset(context, server, playerName);
@@ -876,8 +889,13 @@ public final class SimpleTPAFilm {
                     placeActors(player, target);
                 });
         // The chat is cleared between stages: a button from an earlier stage would otherwise sit
-        // beside this stage's, and a click would land between the two.
-        context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
+        // beside this stage's, and a click would land between the two. The input overlay's typed
+        // line is cleared with it, so a stage does not open with the last stage's command in it.
+        context.runOnClient(
+                client -> {
+                    client.gui.hud.getChat().clearMessages(false);
+                    InputOverlay.clear();
+                });
         context.waitTicks(6);
     }
 
