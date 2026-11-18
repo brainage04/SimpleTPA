@@ -305,7 +305,8 @@ public final class SimpleTPAFilm {
                     // friend's head for the frames in between.
                     stepAside(player(minecraftServer, playerName), friend(minecraftServer));
                 });
-        context.waitTicks(16);
+        showFriendAfterSlide(context, server);
+        context.waitTicks(13);
     }
 
     private static void showClickedDeny(
@@ -348,7 +349,8 @@ public final class SimpleTPAFilm {
                 };
         clickChatButton(context, server, "tpaccept");
         context.waitTicks(2);
-        context.waitTicks(16);
+        showFriendAfterSlide(context, server);
+        context.waitTicks(13);
         closeChat(context);
         context.waitTicks(16);
     }
@@ -941,10 +943,10 @@ public final class SimpleTPAFilm {
      * arrived on them, and turns the player to follow. The player stays where the arrival put
      * them: a player's own teleport is applied by the client at once and reads as a jump, while
      * another player's move is interpolated over three ticks, so the friend slides out of the
-     * shot's centre instead.
+     * shot instead. The friend stays hidden until the slide has played out, so no frame shows
+     * them at the camera.
      */
     private static void stepAside(ServerPlayer player, ServerPlayer friend) {
-        friend.setInvisible(false);
         Vec3 facing =
                 new Vec3(
                         -Math.sin(Math.toRadians(friend.getYRot())),
@@ -953,6 +955,13 @@ public final class SimpleTPAFilm {
         Vec3 away = friend.position().add(facing.scale(4.0D));
         SimpleTPAFakePlayerScenario.place(friend, away, friend.getYRot(), friend.getXRot());
         look(player, player.position(), away.add(0.0D, 1.4D, 0.0D));
+    }
+
+    /** Shows the friend again once their slide has played out, three ticks after the arrival. */
+    private static void showFriendAfterSlide(
+            ClientGameTestContext context, TestDedicatedServerContext server) {
+        context.waitTicks(3);
+        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(false));
     }
 
     /** Places {@code player} at {@code position} looking at {@code target}. */
