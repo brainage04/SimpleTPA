@@ -1151,11 +1151,16 @@ public final class SimpleTPAFilm {
         }
     }
 
-    /** Puts the magma block in place for the two stages that stand a target on it. */
+    /**
+     * Puts the magma block in place for the two stages that stand a target on it, and puts the
+     * stage floor back after, so no later stage's shot shows a hole.
+     */
     private static void magmaBlock(ServerLevel level, boolean present) {
         level.setBlock(
                 BlockPos.containing(MAGMA_POSITION).below(),
-                present ? Blocks.MAGMA_BLOCK.defaultBlockState() : Blocks.AIR.defaultBlockState(),
+                present
+                        ? Blocks.MAGMA_BLOCK.defaultBlockState()
+                        : Blocks.POLISHED_DEEPSLATE.defaultBlockState(),
                 3);
     }
 
