@@ -8,6 +8,7 @@ import io.github.brainage04.minecraftmodconventions.ClientGameTestServers;
 import io.github.brainage04.minecraftmodconventions.ClientGameTestStages;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
+import io.github.brainage04.simpletpa.data.SafetyPreference;
 import java.util.Properties;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -32,6 +33,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -239,6 +241,18 @@ public final class SimpleTPAFilm {
                                 client -> client.gui.hud.getChat().clearMessages(false));
                         // The first frame before the world draws has no terrain yet.
                         context.waitTicks(10);
+                        // The client's player runs each stage's own setup commands, so they need
+                        // the permissions a gamerule command asks for.
+                        server.runOnServer(
+                                minecraftServer -> {
+                                    ServerPlayer player = player(minecraftServer, playerName);
+                                    minecraftServer
+                                            .getPlayerList()
+                                            .op(
+                                                    new NameAndId(
+                                                            player.getUUID(),
+                                                            player.getScoreboardName()));
+                                });
                         showDeniedRequest(context, server, playerName);
                         showAcceptedRequest(context, server, playerName);
                         showClickedDeny(context, server, playerName);
@@ -584,7 +598,7 @@ public final class SimpleTPAFilm {
                     // last stage left them in.
                     target.setInvisible(true);
                     look(player, LOOKOUT_POSITION, HIGH_POSITION);
-                    command(player, "tpasafety off");
+                    setupCommand(player, "tpasafety off");
                 });
         startStage(context, LANDING_CHECK_OFF);
         // The arrival is on the friend's head, so the player steps back in the tick it lands and
@@ -741,7 +755,7 @@ public final class SimpleTPAFilm {
                     ServerPlayer target = friend(minecraftServer);
                     SimpleTPAFakePlayerScenario.place(target, SNOW_POSITION, WEST, 0.0F);
                     target.setInvisible(true);
-                    gamerule(player, "gamerule simpletpa:landing_checks false");
+                    setupCommand(player, "gamerule simpletpa:landing_checks false");
                     look(player, PLAYER_POSITION, SNOW_POSITION);
                 });
         startStage(context, LANDING_CHECKS_OFF);
@@ -759,7 +773,7 @@ public final class SimpleTPAFilm {
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
                     friend(minecraftServer).setInvisible(true);
-                    gamerule(player, "gamerule simpletpa:reset_fall false");
+                    setupCommand(player, "gamerule simpletpa:reset_fall false");
                     look(player, PLAYER_POSITION, FRIEND_POSITION);
                 });
         startStage(context, RESET_FALL_OFF);
@@ -787,7 +801,7 @@ public final class SimpleTPAFilm {
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
                     friend(minecraftServer).setInvisible(true);
-                    gamerule(player, "gamerule simpletpa:reset_fall true");
+                    setupCommand(player, "gamerule simpletpa:reset_fall true");
                     look(player, PLAYER_POSITION, FRIEND_POSITION);
                 });
         startStage(context, RESET_FALL_ON);
@@ -833,7 +847,10 @@ public final class SimpleTPAFilm {
                     player.setHealth(20.0F);
                     player.getFoodData().setFoodLevel(20);
                     player.resetFallDistance();
-                    command(player, "tpasafety on");
+                    // A reset to the default, not a stage's own setup, so it stays out of the
+                    // chat: the command answers the player directly, and its line would open
+                    // every stage.
+                    SafetyPreference.setRefusesDangerousDrop(player, true);
                     gamerule(player, "gamerule simpletpa:landing_checks true");
                     gamerule(player, "gamerule simpletpa:reset_fall true");
                     placeActors(player, target);
@@ -861,15 +878,15 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Runs {@code command} as {@code player}, without printing its answer in the chat. A player
-     * command such as {@code tpasafety} needs the player as its source.
+     * Runs {@code command} as {@code player} and shows its answer in the chat, the way a player
+     * typing it would see it. A stage's own setup command goes through here, so the film shows
+     * what the stage relies on.
      */
-    private static void command(ServerPlayer player, String command) {
+    private static void setupCommand(ServerPlayer player, String command) {
         player.level()
                 .getServer()
                 .getCommands()
-                .performPrefixedCommand(
-                        player.createCommandSourceStack().withSuppressedOutput(), command);
+                .performPrefixedCommand(player.createCommandSourceStack(), command);
     }
 
     /**
