@@ -55,6 +55,19 @@ public final class NeoForgeServerGameTests {
                 event, "teleports_when_nobody_falls", SimpleTPAGameTests::teleportsWhenNobodyFalls);
         register(event, "teleports_onto_happy_ghast", SimpleTPAGameTests::teleportsOntoHappyGhast);
         register(event, "refuses_long_drop", SimpleTPAGameTests::refusesLongDrop);
+        register(
+                event,
+                "long_drop_warns_and_keeps_auto_accept",
+                SimpleTPAGameTests::longDropWarnsAndKeepsAutoAccept);
+        register(event, "long_drop_repeat_teleports", SimpleTPAGameTests::longDropRepeatTeleports);
+        register(
+                event,
+                "long_drop_repeat_after_the_window_warns_again",
+                SimpleTPAGameTests::longDropRepeatAfterTheWindowWarnsAgain);
+        register(
+                event,
+                "long_drop_confirmation_does_not_cover_other_refusals",
+                SimpleTPAGameTests::longDropConfirmationDoesNotCoverOtherRefusals);
         register(event, "accepts_short_drop", SimpleTPAGameTests::acceptsShortDrop);
         register(
                 event,

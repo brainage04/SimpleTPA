@@ -47,6 +47,7 @@ public final class SimpleTPA {
                         SafetyPreference.unload();
                         TPRequestCommand.TP_REQUESTS.clear();
                         TPAutoAcceptCommand.ACCEPT_ALL_CONFIRMATION.clear();
+                        TPRequestCommand.LONG_DROP_CONFIRMATION.clear();
                     }
                 });
         ServerModHelpRegistry.register(

@@ -109,7 +109,7 @@ public final class ModCommands {
                 .line(
                         "/tpautoaccept [*] - accept requests from everyone (run twice to confirm, again to turn off)")
                 .line(
-                        "/tpasafety [on|off] - show or change whether your TP requests wait while the player you teleport to is in the air above a long drop")
+                        "/tpasafety [on|off] - show or change whether your TP requests warn you while the player you teleport to is in the air above a long drop")
                 .register(dispatcher);
     }
 

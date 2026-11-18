@@ -80,6 +80,26 @@ public class SimpleTPAGameTest {
     }
 
     @GameTest(maxTicks = 40)
+    public void longDropWarnsAndKeepsAutoAccept(GameTestHelper helper) {
+        SimpleTPAGameTests.longDropWarnsAndKeepsAutoAccept(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void longDropRepeatTeleports(GameTestHelper helper) {
+        SimpleTPAGameTests.longDropRepeatTeleports(helper);
+    }
+
+    @GameTest(maxTicks = SimpleTPAGameTests.LONG_DROP_REPEAT_MAX_TICKS)
+    public void longDropRepeatAfterTheWindowWarnsAgain(GameTestHelper helper) {
+        SimpleTPAGameTests.longDropRepeatAfterTheWindowWarnsAgain(helper);
+    }
+
+    @GameTest(maxTicks = 40)
+    public void longDropConfirmationDoesNotCoverOtherRefusals(GameTestHelper helper) {
+        SimpleTPAGameTests.longDropConfirmationDoesNotCoverOtherRefusals(helper);
+    }
+
+    @GameTest(maxTicks = 40)
     public void acceptsShortDrop(GameTestHelper helper) {
         SimpleTPAGameTests.acceptsShortDrop(helper);
     }

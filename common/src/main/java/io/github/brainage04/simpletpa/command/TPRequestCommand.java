@@ -1,5 +1,6 @@
 package io.github.brainage04.simpletpa.command;
 
+import io.github.brainage04.brainagelib.confirmation.ConfirmationWindow;
 import io.github.brainage04.simpletpa.SimpleTPA;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
 import io.github.brainage04.simpletpa.data.SafetyPreference;
@@ -24,6 +25,13 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class TPRequestCommand {
+    /** The refusal a repeat of the same request may override, and the words the mod uses for it. */
+    public static final String LONG_DROP = "in the air above a long drop";
+
+    public static final int LONG_DROP_CONFIRM_WINDOW_TICKS = 30 * 20;
+    public static final ConfirmationWindow<LongDropKey> LONG_DROP_CONFIRMATION =
+            new ConfirmationWindow<>(
+                    LONG_DROP_CONFIRM_WINDOW_TICKS, ConfirmationWindow.Boundary.INCLUSIVE);
     public static final List<TPRequest> TP_REQUESTS = new ArrayList<>();
 
     public static int execute(CommandSourceStack source, ServerPlayer to) {
@@ -41,7 +49,21 @@ public class TPRequestCommand {
 
         if (source.getServer().getGameRules().get(SimpleTPA.AUTO_ACCEPT)
                 && InstantTpaWhitelist.allows(to, from)) {
+            LongDropKey key = new LongDropKey(from.getUUID(), to.getUUID());
             String blocked = canBeMoved(from) ? blockedReason(from, to) : null;
+            boolean longDrop = LONG_DROP.equals(blocked);
+            boolean confirmed =
+                    longDrop
+                            && LONG_DROP_CONFIRMATION.requestOrConfirm(
+                                            key, source.getServer().getTickCount())
+                                    == ConfirmationWindow.Outcome.CONFIRMED;
+            if (confirmed) {
+                blocked = null;
+            } else if (!longDrop) {
+                // A confirmation left open by an earlier request must not carry over to a later
+                // one that is refused for another reason.
+                LONG_DROP_CONFIRMATION.cancel(key);
+            }
             if (blocked == null) {
                 if (!teleport(from, to)) {
                     SimpleTPA.FEEDBACK.failure(
@@ -58,11 +80,27 @@ public class TPRequestCommand {
                 TP_REQUESTS.removeIf(pending -> pending.matches(to.getUUID(), from.getUUID()));
                 return 1;
             }
-            SimpleTPA.FEEDBACK.neutral(
-                    from,
-                    "%s is %s, so your TP request was not accepted automatically.",
-                    to.getScoreboardName(),
-                    blocked);
+            if (longDrop) {
+                SimpleTPA.FEEDBACK.error(
+                        from, "%s is in the air above a long drop.", to.getScoreboardName());
+                SimpleTPA.FEEDBACK.neutral(
+                        from,
+                        "If you still want to TP to them, run /tpa %s again within %d seconds.",
+                        to.getScoreboardName(),
+                        LONG_DROP_CONFIRM_WINDOW_TICKS / 20);
+                // The request still waits for the target, who can accept it once they land, so a
+                // repeat is not refused as a duplicate.
+                if (TP_REQUESTS.stream()
+                        .anyMatch(pending -> pending.matches(to.getUUID(), from.getUUID()))) {
+                    return 1;
+                }
+            } else {
+                SimpleTPA.FEEDBACK.neutral(
+                        from,
+                        "%s is %s, so your TP request was not accepted automatically.",
+                        to.getScoreboardName(),
+                        blocked);
+            }
         }
 
         for (TPRequest prevRequest : TP_REQUESTS) {
@@ -180,9 +218,7 @@ public class TPRequestCommand {
         if (SafetyPreference.refusesDangerousDrop(from)
                 && !from.getAbilities().mayfly
                 && Landing.dropHurts(level, from, arrival, carriedFall(level, from))) {
-            return Landing.overVoid(level, from, arrival)
-                    ? "in the air above the void"
-                    : "in the air above a long drop";
+            return Landing.overVoid(level, from, arrival) ? "in the air above the void" : LONG_DROP;
         }
         return null;
     }
@@ -249,6 +285,9 @@ public class TPRequestCommand {
         }
         return true;
     }
+
+    /** The requester and the target of a request whose long drop the requester confirmed. */
+    public record LongDropKey(UUID fromId, UUID toId) {}
 
     public record TPRequest(UUID toId, String toName, UUID fromId, String fromName, long created) {
         public static TPRequest create(ServerPlayer to, ServerPlayer from, long created) {
