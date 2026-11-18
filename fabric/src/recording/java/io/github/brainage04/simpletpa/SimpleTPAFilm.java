@@ -114,7 +114,7 @@ public final class SimpleTPAFilm {
             new Caption(
                     "simpletpa.longdrop",
                     "Long drop",
-                    FRIEND_NAME + " is above a six-block drop, so your request waits");
+                    FRIEND_NAME + " is above a six-block drop, so run it again to go");
     private static final Caption SHORT_DROP =
             new Caption(
                     "simpletpa.shortdrop",
@@ -660,7 +660,26 @@ public final class SimpleTPAFilm {
                 });
         startStage(context, LONG_DROP);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(16);
+        // The warning and the run-again line stay up long enough to read before the repeat.
+        context.waitTicks(40);
+        // The repeat goes through. The arrival lands inside the friend's head, so the friend is
+        // hidden and the step back runs in the same server block as the command: both teleports go
+        // out in one flush, as the creative stage does, and no frame is drawn from inside the head.
+        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    ServerPlayer target = friend(minecraftServer);
+                    target.setInvisible(true);
+                    player.level()
+                            .getServer()
+                            .getCommands()
+                            .performPrefixedCommand(
+                                    player.createCommandSourceStack(), "tpa " + FRIEND_NAME);
+                    stepBackFrom(player, target);
+                });
+        closeChat(context);
+        context.waitTicks(30);
 
         endStage(context);
         reset(context, server, playerName);
