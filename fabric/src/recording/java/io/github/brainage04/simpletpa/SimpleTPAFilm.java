@@ -14,12 +14,12 @@ import java.util.Properties;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext;
-import net.minecraft.client.Minecraft;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.client.CloudStatus;
-import net.minecraft.client.gui.Font;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ActiveTextCollector;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.TextAlignment;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.font.TextRenderable;
@@ -29,13 +29,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.util.ARGB;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.server.players.NameAndId;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -179,6 +179,7 @@ public final class SimpleTPAFilm {
     private static final Vec3 LOOKOUT_POSITION = new Vec3(-11.5D, STAGE_Y, 0.5D);
     private static final Vec3 HIGH_POSITION = new Vec3(2.5D, 78.0D, -5.5D);
     private static final Vec3 GHAST_POSITION = new Vec3(2.5D, 70.0D, 0.5D);
+
     /**
      * Where the ghast waits between its stage and the rest: under the stage floor, which no camera
      * can see through. West of the cameras was not enough: the stages that look up at a target in
@@ -186,28 +187,35 @@ public final class SimpleTPAFilm {
      * searches, which is why it is not parked at the bottom of the world.
      */
     private static final Vec3 GHAST_PARKED = new Vec3(-20.0D, 20.0D, 0.5D);
+
     /**
      * Where the short drop's target hovers: two blocks above the gold mark, over open air, so the
-     * arrival spot has a real two-block drop under it and the mark shows the floor it drops to.
-     * The target is held without gravity, so the drop stays under the arrival for the whole stage.
+     * arrival spot has a real two-block drop under it and the mark shows the floor it drops to. The
+     * target is held without gravity, so the drop stays under the arrival for the whole stage.
      */
     private static final Vec3 SHORT_DROP_POSITION = new Vec3(2.5D, STAGE_Y + 2, 0.5D);
+
     private static final Vec3 MAGMA_POSITION = new Vec3(2.5D, STAGE_Y, 4.5D);
+
     /** A target in the air six blocks up: a drop that hurts, but a short one. */
     private static final Vec3 LOW_AIR_POSITION = new Vec3(2.5D, STAGE_Y + 6, 0.5D);
+
     /**
      * Where the long drop's camera stands: far enough back that the floor under the target is in
      * shot, so the six-block drop reads. From the usual camera the target is close and high, and
      * the shot is all sky. It stands south of the water pool, which fills the floor at x -10 to -7.
      */
     private static final Vec3 LONG_DROP_VIEW = new Vec3(-2.5D, STAGE_Y, 8.5D);
+
     /**
      * A target in the air over a shaft cut through the stage floor to the bottom of the world, so
      * the arrival spot has nothing under it at all: the one refusal that is not a drop.
      */
     private static final Vec3 VOID_POSITION = new Vec3(2.5D, 78.0D, -16.5D);
+
     /** A powder snow block the target stands in: a dangerous block that hurts nobody at once. */
     private static final Vec3 SNOW_POSITION = new Vec3(2.5D, STAGE_Y, -12.5D);
+
     /**
      * Where the requester is when the request is sent: sixteen blocks up over a pool, already
      * falling, so the fall they carry is past the safe distance and the pool catches them.
@@ -241,7 +249,8 @@ public final class SimpleTPAFilm {
                     if (stepBack != null
                             && friend(minecraftServer)
                                             .position()
-                                            .distanceToSqr(player(minecraftServer, playerName).position())
+                                            .distanceToSqr(
+                                                    player(minecraftServer, playerName).position())
                                     < 1.0D) {
                         pendingStepBack = null;
                         stepBack.accept(minecraftServer);
@@ -453,7 +462,8 @@ public final class SimpleTPAFilm {
         Window window = client.getWindow();
         int guiHeight = window.getGuiScaledHeight();
         CommandGlyphFinder finder = new CommandGlyphFinder(client, command);
-        client.gui.hud
+        client.gui
+                .hud
                 .getChat()
                 .captureClickableText(
                         finder,
@@ -466,8 +476,7 @@ public final class SimpleTPAFilm {
         double scaleX = (double) window.getScreenWidth() / window.getGuiScaledWidth();
         double scaleY = (double) window.getScreenHeight() / guiHeight;
         return new double[] {
-            (finder.sumX / finder.hits + 0.5D) * scaleX,
-            (finder.sumY / finder.hits + 0.5D) * scaleY
+            (finder.sumX / finder.hits + 0.5D) * scaleX, (finder.sumY / finder.hits + 0.5D) * scaleY
         };
     }
 
@@ -522,7 +531,7 @@ public final class SimpleTPAFilm {
                                 public void acceptGlyph(TextRenderable.Styled glyph) {
                                     Style style = glyph.style();
                                     if (style.getClickEvent()
-                                            instanceof ClickEvent.RunCommand(String run)
+                                                    instanceof ClickEvent.RunCommand(String run)
                                             && run.equals(command)) {
                                         Vector2f middle =
                                                 textParameters
@@ -836,8 +845,7 @@ public final class SimpleTPAFilm {
         context.waitTicks(1);
         server.runOnServer(
                 minecraftServer ->
-                        stepBackFrom(
-                                player(minecraftServer, playerName), friend(minecraftServer)));
+                        stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer)));
         context.waitTicks(16);
 
         endStage(context);
@@ -959,8 +967,8 @@ public final class SimpleTPAFilm {
 
     /**
      * Runs {@code command} as {@code player} and shows its answer in the chat, the way a player
-     * typing it would see it. A stage's own setup command goes through here, so the film shows
-     * what the stage relies on.
+     * typing it would see it. A stage's own setup command goes through here, so the film shows what
+     * the stage relies on.
      */
     private static void setupCommand(ServerPlayer player, String command) {
         player.level()
@@ -1024,11 +1032,10 @@ public final class SimpleTPAFilm {
 
     /**
      * Moves the friend four blocks along their own facing, away from the player who has just
-     * arrived on them, and turns the player to follow. The player stays where the arrival put
-     * them: a player's own teleport is applied by the client at once and reads as a jump, while
-     * another player's move is interpolated over three ticks, so the friend slides out of the
-     * shot instead. The friend stays hidden until the slide has played out, so no frame shows
-     * them at the camera.
+     * arrived on them, and turns the player to follow. The player stays where the arrival put them:
+     * a player's own teleport is applied by the client at once and reads as a jump, while another
+     * player's move is interpolated over three ticks, so the friend slides out of the shot instead.
+     * The friend stays hidden until the slide has played out, so no frame shows them at the camera.
      */
     private static void stepAside(ServerPlayer player, ServerPlayer friend) {
         Vec3 facing =
@@ -1112,7 +1119,9 @@ public final class SimpleTPAFilm {
         stage = caption.id();
     }
 
-    /** Ends the stage on screen and holds its last frames, so a cut never lands on the next scene. */
+    /**
+     * Ends the stage on screen and holds its last frames, so a cut never lands on the next scene.
+     */
     private static void endStage(ClientGameTestContext context) {
         if (stage != null) {
             ClientGameTestStages.endStage(context, stage, STAGE_HOLD_TICKS);
@@ -1236,8 +1245,8 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Places the friend, and keeps the gold block only when they stand on their own mark: the
-     * block marks where the friend is, so it does not belong under a stage that moves them.
+     * Places the friend, and keeps the gold block only when they stand on their own mark: the block
+     * marks where the friend is, so it does not belong under a stage that moves them.
      */
     private static void placeTarget(ServerPlayer target, Vec3 position, float yaw, float pitch) {
         friendMark(target.level(), position.equals(FRIEND_POSITION));
