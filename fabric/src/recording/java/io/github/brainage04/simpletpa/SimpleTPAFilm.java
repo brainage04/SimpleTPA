@@ -233,7 +233,7 @@ public final class SimpleTPAFilm {
             BiConsumer<ServerPlayer, ServerPlayer> afterClickedAccept) {
         String playerName = context.computeOnClient(client -> client.getUser().getName());
         // Command suggestions would cover the chat while a command sits in the chat box. Clouds are
-        // off so no cloud crosses the sky in the stages that look up at a target in the air. The sun
+        // off so none crosses the sky in the stages that look up at a target in the air. The sun
         // still shows as a white square clipped by the top edge in the long-drop and short-drop
         // stages, which look up at noon; it is the sun, not a cloud.
         context.runOnClient(
