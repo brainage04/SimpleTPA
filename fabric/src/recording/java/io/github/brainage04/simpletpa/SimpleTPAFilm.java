@@ -358,13 +358,15 @@ public final class SimpleTPAFilm {
                                 friend(minecraftServer), "tpa " + playerName));
         context.waitTicks(25);
         // The click's command is handled during the server tick, before its end-of-tick event, so
-        // the step back runs in the same tick as the arrival: the client never renders a frame
-        // from inside the friend's head.
+        // the step back runs in the same tick as the arrival. The friend is hidden for that tick
+        // as the accept stage hides them: the client interpolates the slide over the next few
+        // ticks, so a visible friend fills the frame with their head on the arrival frame.
         pendingStepBack =
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
                     ServerPlayer target = friend(minecraftServer);
                     afterClickedAccept.accept(target, player);
+                    target.setInvisible(true);
                     stepAside(player, target);
                 };
         clickChatButton(context, server, "tpaccept");
