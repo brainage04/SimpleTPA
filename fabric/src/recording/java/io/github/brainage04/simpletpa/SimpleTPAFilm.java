@@ -192,6 +192,11 @@ public final class SimpleTPAFilm {
      * without gravity, so the drop stays under the arrival for the whole stage.
      */
     private static final Vec3 SHORT_DROP_POSITION = new Vec3(2.5D, STAGE_Y + 2, -4.5D);
+    /**
+     * Where the short drop's camera stands: further back and lower than the other stages' camera,
+     * so the floor under the hovering target is in shot and the two-block gap reads.
+     */
+    private static final Vec3 SHORT_DROP_VIEW = new Vec3(-2.5D, STAGE_Y, 3.5D);
     private static final Vec3 MAGMA_POSITION = new Vec3(2.5D, STAGE_Y, 4.5D);
     /** A target in the air six blocks up: a drop that hurts, but a short one. */
     private static final Vec3 LOW_AIR_POSITION = new Vec3(2.5D, STAGE_Y + 6, 0.5D);
@@ -728,15 +733,27 @@ public final class SimpleTPAFilm {
                     // showing an empty floor, with nothing to read the drop against.
                     target.setNoGravity(true);
                     placeTarget(target, SHORT_DROP_POSITION, WEST, 20.0F);
-                    look(player, PLAYER_POSITION, SHORT_DROP_POSITION);
+                    // Further back than the other stages, so the floor under the hovering target
+                    // is in shot and the two-block gap reads.
+                    look(player, SHORT_DROP_VIEW, SHORT_DROP_POSITION);
                 });
         startStage(context, SHORT_DROP);
-        typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(1);
+        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
+        // The arrival lands inside the friend's head, and the friend has to stay visible here, so
+        // the step back goes out in the same server block as the request: both teleports reach the
+        // client in one flush and no frame is drawn from inside the friend's head.
         server.runOnServer(
-                minecraftServer ->
-                        stepBackFrom(
-                                player(minecraftServer, playerName), friend(minecraftServer)));
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    ServerPlayer target = friend(minecraftServer);
+                    player.level()
+                            .getServer()
+                            .getCommands()
+                            .performPrefixedCommand(
+                                    player.createCommandSourceStack(), "tpa " + FRIEND_NAME);
+                    stepBackFrom(player, target);
+                });
+        closeChat(context);
         context.waitTicks(16);
 
         endStage(context);
