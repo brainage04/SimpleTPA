@@ -866,15 +866,37 @@ public final class SimpleTPAFilm {
                                 FALLING_POSITION,
                                 FRIEND_POSITION));
         waitForFall(context, server, playerName);
-        // The request is answered inside the command, so the arrival lands in this tick and the
-        // step back runs in it too.
-        pendingStepBack =
+        // The request goes out with the fall behind it, so the carried fall counts as a long drop
+        // and the request warns. The player is held in the air while the warning is read, so the
+        // fall is still behind the repeat; without the hold they land first and the repeat arrives
+        // with no fall to keep.
+        context.getInput().pressKey(InputConstants.KEY_RETURN);
+        server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
-                    stepBackFrom(player, friend(minecraftServer));
-                };
-        context.getInput().pressKey(InputConstants.KEY_RETURN);
-        context.waitTicks(8);
+                    // No gravity stops the fall but keeps the speed it had, so the speed is
+                    // cleared too: the player hovers with the fall distance still behind them.
+                    player.setNoGravity(true);
+                    player.setDeltaMovement(Vec3.ZERO);
+                });
+        context.waitTicks(40);
+        context.runOnClient(client -> InputOverlay.clear());
+        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    ServerPlayer target = friend(minecraftServer);
+                    player.setNoGravity(false);
+                    player.level()
+                            .getServer()
+                            .getCommands()
+                            .performPrefixedCommand(
+                                    player.createCommandSourceStack(), "tpa " + FRIEND_NAME);
+                    stepBackFrom(player, target);
+                });
+        closeChat(context);
+        // The arrival keeps the fall, so the landing hurts: the stage ends on the hearts it took.
+        context.waitTicks(20);
 
         endStage(context);
         reset(context, server, playerName);
