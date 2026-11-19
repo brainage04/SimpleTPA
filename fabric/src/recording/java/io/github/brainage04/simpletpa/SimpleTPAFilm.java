@@ -187,19 +187,20 @@ public final class SimpleTPAFilm {
      */
     private static final Vec3 GHAST_PARKED = new Vec3(-20.0D, 20.0D, 0.5D);
     /**
-     * Where the short drop's target hovers: two blocks above the stage floor, over open air, so
-     * the arrival spot has a real two-block drop under it. The target is invisible and held
-     * without gravity, so the drop stays under the arrival for the whole stage.
+     * Where the short drop's target hovers: two blocks above the gold mark, over open air, so the
+     * arrival spot has a real two-block drop under it and the mark shows the floor it drops to.
+     * The target is held without gravity, so the drop stays under the arrival for the whole stage.
      */
-    private static final Vec3 SHORT_DROP_POSITION = new Vec3(2.5D, STAGE_Y + 2, -4.5D);
-    /**
-     * Where the short drop's camera stands: further back and lower than the other stages' camera,
-     * so the floor under the hovering target is in shot and the two-block gap reads.
-     */
-    private static final Vec3 SHORT_DROP_VIEW = new Vec3(-2.5D, STAGE_Y, 3.5D);
+    private static final Vec3 SHORT_DROP_POSITION = new Vec3(2.5D, STAGE_Y + 2, 0.5D);
     private static final Vec3 MAGMA_POSITION = new Vec3(2.5D, STAGE_Y, 4.5D);
     /** A target in the air six blocks up: a drop that hurts, but a short one. */
     private static final Vec3 LOW_AIR_POSITION = new Vec3(2.5D, STAGE_Y + 6, 0.5D);
+    /**
+     * Where the long drop's camera stands: far enough back that the floor under the target is in
+     * shot, so the six-block drop reads. From the usual camera the target is close and high, and
+     * the shot is all sky.
+     */
+    private static final Vec3 LONG_DROP_VIEW = new Vec3(-9.5D, STAGE_Y, 0.5D);
     /**
      * A target in the air over a shaft cut through the stage floor to the bottom of the world, so
      * the arrival spot has nothing under it at all: the one refusal that is not a drop.
@@ -684,7 +685,7 @@ public final class SimpleTPAFilm {
                     // would have fallen to.
                     target.setNoGravity(true);
                     placeTarget(target, LOW_AIR_POSITION, WEST, 0.0F);
-                    look(player, PLAYER_POSITION, LOW_AIR_POSITION);
+                    look(player, LONG_DROP_VIEW, LOW_AIR_POSITION);
                 });
         startStage(context, LONG_DROP);
         typeCommand(context, "tpa " + FRIEND_NAME);
@@ -731,13 +732,13 @@ public final class SimpleTPAFilm {
                     ServerPlayer target = friend(minecraftServer);
                     // The target hovers two blocks up over open air, so the arrival spot has a
                     // real two-block drop under it. Without gravity the target stays there for
-                    // the whole stage. It stays visible: an invisible target left the stage
-                    // showing an empty floor, with nothing to read the drop against.
+                    // the whole stage. It stays visible, and the gold mark stays under it: an
+                    // invisible target, or one with no mark below, left the stage showing a
+                    // player against empty sky with nothing to read the drop against.
                     target.setNoGravity(true);
                     placeTarget(target, SHORT_DROP_POSITION, WEST, 20.0F);
-                    // Further back than the other stages, so the floor under the hovering target
-                    // is in shot and the two-block gap reads.
-                    look(player, SHORT_DROP_VIEW, SHORT_DROP_POSITION);
+                    friendMark(player.level(), true);
+                    look(player, PLAYER_POSITION, SHORT_DROP_POSITION);
                 });
         startStage(context, SHORT_DROP);
         typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
