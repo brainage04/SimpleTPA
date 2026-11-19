@@ -198,9 +198,9 @@ public final class SimpleTPAFilm {
     /**
      * Where the long drop's camera stands: far enough back that the floor under the target is in
      * shot, so the six-block drop reads. From the usual camera the target is close and high, and
-     * the shot is all sky.
+     * the shot is all sky. It stands south of the water pool, which fills the floor at x -10 to -7.
      */
-    private static final Vec3 LONG_DROP_VIEW = new Vec3(-9.5D, STAGE_Y, 0.5D);
+    private static final Vec3 LONG_DROP_VIEW = new Vec3(-2.5D, STAGE_Y, 8.5D);
     /**
      * A target in the air over a shaft cut through the stage floor to the bottom of the world, so
      * the arrival spot has nothing under it at all: the one refusal that is not a drop.
