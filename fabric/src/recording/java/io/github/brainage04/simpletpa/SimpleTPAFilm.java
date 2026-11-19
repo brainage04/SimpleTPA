@@ -920,10 +920,11 @@ public final class SimpleTPAFilm {
                     player.resetFallDistance();
                     // A reset to the default, not a stage's own setup, so it stays out of the
                     // chat: the command answers the player directly, and its line would open
-                    // every stage.
+                    // every stage. reset_fall is left to the two fall stages, which set it
+                    // visibly: a silent reset to true would make the second one print "already
+                    // set to true" instead of showing the change it demonstrates.
                     SafetyPreference.setRefusesDangerousDrop(player, true);
                     gamerule(player, "gamerule simpletpa:landing_checks true");
-                    gamerule(player, "gamerule simpletpa:reset_fall true");
                     placeActors(player, target);
                 });
         // The chat is cleared between stages: a button from an earlier stage would otherwise sit
