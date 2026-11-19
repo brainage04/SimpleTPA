@@ -17,6 +17,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.CloudStatus;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.ActiveTextCollector;
 import net.minecraft.client.gui.TextAlignment;
@@ -217,8 +218,14 @@ public final class SimpleTPAFilm {
             ClientGameTestContext context,
             BiConsumer<ServerPlayer, ServerPlayer> afterClickedAccept) {
         String playerName = context.computeOnClient(client -> client.getUser().getName());
-        // Command suggestions would cover the chat while a command sits in the chat box.
-        context.runOnClient(client -> client.options.autoSuggestions().set(false));
+        // Command suggestions would cover the chat while a command sits in the chat box. Clouds are
+        // off because the stages that look up at a target in the air put a cloud in the top of the
+        // frame, where it reads as a white box.
+        context.runOnClient(
+                client -> {
+                    client.options.autoSuggestions().set(false);
+                    client.options.cloudStatus().set(CloudStatus.OFF);
+                });
         ServerTickEvents.END_SERVER_TICK.register(
                 minecraftServer -> {
                     Consumer<MinecraftServer> stepBack = pendingStepBack;
