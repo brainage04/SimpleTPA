@@ -710,6 +710,9 @@ public final class SimpleTPAFilm {
                     stepBackFrom(player, target);
                 });
         closeChat(context);
+        // The friend is shown again once the step back has played out, so the stage ends on them
+        // rather than on empty sky.
+        showFriendAfterSlide(context, server);
         // The arrival is six blocks up, so the player falls to the floor. The camera is turned back
         // up to the friend once the fall has landed, so the stage ends on them rather than on the
         // floor; the turn waits for the landing because a teleport mid-fall would stop the fall.
