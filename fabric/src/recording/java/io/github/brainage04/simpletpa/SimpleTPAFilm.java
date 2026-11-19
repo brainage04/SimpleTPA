@@ -724,10 +724,10 @@ public final class SimpleTPAFilm {
                     ServerPlayer target = friend(minecraftServer);
                     // The target hovers two blocks up over open air, so the arrival spot has a
                     // real two-block drop under it. Without gravity the target stays there for
-                    // the whole stage, and being invisible it does not read as flying.
+                    // the whole stage. It stays visible: an invisible target left the stage
+                    // showing an empty floor, with nothing to read the drop against.
                     target.setNoGravity(true);
                     placeTarget(target, SHORT_DROP_POSITION, WEST, 20.0F);
-                    target.setInvisible(true);
                     look(player, PLAYER_POSITION, SHORT_DROP_POSITION);
                 });
         startStage(context, SHORT_DROP);
