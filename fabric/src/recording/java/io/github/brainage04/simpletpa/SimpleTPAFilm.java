@@ -1220,11 +1220,17 @@ public final class SimpleTPAFilm {
         SimpleTPAFakePlayerScenario.place(target, position, yaw, pitch);
     }
 
-    /** The gold block under the friend's mark, which shows where the friend stands. */
+    /**
+     * The gold block under the friend's mark, which shows where the friend stands. Without it the
+     * floor block goes back, not air: the mark sits in the stage floor, so air leaves a hole that
+     * every stage looking that way shows.
+     */
     private static void friendMark(ServerLevel level, boolean present) {
         level.setBlock(
                 BlockPos.containing(FRIEND_POSITION).below(),
-                present ? Blocks.GOLD_BLOCK.defaultBlockState() : Blocks.AIR.defaultBlockState(),
+                present
+                        ? Blocks.GOLD_BLOCK.defaultBlockState()
+                        : Blocks.POLISHED_DEEPSLATE.defaultBlockState(),
                 3);
     }
 
