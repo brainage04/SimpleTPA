@@ -9,7 +9,8 @@
 	],
 	"contact": {
 		"homepage": "https://github.com/brainage04/SimpleTPA",
-		"sources": "https://github.com/brainage04/SimpleTPA"
+		"sources": "https://github.com/brainage04/SimpleTPA",
+		"issues": "https://github.com/brainage04/SimpleTPA/issues"
 	},
 	"license": "MIT",
 	"icon": "assets/simpletpa/icon.png",
