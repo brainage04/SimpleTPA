@@ -761,10 +761,10 @@ public final class SimpleTPAFilm {
         // The friend is shown again once the step back has played out, so the stage ends on them
         // rather than on empty sky.
         showFriendAfterSlide(context, server);
-        // The arrival is six blocks up, so the player falls to the floor. The camera then pans up to
-        // the friend, so the stage ends on them rather than on empty floor. A pan, not a turn: a
-        // turn is a cut, and a cut inside a stage shows a new shot under the old caption. The pan
-        // waits for the landing, because a teleport mid-fall would stop the fall.
+        // The arrival is six blocks up, so the player falls to the floor. The camera then pans up
+        // to the friend, so the stage ends on them rather than on empty floor. A pan, not a turn:
+        // a turn is a cut, and a cut inside a stage shows a new shot under the old caption. The
+        // pan waits for the landing, because a teleport mid-fall would stop the fall.
         context.waitTicks(20);
         panTo(
                 context,
@@ -1135,13 +1135,11 @@ public final class SimpleTPAFilm {
                         minecraftServer -> {
                             ServerPlayer player = player(minecraftServer, playerName);
                             Vec3 towards =
-                                    target.subtract(
-                                            player.position().add(0.0D, 1.62D, 0.0D));
+                                    target.subtract(player.position().add(0.0D, 1.62D, 0.0D));
                             float reach =
                                     (float)
                                             Math.sqrt(
-                                                    towards.x * towards.x
-                                                            + towards.z * towards.z);
+                                                    towards.x * towards.x + towards.z * towards.z);
                             return new float[] {
                                 (float) Math.toDegrees(Math.atan2(towards.z, towards.x)) - 90.0F,
                                 (float) -Math.toDegrees(Math.atan2(towards.y, reach))
