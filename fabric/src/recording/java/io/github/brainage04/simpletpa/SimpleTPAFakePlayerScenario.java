@@ -28,6 +28,12 @@ final class SimpleTPAFakePlayerScenario {
         executeServerCommand(level, Vec3.ZERO, "team modify %s color %s".formatted(team, color));
         executeServerCommand(
                 level, Vec3.ZERO, "team modify %s collisionRule always".formatted(team));
+        // The tag is drawn in world space, so it grows on screen as the camera nears the friend:
+        // 637 px wide under the caption panel at the happy ghast arrival, and 450 px for one frame
+        // wherever the friend is shown at the arrival spot. The team's own visibility rule hides it
+        // (LivingEntityRenderer.java:211-215); the captions and the chat name the friend.
+        executeServerCommand(
+                level, Vec3.ZERO, "team modify %s nametagVisibility never".formatted(team));
         executeServerCommand(level, Vec3.ZERO, "team join %s %s".formatted(team, name));
     }
 

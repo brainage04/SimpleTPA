@@ -181,6 +181,16 @@ public final class SimpleTPAFilm {
     private static final Vec3 GHAST_POSITION = new Vec3(2.5D, 70.0D, 0.5D);
 
     /**
+     * Where the camera stands on the ghast's top after the arrival. The arrival lands on the
+     * friend's head, and the friend rides the ghast, so the game does not push the player off them:
+     * from the arrival spot the friend's back fills the middle of the frame for the whole stage.
+     * This spot is the far corner of the ghast's top, in front of the friend, so the shot shows the
+     * friend riding rather than their back.
+     */
+    private static final Vec3 GHAST_VIEW =
+            new Vec3(GHAST_POSITION.x - 1.5D, GHAST_POSITION.y + 4.0D, GHAST_POSITION.z - 1.5D);
+
+    /**
      * Where the ghast waits between its stage and the rest: under the stage floor, which no camera
      * can see through. West of the cameras was not enough: the stages that look up at a target in
      * the air put it in the top of the frame. It stays within the 64 blocks {@link #filmGhast}
@@ -679,7 +689,25 @@ public final class SimpleTPAFilm {
                     look(player, LOOKOUT_POSITION, rider.position());
                 });
         startStage(context, HAPPY_GHAST);
-        typeCommand(context, "tpa " + FRIEND_NAME);
+        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
+        // The arrival lands on the friend's head, and the friend rides the ghast, so the game does
+        // not push the player off them: from the arrival spot the friend's back fills the middle
+        // of the frame. The step back goes out in the same server block as the request, so both
+        // teleports reach the client in one flush and no frame is drawn from inside the head.
+        server.runOnServer(
+                minecraftServer -> {
+                    ServerPlayer player = player(minecraftServer, playerName);
+                    player.level()
+                            .getServer()
+                            .getCommands()
+                            .performPrefixedCommand(
+                                    player.createCommandSourceStack(), "tpa " + FRIEND_NAME);
+                    look(
+                            player,
+                            GHAST_VIEW,
+                            friend(minecraftServer).position().add(0.0D, 1.4D, 0.0D));
+                });
+        closeChat(context);
         context.waitTicks(16);
         assertOnGhast(context, server, friend);
         context.waitTicks(12);
@@ -699,14 +727,20 @@ public final class SimpleTPAFilm {
                 });
         startStage(context, LONG_DROP);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        // The warning and the run-again line stay up long enough to read before the repeat.
-        context.waitTicks(40);
-        // The repeat goes through. The arrival lands inside the friend's head, so the friend is
-        // hidden and the step back runs in the same server block as the command: both teleports go
-        // out in one flush, as the creative stage does, and no frame is drawn from inside the head.
-        // The overlay's typed line is cleared first, so it shows the repeat rather than both runs.
-        context.runOnClient(client -> InputOverlay.clear());
-        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
+        // The warning and the run-again line stay up long enough to read before the repeat. The
+        // repeat is typed in two parts, the second before the first part's typed line expires: the
+        // overlay keeps a typed line for two seconds after its last character, so typing the whole
+        // repeat after the read left the panel blank for a second in the middle of the stage.
+        context.waitTicks(20);
+        context.runOnClient(
+                client -> {
+                    InputOverlay.clear();
+                    client.gui.setScreen(new ChatScreen("", false));
+                });
+        context.getInput().typeChars("/tpa ");
+        context.waitTicks(20);
+        context.getInput().typeChars(FRIEND_NAME);
+        context.waitTicks(20);
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
@@ -723,16 +757,19 @@ public final class SimpleTPAFilm {
         // The friend is shown again once the step back has played out, so the stage ends on them
         // rather than on empty sky.
         showFriendAfterSlide(context, server);
-        // The arrival is six blocks up, so the player falls to the floor. The camera is turned back
-        // up to the friend once the fall has landed, so the stage ends on them rather than on the
-        // floor; the turn waits for the landing because a teleport mid-fall would stop the fall.
+        // The arrival is six blocks up, so the player falls to the floor. The camera then goes back
+        // to the wide view the stage opened on, so the stage ends on the drop it is about. Turned
+        // up at the friend from the floor under the arrival, the shot is a player on the floor
+        // looking at the friend over the gold mark, which is what the short-drop stage opens on;
+        // the wide view keeps the two apart. The move waits for the landing, because a teleport
+        // mid-fall would stop the fall.
         context.waitTicks(20);
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
                     look(
                             player,
-                            player.position(),
+                            LONG_DROP_VIEW,
                             friend(minecraftServer).position().add(0.0D, 1.4D, 0.0D));
                 });
         context.waitTicks(10);
