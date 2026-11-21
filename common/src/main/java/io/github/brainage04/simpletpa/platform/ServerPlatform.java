@@ -4,12 +4,9 @@ import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.gamerules.GameRule;
 
 public interface ServerPlatform {
     String loaderName();
-
-    GameRule<Boolean> registerAutoAcceptGameRule();
 
     void registerCommands(
             java.util.function.Consumer<CommandDispatcher<CommandSourceStack>> registration);

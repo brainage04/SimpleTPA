@@ -1,6 +1,7 @@
 package io.github.brainage04.simpletpa;
 
 import io.github.brainage04.brainagelib.feedback.ModFeedback;
+import io.github.brainage04.brainagelib.gamerule.GameRuleSet;
 import io.github.brainage04.brainagelib.help.ServerModHelpEntry;
 import io.github.brainage04.brainagelib.help.ServerModHelpRegistry;
 import io.github.brainage04.simpletpa.command.TPAutoAcceptCommand;
@@ -12,6 +13,7 @@ import io.github.brainage04.simpletpa.data.SafetyPreference;
 import io.github.brainage04.simpletpa.event.ModTickEvents;
 import io.github.brainage04.simpletpa.platform.ServerPlatform;
 import net.minecraft.world.level.gamerules.GameRule;
+import net.minecraft.world.level.gamerules.GameRuleCategory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,13 +22,14 @@ public final class SimpleTPA {
     public static final String MOD_NAME = "SimpleTPA";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     public static final ModFeedback FEEDBACK = ModFeedback.create(MOD_NAME);
-    public static GameRule<Boolean> AUTO_ACCEPT;
+    public static final GameRuleSet RULES = GameRuleSet.create(MOD_ID);
+    public static final GameRule<Boolean> AUTO_ACCEPT =
+            RULES.bool("auto_accept", GameRuleCategory.PLAYER, true);
 
     private SimpleTPA() {}
 
     public static void initialize(ServerPlatform platform) {
         LOGGER.info("{} initializing on {}...", MOD_NAME, platform.loaderName());
-        AUTO_ACCEPT = platform.registerAutoAcceptGameRule();
         platform.registerCommands(ModCommands::register);
         platform.registerEndServerTick(ModTickEvents::onEndServerTick);
         platform.registerServerStarting(LegacyGameRule::migrate);

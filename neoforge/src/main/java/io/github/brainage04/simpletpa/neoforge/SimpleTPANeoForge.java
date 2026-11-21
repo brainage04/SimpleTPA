@@ -7,10 +7,6 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.flag.FeatureFlagSet;
-import net.minecraft.world.level.gamerules.GameRule;
-import net.minecraft.world.level.gamerules.GameRuleCategory;
-import net.minecraft.world.level.gamerules.GameRuleType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -20,40 +16,22 @@ import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.RegisterEvent;
 
 @Mod(SimpleTPA.MOD_ID)
 public final class SimpleTPANeoForge implements ServerPlatform {
-    private static final DeferredRegister<GameRule<?>> GAME_RULES =
-            DeferredRegister.create(Registries.GAME_RULE, SimpleTPA.MOD_ID);
-    private static final DeferredHolder<GameRule<?>, GameRule<Boolean>> AUTO_ACCEPT =
-            GAME_RULES.register(
-                    "auto_accept",
-                    () ->
-                            new GameRule<>(
-                                    GameRuleCategory.PLAYER,
-                                    GameRuleType.BOOL,
-                                    com.mojang.brigadier.arguments.BoolArgumentType.bool(),
-                                    (visitor, rule) -> visitor.visitBoolean(rule),
-                                    com.mojang.serialization.Codec.BOOL,
-                                    value -> value ? 1 : 0,
-                                    true,
-                                    FeatureFlagSet.of()));
-
     public SimpleTPANeoForge(IEventBus modEventBus) {
-        GAME_RULES.register(modEventBus);
+        modEventBus.addListener(
+                (RegisterEvent event) ->
+                        event.register(
+                                Registries.GAME_RULE,
+                                helper -> SimpleTPA.RULES.registerAll(helper::register)));
         modEventBus.addListener((FMLCommonSetupEvent event) -> SimpleTPA.initialize(this));
     }
 
     @Override
     public String loaderName() {
         return "NeoForge";
-    }
-
-    @Override
-    public GameRule<Boolean> registerAutoAcceptGameRule() {
-        return AUTO_ACCEPT.get();
     }
 
     @Override

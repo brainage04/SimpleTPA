@@ -7,31 +7,24 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.gamerule.v1.GameRuleBuilder;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.gamerules.GameRule;
-import net.minecraft.world.level.gamerules.GameRuleCategory;
 
 public final class SimpleTPAFabric implements ModInitializer, ServerPlatform {
     @Override
     public void onInitialize() {
+        SimpleTPA.RULES.registerAll(
+                (id, rule) -> Registry.register(BuiltInRegistries.GAME_RULE, id, rule));
         SimpleTPA.initialize(this);
     }
 
     @Override
     public String loaderName() {
         return "Fabric";
-    }
-
-    @Override
-    public GameRule<Boolean> registerAutoAcceptGameRule() {
-        return GameRuleBuilder.forBoolean(true)
-                .category(GameRuleCategory.PLAYER)
-                .buildAndRegister(Identifier.fromNamespaceAndPath(SimpleTPA.MOD_ID, "auto_accept"));
     }
 
     @Override

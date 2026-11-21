@@ -19,24 +19,25 @@ on:
 permissions:
   contents: read
 
-# BrainageLib 2.0.0 is not on Maven Central yet, so every job builds it from its release candidate commit
-# (release/2.0.0). Drop the @<sha> once 2.0.0 is published.
+# BrainageLib 2.2.0 is not on Maven Central yet, so every job builds it from the feat/game-rule-set head,
+# d8919f3, which adds the GameRuleSet this mod registers its gamerule with. Drop the @<sha> once 2.2.0 is
+# published.
 jobs:
   build:
     uses: brainage04/MinecraftModConventions/.github/workflows/reusable-mod-build.yml@v3.4.0
     with:
-      prepare_siblings: BrainageLib@d783aa0a761aa6523fbf3ed291d7b5ca288fbffc
+      prepare_siblings: BrainageLib@d8919f3080f06697b794c73dd5dd4ba3fe3f548e
 
   production-gametests:
     uses: brainage04/MinecraftModConventions/.github/workflows/reusable-production-gametests.yml@v3.4.0
     with:
-      prepare_siblings: BrainageLib@d783aa0a761aa6523fbf3ed291d7b5ca288fbffc
+      prepare_siblings: BrainageLib@d8919f3080f06697b794c73dd5dd4ba3fe3f548e
 
   client-gametests:
     if: ${{ vars.RUN_CLIENT_GAMETESTS != 'false' && (github.event_name != 'workflow_dispatch' || inputs.run_client_gametests || inputs.record_client_gametests) }}
     uses: brainage04/MinecraftModConventions/.github/workflows/reusable-client-gametests.yml@v3.4.0
     with:
-      prepare_siblings: BrainageLib@d783aa0a761aa6523fbf3ed291d7b5ca288fbffc
+      prepare_siblings: BrainageLib@d8919f3080f06697b794c73dd5dd4ba3fe3f548e
       run_client_gametests: ${{ github.event_name != 'workflow_dispatch' || inputs.run_client_gametests }}
       client_gametest_profile: smoke
       record_client_gametests: ${{ github.event_name == 'workflow_dispatch' && inputs.record_client_gametests }}
