@@ -184,13 +184,13 @@ public final class SimpleTPAFilm {
      * Where the camera stands on the ghast's top after the arrival. The arrival lands on the
      * friend's head, and the friend rides the ghast, so the game does not push the player off them:
      * from the arrival spot the friend's back fills the middle of the frame. This spot is the far
-     * corner of the ghast's top, and the friend is turned to face it, so the shot shows the friend
-     * riding rather than their back.
+     * corner of the ghast's 4x4 top (EntityTypes.java:499-506), the furthest the camera can stand
+     * and still be on the ghast, and the ghast is turned to face it.
      */
     private static final Vec3 GHAST_VIEW =
-            new Vec3(GHAST_POSITION.x - 1.5D, GHAST_POSITION.y + 4.0D, GHAST_POSITION.z - 1.5D);
+            new Vec3(GHAST_POSITION.x - 2.0D, GHAST_POSITION.y + 4.0D, GHAST_POSITION.z - 2.0D);
 
-    /** The yaw that turns the ghast's rider to face {@link #GHAST_VIEW}. */
+    /** The yaw that turns the ghast, and so its rider, to face {@link #GHAST_VIEW}. */
     private static final float GHAST_VIEW_YAW = 135.0F;
 
     /**
