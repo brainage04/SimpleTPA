@@ -739,9 +739,10 @@ public final class SimpleTPAFilm {
         startStage(context, LONG_DROP);
         typeCommand(context, "tpa " + FRIEND_NAME);
         // The warning and the run-again line stay up long enough to read before the repeat. The
-        // repeat is typed whole, as everywhere else, before the first command's typed line
+        // repeat is typed whole, as everywhere else, at the moment the first command's typed line
         // expires: the overlay keeps a typed line for two seconds after its last character
-        // (InputOverlayState.java:24), so the panel never blanks while the warning is read.
+        // (InputOverlayState.java:24), and the clear and the retype run in one client task, so the
+        // panel never blanks while the warning is read.
         context.waitTicks(20);
         context.runOnClient(client -> InputOverlay.clear());
         typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
