@@ -1057,22 +1057,25 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Moves the player who has just arrived on the friend three blocks back, looking at them, so
+     * Moves the player who has just arrived on the friend four blocks back, looking at them, so
      * the shot shows both of them instead of the inside of the friend's head. The player moves
      * rather than the friend: the client applies a player's own teleport at once, while another
      * player's move is interpolated over three ticks, which is the face filling the screen.
      */
     private static void stepBackFrom(ServerPlayer player, ServerPlayer friend) {
-        friend.setInvisible(false);
         Vec3 facing =
                 new Vec3(
                         -Math.sin(Math.toRadians(friend.getYRot())),
                         0.0D,
                         Math.cos(Math.toRadians(friend.getYRot())));
+        // The camera moves before the friend is shown: the client applies the player's own
+        // teleport at once, so the friend's first visible frame is already the stepped-back shot
+        // rather than the inside of their head.
         look(
                 player,
                 friend.position().add(facing.scale(4.0D)),
                 friend.position().add(0.0D, 1.4D, 0.0D));
+        friend.setInvisible(false);
     }
 
     /**
