@@ -1153,8 +1153,10 @@ public final class SimpleTPAFilm {
             float fraction = (float) step / ticks;
             float yaw = from[0] + wrapDegrees(to[0] - from[0]) * fraction;
             float pitch = from[1] + (to[1] - from[1]) * fraction;
-            // A teleport, not setYRot: the client only learns a player's look from the server's
-            // position packet, so setting the angles alone leaves the camera where it was.
+            // A teleport, not setYRot: a player is not sent to themselves as a tracked entity
+            // (ChunkMap.java:1384), so setting the angles alone never reaches their own client.
+            // The look arrives by teleport (ClientPacketListener.java:787) or by forceSetRotation
+            // (ServerPlayer.java:1199).
             server.runOnServer(
                     minecraftServer -> {
                         ServerPlayer player = player(minecraftServer, playerName);
