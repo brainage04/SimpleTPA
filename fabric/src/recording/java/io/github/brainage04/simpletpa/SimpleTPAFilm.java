@@ -183,12 +183,15 @@ public final class SimpleTPAFilm {
     /**
      * Where the camera stands on the ghast's top after the arrival. The arrival lands on the
      * friend's head, and the friend rides the ghast, so the game does not push the player off them:
-     * from the arrival spot the friend's back fills the middle of the frame for the whole stage.
-     * This spot is the far corner of the ghast's top, in front of the friend, so the shot shows the
-     * friend riding rather than their back.
+     * from the arrival spot the friend's back fills the middle of the frame. This spot is the far
+     * corner of the ghast's top, and the friend is turned to face it, so the shot shows the friend
+     * riding rather than their back.
      */
     private static final Vec3 GHAST_VIEW =
             new Vec3(GHAST_POSITION.x - 1.5D, GHAST_POSITION.y + 4.0D, GHAST_POSITION.z - 1.5D);
+
+    /** The yaw that turns the ghast's rider to face {@link #GHAST_VIEW}. */
+    private static final float GHAST_VIEW_YAW = 135.0F;
 
     /**
      * Where the ghast waits between its stage and the rest: under the stage floor, which no camera
@@ -702,10 +705,10 @@ public final class SimpleTPAFilm {
                             .getCommands()
                             .performPrefixedCommand(
                                     player.createCommandSourceStack(), "tpa " + FRIEND_NAME);
-                    look(
-                            player,
-                            GHAST_VIEW,
-                            friend(minecraftServer).position().add(0.0D, 1.4D, 0.0D));
+                    ServerPlayer rider = friend(minecraftServer);
+                    rider.setYRot(GHAST_VIEW_YAW);
+                    rider.setYHeadRot(GHAST_VIEW_YAW);
+                    look(player, GHAST_VIEW, rider.position().add(0.0D, 1.4D, 0.0D));
                 });
         closeChat(context);
         context.waitTicks(16);
