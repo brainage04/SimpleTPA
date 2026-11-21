@@ -181,11 +181,11 @@ public final class SimpleTPAFilm {
     private static final Vec3 GHAST_POSITION = new Vec3(2.5D, 70.0D, 0.5D);
 
     /**
-     * Where the camera stands on the ghast's top after the arrival. The arrival lands at the
-     * middle of the ghast's top, 1.7 blocks from the friend's seat (Landing.java:47-57), so from
-     * there the friend's back fills the middle of the frame. This spot is the far corner of the
-     * ghast's 4x4 top (EntityTypes.java:499-506), the furthest the camera can stand and still be
-     * on the ghast, and the ghast is turned to face it.
+     * Where the camera stands on the ghast's top after the arrival. The arrival lands at the middle
+     * of the ghast's top, 1.7 blocks from the friend's seat (Landing.java:47-57), so from there the
+     * friend's back fills the middle of the frame. This spot is the far corner of the ghast's 4x4
+     * top (EntityTypes.java:499-506), the furthest the camera can stand and still be on the ghast,
+     * and the ghast is turned to face it.
      */
     private static final Vec3 GHAST_VIEW =
             new Vec3(GHAST_POSITION.x - 2.0D, GHAST_POSITION.y + 4.0D, GHAST_POSITION.z - 2.0D);
