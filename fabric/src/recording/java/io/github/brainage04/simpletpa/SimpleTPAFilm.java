@@ -1154,8 +1154,7 @@ public final class SimpleTPAFilm {
             server.runOnServer(
                     minecraftServer -> {
                         ServerPlayer player = player(minecraftServer, playerName);
-                        SimpleTPAFakePlayerScenario.place(
-                                player, player.position(), yaw, pitch);
+                        SimpleTPAFakePlayerScenario.place(player, player.position(), yaw, pitch);
                     });
             context.waitTicks(1);
         }
