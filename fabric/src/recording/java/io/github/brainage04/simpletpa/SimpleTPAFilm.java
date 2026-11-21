@@ -761,11 +761,19 @@ public final class SimpleTPAFilm {
         // The friend is shown again once the step back has played out, so the stage ends on them
         // rather than on empty sky.
         showFriendAfterSlide(context, server);
-        // The arrival is six blocks up, so the player falls to the floor, and the stage ends there.
-        // The camera is not turned back up at the friend: that turn is a cut, and it landed 0.57 s
-        // before the caption changed, so the last half second of the stage showed a new shot under
-        // the old caption. The fall itself is the shot the caption describes.
-        context.waitTicks(30);
+        // The arrival is six blocks up, so the player falls to the floor. The camera then pans up to
+        // the friend, so the stage ends on them rather than on empty floor. A pan, not a turn: a
+        // turn is a cut, and a cut inside a stage shows a new shot under the old caption. The pan
+        // waits for the landing, because a teleport mid-fall would stop the fall.
+        context.waitTicks(20);
+        panTo(
+                context,
+                server,
+                playerName,
+                server.computeOnServer(
+                        minecraftServer ->
+                                friend(minecraftServer).position().add(0.0D, 1.4D, 0.0D)),
+                10);
 
         endStage(context);
         reset(context, server, playerName);
@@ -1104,6 +1112,66 @@ public final class SimpleTPAFilm {
     private static float yawTowards(Vec3 from, Vec3 to) {
         Vec3 towards = to.subtract(from);
         return (float) Math.toDegrees(Math.atan2(towards.z, towards.x)) - 90.0F;
+    }
+
+    /**
+     * Turns {@code player} to look at {@code target} over {@code ticks}, a step a tick, so the move
+     * reads as a pan rather than a cut. The player stays where they are: only the look angles move.
+     */
+    private static void panTo(
+            ClientGameTestContext context,
+            TestDedicatedServerContext server,
+            String playerName,
+            Vec3 target,
+            int ticks) {
+        float[] from =
+                server.computeOnServer(
+                        minecraftServer -> {
+                            ServerPlayer player = player(minecraftServer, playerName);
+                            return new float[] {player.getYRot(), player.getXRot()};
+                        });
+        float[] to =
+                server.computeOnServer(
+                        minecraftServer -> {
+                            ServerPlayer player = player(minecraftServer, playerName);
+                            Vec3 towards =
+                                    target.subtract(
+                                            player.position().add(0.0D, 1.62D, 0.0D));
+                            float reach =
+                                    (float)
+                                            Math.sqrt(
+                                                    towards.x * towards.x
+                                                            + towards.z * towards.z);
+                            return new float[] {
+                                (float) Math.toDegrees(Math.atan2(towards.z, towards.x)) - 90.0F,
+                                (float) -Math.toDegrees(Math.atan2(towards.y, reach))
+                            };
+                        });
+        for (int step = 1; step <= ticks; step++) {
+            float fraction = (float) step / ticks;
+            float yaw = from[0] + wrapDegrees(to[0] - from[0]) * fraction;
+            float pitch = from[1] + (to[1] - from[1]) * fraction;
+            server.runOnServer(
+                    minecraftServer -> {
+                        ServerPlayer player = player(minecraftServer, playerName);
+                        player.setYRot(yaw);
+                        player.setYHeadRot(yaw);
+                        player.setXRot(pitch);
+                    });
+            context.waitTicks(1);
+        }
+    }
+
+    /** {@code degrees} wrapped to -180 to 180, so a pan takes the short way round. */
+    private static float wrapDegrees(float degrees) {
+        float wrapped = degrees % 360.0F;
+        if (wrapped >= 180.0F) {
+            wrapped -= 360.0F;
+        }
+        if (wrapped < -180.0F) {
+            wrapped += 360.0F;
+        }
+        return wrapped;
     }
 
     /** Forgets the client's pending request, so the next scenario starts from a clean slate. */
