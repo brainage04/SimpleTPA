@@ -14,7 +14,7 @@ jobs:
       contents: write
     uses: brainage04/MinecraftModConventions/.github/workflows/reusable-multiloader-release.yml@v3.4.0
     with:
-      prepare_siblings: BrainageLib@e65836fa6b400f1cef90ae6d73d4d9299014362c
+      prepare_siblings: BrainageLib@7bf5459fd129985b85c03b12f17d210830d8f3e4
       additional_artifact_pattern: simpletpa-neoforge-*.jar
       release_name: ${{ format('SimpleTPA {0}', github.ref_name) }}
       modrinth_project_id: ${{ vars.MODRINTH_PROJECT_ID }}
