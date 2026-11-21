@@ -711,10 +711,12 @@ public final class SimpleTPAFilm {
                             .getCommands()
                             .performPrefixedCommand(
                                     player.createCommandSourceStack(), "tpa " + FRIEND_NAME);
-                    // Aimed at the friend's feet, not their head: from 2.8 blocks away their head
-                    // fills the middle of the frame, and the pitch down puts the ghast's deck in
-                    // the shot the caption is about.
-                    look(player, GHAST_VIEW, friend(minecraftServer).position());
+                    // Aimed at the friend's chest: their head alone leaves the ghast's deck out of
+                    // shot, and their feet put their head at the top edge.
+                    look(
+                            player,
+                            GHAST_VIEW,
+                            friend(minecraftServer).position().add(0.0D, 1.0D, 0.0D));
                 });
         closeChat(context);
         context.waitTicks(16);
