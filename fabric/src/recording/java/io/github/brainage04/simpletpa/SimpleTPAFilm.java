@@ -181,17 +181,17 @@ public final class SimpleTPAFilm {
     private static final Vec3 GHAST_POSITION = new Vec3(2.5D, 70.0D, 0.5D);
 
     /**
-     * Where the camera stands on the ghast's top after the arrival. The arrival lands on the
-     * friend's head, and the friend rides the ghast, so the game does not push the player off them:
-     * from the arrival spot the friend's back fills the middle of the frame. This spot is the far
-     * corner of the ghast's 4x4 top (EntityTypes.java:499-506), the furthest the camera can stand
-     * and still be on the ghast, and the ghast is turned to face it.
+     * Where the camera stands on the ghast's top after the arrival. The arrival lands at the
+     * middle of the ghast's top, 1.7 blocks from the friend's seat (Landing.java:47-57), so from
+     * there the friend's back fills the middle of the frame. This spot is the far corner of the
+     * ghast's 4x4 top (EntityTypes.java:499-506), the furthest the camera can stand and still be
+     * on the ghast, and the ghast is turned to face it.
      */
     private static final Vec3 GHAST_VIEW =
             new Vec3(GHAST_POSITION.x - 2.0D, GHAST_POSITION.y + 4.0D, GHAST_POSITION.z - 2.0D);
 
     /** The yaw that turns the ghast, and so its rider, to face {@link #GHAST_VIEW}. */
-    private static final float GHAST_VIEW_YAW = 135.0F;
+    private static final float GHAST_VIEW_YAW = yawTowards(GHAST_POSITION, GHAST_VIEW);
 
     /**
      * Where the ghast waits between its stage and the rest: under the stage floor, which no camera
@@ -711,8 +711,10 @@ public final class SimpleTPAFilm {
                             .getCommands()
                             .performPrefixedCommand(
                                     player.createCommandSourceStack(), "tpa " + FRIEND_NAME);
-                    ServerPlayer rider = friend(minecraftServer);
-                    look(player, GHAST_VIEW, rider.position().add(0.0D, 1.4D, 0.0D));
+                    // Aimed at the friend's feet, not their head: from 2.8 blocks away their head
+                    // fills the middle of the frame, and the pitch down puts the ghast's deck in
+                    // the shot the caption is about.
+                    look(player, GHAST_VIEW, friend(minecraftServer).position());
                 });
         closeChat(context);
         context.waitTicks(16);
@@ -735,19 +737,12 @@ public final class SimpleTPAFilm {
         startStage(context, LONG_DROP);
         typeCommand(context, "tpa " + FRIEND_NAME);
         // The warning and the run-again line stay up long enough to read before the repeat. The
-        // repeat is typed in two parts, the second before the first part's typed line expires: the
-        // overlay keeps a typed line for two seconds after its last character, so typing the whole
-        // repeat after the read left the panel blank for a second in the middle of the stage.
+        // repeat is typed whole, as everywhere else, before the first command's typed line
+        // expires: the overlay keeps a typed line for two seconds after its last character
+        // (InputOverlayState.java:24), so the panel never blanks while the warning is read.
         context.waitTicks(20);
-        context.runOnClient(
-                client -> {
-                    InputOverlay.clear();
-                    client.gui.setScreen(new ChatScreen("", false));
-                });
-        context.getInput().typeChars("/tpa ");
-        context.waitTicks(20);
-        context.getInput().typeChars(FRIEND_NAME);
-        context.waitTicks(20);
+        context.runOnClient(client -> InputOverlay.clear());
+        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
@@ -764,22 +759,11 @@ public final class SimpleTPAFilm {
         // The friend is shown again once the step back has played out, so the stage ends on them
         // rather than on empty sky.
         showFriendAfterSlide(context, server);
-        // The arrival is six blocks up, so the player falls to the floor. The camera then goes back
-        // to the wide view the stage opened on, so the stage ends on the drop it is about. Turned
-        // up at the friend from the floor under the arrival, the shot is a player on the floor
-        // looking at the friend over the gold mark, which is what the short-drop stage opens on;
-        // the wide view keeps the two apart. The move waits for the landing, because a teleport
-        // mid-fall would stop the fall.
-        context.waitTicks(20);
-        server.runOnServer(
-                minecraftServer -> {
-                    ServerPlayer player = player(minecraftServer, playerName);
-                    look(
-                            player,
-                            LONG_DROP_VIEW,
-                            friend(minecraftServer).position().add(0.0D, 1.4D, 0.0D));
-                });
-        context.waitTicks(10);
+        // The arrival is six blocks up, so the player falls to the floor, and the stage ends there.
+        // The camera is not turned back up at the friend: that turn is a cut, and it landed 0.57 s
+        // before the caption changed, so the last half second of the stage showed a new shot under
+        // the old caption. The fall itself is the shot the caption describes.
+        context.waitTicks(30);
 
         endStage(context);
         reset(context, server, playerName);
@@ -1112,6 +1096,12 @@ public final class SimpleTPAFilm {
         float reach = (float) Math.sqrt(towards.x * towards.x + towards.z * towards.z);
         float pitch = (float) -Math.toDegrees(Math.atan2(towards.y, reach));
         SimpleTPAFakePlayerScenario.place(player, position, yaw, pitch);
+    }
+
+    /** The yaw that faces {@code from} towards {@code to}, as {@link #look} computes it. */
+    private static float yawTowards(Vec3 from, Vec3 to) {
+        Vec3 towards = to.subtract(from);
+        return (float) Math.toDegrees(Math.atan2(towards.z, towards.x)) - 90.0F;
     }
 
     /** Forgets the client's pending request, so the next scenario starts from a clean slate. */
