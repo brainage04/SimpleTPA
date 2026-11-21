@@ -1057,10 +1057,10 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Moves the player who has just arrived on the friend four blocks back, looking at them, so
-     * the shot shows both of them instead of the inside of the friend's head. The player moves
-     * rather than the friend: the client applies a player's own teleport at once, while another
-     * player's move is interpolated over three ticks, which is the face filling the screen.
+     * Moves the player who has just arrived on the friend four blocks back, looking at them, so the
+     * shot shows both of them instead of the inside of the friend's head. The player moves rather
+     * than the friend: the client applies a player's own teleport at once, while another player's
+     * move is interpolated over three ticks, which is the face filling the screen.
      */
     private static void stepBackFrom(ServerPlayer player, ServerPlayer friend) {
         Vec3 facing =
