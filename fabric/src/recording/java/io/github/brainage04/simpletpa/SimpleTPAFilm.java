@@ -685,6 +685,12 @@ public final class SimpleTPAFilm {
                     rider.onUpdateAbilities();
                     HappyGhast ghast = filmGhast(minecraftServer, rider);
                     ghast.setPos(GHAST_POSITION.x, GHAST_POSITION.y, GHAST_POSITION.z);
+                    // The rider's body follows the ghast's body rotation
+                    // (LivingEntityRenderer.java:305-315), so the ghast is turned to face the
+                    // camera the stage steps back to; turning the rider alone left their back in
+                    // shot.
+                    ghast.setYRot(GHAST_VIEW_YAW);
+                    ghast.setYHeadRot(GHAST_VIEW_YAW);
                     rider.startRiding(ghast, true, false);
                     rider.setYRot(WEST);
                     rider.setYHeadRot(WEST);
@@ -706,8 +712,6 @@ public final class SimpleTPAFilm {
                             .performPrefixedCommand(
                                     player.createCommandSourceStack(), "tpa " + FRIEND_NAME);
                     ServerPlayer rider = friend(minecraftServer);
-                    rider.setYRot(GHAST_VIEW_YAW);
-                    rider.setYHeadRot(GHAST_VIEW_YAW);
                     look(player, GHAST_VIEW, rider.position().add(0.0D, 1.4D, 0.0D));
                 });
         closeChat(context);
