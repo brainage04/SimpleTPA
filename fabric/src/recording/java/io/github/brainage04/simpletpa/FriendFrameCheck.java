@@ -111,8 +111,7 @@ final class FriendFrameCheck implements HudElement {
             return;
         }
         measured++;
-        double fraction =
-                fraction(client, friend, deltaTracker.getGameTimeDeltaPartialTick(true));
+        double fraction = fraction(client, friend, deltaTracker.getGameTimeDeltaPartialTick(true));
         if (fraction > worst) {
             worst = fraction;
             worstStage = stage.get();
