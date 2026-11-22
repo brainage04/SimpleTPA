@@ -602,22 +602,15 @@ public final class SimpleTPAFilm {
         startStage(context, AUTO_ACCEPT);
         typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
         context.waitTicks(25);
-        // The friend is hidden a tick before the request, so the client has their invisibility
-        // before the arrival is drawn: the flag is entity data sent at the end of the tick
-        // (ServerEntity.java:370-375), and hiding them in the request's own tick left one frame
-        // drawn from inside their model.
-        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
-        context.waitTicks(1);
         server.runOnServer(
                 minecraftServer -> {
+                    friend(minecraftServer).setInvisible(true);
                     SimpleTPAFakePlayerScenario.executeCommand(
                             friend(minecraftServer), "tpa " + playerName);
-                    // The whitelist answers the request inside the command, so the arrival has
-                    // already landed and the camera steps clear in the same tick.
                     stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer));
+                    friend(minecraftServer).setInvisible(false);
                 });
-        showFriendAfterSlide(context, server);
-        context.waitTicks(13);
+        context.waitTicks(16);
     }
 
     /**
