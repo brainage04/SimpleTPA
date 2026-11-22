@@ -611,11 +611,7 @@ public final class SimpleTPAFilm {
                 minecraftServer ->
                         SimpleTPAFakePlayerScenario.executeCommand(
                                 friend(minecraftServer), "tpa " + playerName));
-        context.waitTicks(1);
-        server.runOnServer(
-                minecraftServer ->
-                        stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer)));
-        context.waitTicks(15);
+        context.waitTicks(16);
     }
 
     /**
