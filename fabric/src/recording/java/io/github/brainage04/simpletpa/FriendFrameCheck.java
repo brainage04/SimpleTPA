@@ -67,6 +67,13 @@ final class FriendFrameCheck implements HudElement {
         return check;
     }
 
+    /** Prints the worst frame and the count, so a passing take still shows what it measured. */
+    void report() {
+        System.out.println(
+                "FRIEND_FRAME_CHECK worst=%.3f stage=%s measured=%d limit=%.2f"
+                        .formatted(worst, worstStage, measured, MAX_FRACTION));
+    }
+
     /** Throws when any measured frame showed the friend over {@link #MAX_FRACTION}. */
     void assertWithinLimit() {
         if (worst > MAX_FRACTION) {
