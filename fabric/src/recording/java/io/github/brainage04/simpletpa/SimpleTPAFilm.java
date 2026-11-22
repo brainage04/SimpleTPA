@@ -174,8 +174,8 @@ public final class SimpleTPAFilm {
      */
     private static final int CAPTION_LEAD_TICKS = 4;
 
-    /** The stage on screen, for {@link #endStage}. */
-    private static String stage;
+    /** The stage on screen, for {@link #endStage}. Volatile: the frame check reads it. */
+    private static volatile String stage;
 
     private static final Vec3 LOOKOUT_POSITION = new Vec3(-11.5D, STAGE_Y, 0.5D);
     private static final Vec3 HIGH_POSITION = new Vec3(2.5D, 78.0D, -5.5D);
@@ -283,7 +283,10 @@ public final class SimpleTPAFilm {
                 server -> {
                     try {
                         context.runOnClient(
-                                client -> client.gui.hud.getChat().clearMessages(false));
+                                client -> {
+                                    client.gui.hud.getChat().clearMessages(false);
+                                    FriendFrameCheck.start(FRIEND_NAME, () -> stage);
+                                });
                         // The first frame before the world draws has no terrain yet.
                         context.waitTicks(10);
                         // The client's player runs each stage's own setup commands, so they need
@@ -310,7 +313,10 @@ public final class SimpleTPAFilm {
                             ClientGameTestStages.endStage(context, stage, STAGE_HOLD_TICKS);
                             stage = null;
                         }
+                        FriendFrameCheck check = FriendFrameCheck.stop();
                         server.runOnServer(minecraftServer -> friend[0].close());
+                        check.report();
+                        check.assertWithinLimit();
                     }
                 });
     }
