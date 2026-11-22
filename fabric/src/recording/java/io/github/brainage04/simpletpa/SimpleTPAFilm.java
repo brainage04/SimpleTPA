@@ -283,7 +283,10 @@ public final class SimpleTPAFilm {
                 server -> {
                     try {
                         context.runOnClient(
-                                client -> client.gui.hud.getChat().clearMessages(false));
+                                client -> {
+                                    client.gui.hud.getChat().clearMessages(false);
+                                    FriendFrameCheck.start(FRIEND_NAME, () -> stage);
+                                });
                         // The first frame before the world draws has no terrain yet.
                         context.waitTicks(10);
                         // The client's player runs each stage's own setup commands, so they need
@@ -310,7 +313,9 @@ public final class SimpleTPAFilm {
                             ClientGameTestStages.endStage(context, stage, STAGE_HOLD_TICKS);
                             stage = null;
                         }
+                        FriendFrameCheck check = FriendFrameCheck.stop();
                         server.runOnServer(minecraftServer -> friend[0].close());
+                        check.assertWithinLimit();
                     }
                 });
     }
@@ -598,16 +603,22 @@ public final class SimpleTPAFilm {
         startStage(context, AUTO_ACCEPT);
         typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
         context.waitTicks(25);
+        // The friend is hidden a tick before the request, so the client has their invisibility
+        // before the arrival is drawn: the flag is entity data sent at the end of the tick
+        // (ServerEntity.java:370-375), and hiding them in the request's own tick left one frame
+        // drawn from inside their model.
+        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
+        context.waitTicks(1);
         server.runOnServer(
                 minecraftServer -> {
-                    friend(minecraftServer).setInvisible(true);
                     SimpleTPAFakePlayerScenario.executeCommand(
                             friend(minecraftServer), "tpa " + playerName);
                     // The whitelist answers the request inside the command, so the arrival has
-                    // already landed and the friend steps clear in the same tick.
+                    // already landed and the camera steps clear in the same tick.
                     stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer));
                 });
-        context.waitTicks(16);
+        showFriendAfterSlide(context, server);
+        context.waitTicks(13);
     }
 
     /**
@@ -649,15 +660,17 @@ public final class SimpleTPAFilm {
                     setupCommand(player, "tpasafety off");
                 });
         startStage(context, LANDING_CHECK_OFF);
-        // The arrival is on the friend's head, so the player steps back in the tick it lands and
-        // falls from there, with the friend in shot.
+        // The arrival is on the friend's head, so the camera steps back in the tick it lands and
+        // falls from there. The friend is shown once the step back has played out, so the fall is
+        // watched past them rather than through them.
         pendingStepBack =
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
                     stepBackFrom(player, friend(minecraftServer));
                 };
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(45);
+        showFriendAfterSlide(context, server);
+        context.waitTicks(42);
 
         endStage(context);
         reset(context, server, playerName);
@@ -857,7 +870,8 @@ public final class SimpleTPAFilm {
                     stepBackFrom(player, target);
                 });
         closeChat(context);
-        context.waitTicks(16);
+        showFriendAfterSlide(context, server);
+        context.waitTicks(13);
 
         endStage(context);
         reset(context, server, playerName);
@@ -888,7 +902,8 @@ public final class SimpleTPAFilm {
         server.runOnServer(
                 minecraftServer ->
                         stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer)));
-        context.waitTicks(16);
+        showFriendAfterSlide(context, server);
+        context.waitTicks(13);
 
         endStage(context);
         reset(context, server, playerName);
@@ -920,8 +935,9 @@ public final class SimpleTPAFilm {
                     stepBackFrom(player, friend(minecraftServer));
                 };
         context.getInput().pressKey(InputConstants.KEY_RETURN);
+        showFriendAfterSlide(context, server);
         // The arrival keeps the fall, so the landing hurts: the stage ends on the hearts it took.
-        context.waitTicks(20);
+        context.waitTicks(17);
 
         endStage(context);
         reset(context, server, playerName);
@@ -947,7 +963,8 @@ public final class SimpleTPAFilm {
                     stepBackFrom(player, friend(minecraftServer));
                 };
         context.getInput().pressKey(InputConstants.KEY_RETURN);
-        context.waitTicks(16);
+        showFriendAfterSlide(context, server);
+        context.waitTicks(13);
     }
 
     /**
@@ -1064,6 +1081,11 @@ public final class SimpleTPAFilm {
      * than the friend: the client applies a player's own teleport at once
      * (ServerGamePacketListenerImpl.java:1328), while another player's move is interpolated over
      * three ticks, which is the face filling the screen.
+     *
+     * <p>The friend is left as they are, hidden or not. Showing them here put their model in the
+     * frame the arrival was drawn in: the invisibility flag is entity data sent at the end of the
+     * tick (ServerEntity.java:370-375), while the camera's own teleport goes out inside the call.
+     * A stage that wants the friend in shot shows them with {@link #showFriendAfterSlide}.
      */
     private static void stepBackFrom(ServerPlayer player, ServerPlayer friend) {
         Vec3 facing =
@@ -1071,15 +1093,10 @@ public final class SimpleTPAFilm {
                         -Math.sin(Math.toRadians(friend.getYRot())),
                         0.0D,
                         Math.cos(Math.toRadians(friend.getYRot())));
-        // The camera moves before the friend is shown: the player's teleport goes out inside the
-        // call (ServerGamePacketListenerImpl.java:1328), while the invisibility flag is entity data
-        // sent at the end of the tick (ServerEntity.java:370-375), so the friend's first visible
-        // frame is already the stepped-back shot rather than the inside of their head.
         look(
                 player,
                 friend.position().add(facing.scale(4.0D)),
                 friend.position().add(0.0D, 1.4D, 0.0D));
-        friend.setInvisible(false);
     }
 
     /**
