@@ -36,6 +36,7 @@ import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.server.players.NameAndId;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -741,8 +742,8 @@ public final class SimpleTPAFilm {
         // The warning and the run-again line stay up long enough to read before the repeat. The
         // repeat is typed whole, as everywhere else, at the moment the first command's typed line
         // expires: the overlay keeps a typed line for two seconds after its last character
-        // (InputOverlayState.java:24), and the clear and the retype run in one client task, so the
-        // panel never blanks while the warning is read.
+        // (InputOverlayState.java:24), and the clear and the retype both run before the next tick,
+        // so the panel never blanks while the warning is read.
         context.waitTicks(20);
         context.runOnClient(client -> InputOverlay.clear());
         typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
@@ -765,7 +766,8 @@ public final class SimpleTPAFilm {
         // The arrival is six blocks up, so the player falls to the floor. The camera then pans up
         // to the friend, so the stage ends on them rather than on empty floor. A pan, not a turn:
         // a turn is a cut, and a cut inside a stage shows a new shot under the old caption. The
-        // pan waits for the landing, because a teleport mid-fall would stop the fall.
+        // pan waits for the landing, because a teleport zeroes the player's velocity
+        // (Entity.java:3275) and the fall would stutter.
         context.waitTicks(20);
         panTo(
                 context,
@@ -1059,8 +1061,9 @@ public final class SimpleTPAFilm {
     /**
      * Moves the player who has just arrived on the friend four blocks back, looking at them, so the
      * shot shows both of them instead of the inside of the friend's head. The player moves rather
-     * than the friend: the client applies a player's own teleport at once, while another player's
-     * move is interpolated over three ticks, which is the face filling the screen.
+     * than the friend: the client applies a player's own teleport at once
+     * (ServerGamePacketListenerImpl.java:1328), while another player's move is interpolated over
+     * three ticks, which is the face filling the screen.
      */
     private static void stepBackFrom(ServerPlayer player, ServerPlayer friend) {
         Vec3 facing =
@@ -1068,9 +1071,10 @@ public final class SimpleTPAFilm {
                         -Math.sin(Math.toRadians(friend.getYRot())),
                         0.0D,
                         Math.cos(Math.toRadians(friend.getYRot())));
-        // The camera moves before the friend is shown: the client applies the player's own
-        // teleport at once, so the friend's first visible frame is already the stepped-back shot
-        // rather than the inside of their head.
+        // The camera moves before the friend is shown: the player's teleport goes out inside the
+        // call (ServerGamePacketListenerImpl.java:1328), while the invisibility flag is entity data
+        // sent at the end of the tick (ServerEntity.java:370-375), so the friend's first visible
+        // frame is already the stepped-back shot rather than the inside of their head.
         look(
                 player,
                 friend.position().add(facing.scale(4.0D)),
@@ -1105,7 +1109,7 @@ public final class SimpleTPAFilm {
 
     /** Places {@code player} at {@code position} looking at {@code target}. */
     private static void look(ServerPlayer player, Vec3 position, Vec3 target) {
-        Vec3 towards = target.subtract(position.add(0.0D, 1.62D, 0.0D));
+        Vec3 towards = target.subtract(position.add(0.0D, player.getEyeHeight(), 0.0D));
         float yaw = (float) Math.toDegrees(Math.atan2(towards.z, towards.x)) - 90.0F;
         float reach = (float) Math.sqrt(towards.x * towards.x + towards.z * towards.z);
         float pitch = (float) -Math.toDegrees(Math.atan2(towards.y, reach));
@@ -1120,7 +1124,8 @@ public final class SimpleTPAFilm {
 
     /**
      * Turns {@code player} to look at {@code target} over {@code ticks}, a step a tick, so the move
-     * reads as a pan rather than a cut. The player stays where they are: only the look angles move.
+     * reads as a pan rather than a cut. The player's position is unchanged: each step teleports
+     * them to where they stand with new look angles.
      */
     private static void panTo(
             ClientGameTestContext context,
@@ -1139,7 +1144,9 @@ public final class SimpleTPAFilm {
                         minecraftServer -> {
                             ServerPlayer player = player(minecraftServer, playerName);
                             Vec3 towards =
-                                    target.subtract(player.position().add(0.0D, 1.62D, 0.0D));
+                                    target.subtract(
+                                            player.position()
+                                                    .add(0.0D, player.getEyeHeight(), 0.0D));
                             float reach =
                                     (float)
                                             Math.sqrt(
@@ -1151,7 +1158,7 @@ public final class SimpleTPAFilm {
                         });
         for (int step = 1; step <= ticks; step++) {
             float fraction = (float) step / ticks;
-            float yaw = from[0] + wrapDegrees(to[0] - from[0]) * fraction;
+            float yaw = from[0] + Mth.wrapDegrees(to[0] - from[0]) * fraction;
             float pitch = from[1] + (to[1] - from[1]) * fraction;
             // A teleport, not setYRot: a player is not sent to themselves as a tracked entity
             // (ChunkMap.java:1384), so setting the angles alone never reaches their own client.
@@ -1164,18 +1171,6 @@ public final class SimpleTPAFilm {
                     });
             context.waitTicks(1);
         }
-    }
-
-    /** {@code degrees} wrapped to -180 to 180, so a pan takes the short way round. */
-    private static float wrapDegrees(float degrees) {
-        float wrapped = degrees % 360.0F;
-        if (wrapped >= 180.0F) {
-            wrapped -= 360.0F;
-        }
-        if (wrapped < -180.0F) {
-            wrapped += 360.0F;
-        }
-        return wrapped;
     }
 
     /** Forgets the client's pending request, so the next scenario starts from a clean slate. */
