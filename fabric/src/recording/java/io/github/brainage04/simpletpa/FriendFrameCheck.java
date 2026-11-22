@@ -1,14 +1,11 @@
 package io.github.brainage04.simpletpa;
 
 import java.util.function.Supplier;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Camera;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
@@ -25,13 +22,16 @@ import org.joml.Vector4f;
  *
  * <p>A frame the friend is hidden in is not measured: an invisible friend fills nothing. A box the
  * camera stands inside counts as the whole frame, which is the defect this check exists for.
+ *
+ * <p>The measure runs at the end of the level's own render ({@code LevelRenderEvents.END_MAIN}),
+ * after the camera has been updated for the frame and before the frame is presented, so it reads
+ * the camera and the friend the frame is drawn with. A HUD element runs before that update and
+ * measures the frame before.
  */
-final class FriendFrameCheck implements HudElement {
+final class FriendFrameCheck {
     /** The most of a frame the friend's box may cover. */
     static final double MAX_FRACTION = 0.25D;
 
-    private static final Identifier ID =
-            Identifier.fromNamespaceAndPath("simpletpa", "friend_frame_check");
     private static final float NEAR = 0.05F;
 
     private static FriendFrameCheck active;
@@ -53,7 +53,7 @@ final class FriendFrameCheck implements HudElement {
             throw new IllegalStateException("The friend frame check is already running.");
         }
         active = new FriendFrameCheck(friendName, stage);
-        HudElementRegistry.addLast(ID, active);
+        LevelRenderEvents.END_MAIN.register(active::endMain);
     }
 
     /** Stops measuring and returns the check, for its verdict. */
@@ -63,7 +63,6 @@ final class FriendFrameCheck implements HudElement {
             throw new IllegalStateException("The friend frame check is not running.");
         }
         active = null;
-        HudElementRegistry.removeElement(ID);
         return check;
     }
 
@@ -88,8 +87,7 @@ final class FriendFrameCheck implements HudElement {
         }
     }
 
-    @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+    private void endMain(LevelRenderContext context) {
         Minecraft client = Minecraft.getInstance();
         // Only a filmed stage is measured. Between stages the reset puts the camera on the friend's
         // own spot, which is off camera and never in the film.
