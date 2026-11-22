@@ -1,11 +1,14 @@
 package io.github.brainage04.simpletpa;
 
 import java.util.function.Supplier;
-import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
@@ -17,21 +20,23 @@ import org.joml.Vector4f;
  * <p>The measure is the friend's own box projected into the frame, not a count of skin-coloured
  * pixels: the player's first-person arm is the same brown as the friend's skin and sits in the
  * bottom right of every shot, so a colour count would have to be told which brown is which. The box
- * is the game's own answer for what the friend occupies ({@code Entity.getBoundingBox}), and the
- * matrix is the camera's own view-projection matrix, so the fraction is what the frame shows.
+ * is the game's own answer for what the friend occupies, interpolated the way the renderer draws
+ * them ({@code Entity.getInterpolatedBoundingBox}), and the matrix is the camera's own
+ * view-projection matrix, so the fraction is what the frame shows.
  *
- * <p>A frame the friend is hidden in is not measured: an invisible friend fills nothing. A box the
- * camera stands inside counts as the whole frame, which is the defect this check exists for.
+ * <p>A frame the friend is hidden in is not measured: an invisible friend fills nothing. A camera
+ * inside the friend's box counts as the whole frame, which is the defect this check exists for.
  *
- * <p>The measure runs at the end of the level's own render ({@code LevelRenderEvents.END_MAIN}),
- * after the camera has been updated for the frame and before the frame is presented, so it reads
- * the camera and the friend the frame is drawn with. A HUD element runs before that update and
- * measures the frame before.
+ * <p>The limit is a quarter of the frame. The largest legitimate frame measured across takes 6 and
+ * 7 is 0.131, and the defect is 1.0, so a quarter leaves the real shots room and still fails a
+ * friend filling a third of the frame.
  */
-final class FriendFrameCheck {
+final class FriendFrameCheck implements HudElement {
     /** The most of a frame the friend's box may cover. */
     static final double MAX_FRACTION = 0.25D;
 
+    private static final Identifier ID =
+            Identifier.fromNamespaceAndPath("simpletpa", "friend_frame_check");
     private static final float NEAR = 0.05F;
 
     private static FriendFrameCheck active;
@@ -53,7 +58,7 @@ final class FriendFrameCheck {
             throw new IllegalStateException("The friend frame check is already running.");
         }
         active = new FriendFrameCheck(friendName, stage);
-        LevelRenderEvents.END_MAIN.register(active::endMain);
+        HudElementRegistry.addLast(ID, active);
     }
 
     /** Stops measuring and returns the check, for its verdict. */
@@ -63,6 +68,7 @@ final class FriendFrameCheck {
             throw new IllegalStateException("The friend frame check is not running.");
         }
         active = null;
+        HudElementRegistry.removeElement(ID);
         return check;
     }
 
@@ -87,10 +93,10 @@ final class FriendFrameCheck {
         }
     }
 
-    private void endMain(LevelRenderContext context) {
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         Minecraft client = Minecraft.getInstance();
-        // Only a filmed stage is measured. Between stages the reset puts the camera on the friend's
-        // own spot, which is off camera and never in the film.
+        // Only a filmed stage is measured: the frames between stages are not in the film.
         if (client.level == null || client.player == null || stage.get() == null) {
             return;
         }
@@ -105,17 +111,19 @@ final class FriendFrameCheck {
             return;
         }
         measured++;
-        double fraction = fraction(client, friend);
+        double fraction =
+                fraction(client, friend, deltaTracker.getGameTimeDeltaPartialTick(true));
         if (fraction > worst) {
             worst = fraction;
             worstStage = stage.get();
         }
     }
 
-    private static double fraction(Minecraft client, AbstractClientPlayer friend) {
+    private static double fraction(
+            Minecraft client, AbstractClientPlayer friend, float partialTicks) {
         Camera camera = client.gameRenderer.mainCamera();
         Vec3 eye = camera.position();
-        AABB box = friend.getBoundingBox();
+        AABB box = friend.getInterpolatedBoundingBox(partialTicks);
         if (box.contains(eye)) {
             return 1.0D;
         }
