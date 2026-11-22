@@ -611,10 +611,15 @@ public final class SimpleTPAFilm {
                     friend(minecraftServer).setInvisible(true);
                     SimpleTPAFakePlayerScenario.executeCommand(
                             friend(minecraftServer), "tpa " + playerName);
-                    stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer));
                     friend(minecraftServer).setInvisible(false);
                 });
-        context.waitTicks(16);
+        // Take 6's race, made deterministic: the step back reaches the client a tick after the
+        // arrival, so one frame is drawn from the arrival spot with the friend visible.
+        context.waitTicks(1);
+        server.runOnServer(
+                minecraftServer ->
+                        stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer)));
+        context.waitTicks(15);
     }
 
     /**
