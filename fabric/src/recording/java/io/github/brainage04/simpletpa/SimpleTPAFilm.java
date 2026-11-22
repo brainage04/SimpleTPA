@@ -173,8 +173,11 @@ public final class SimpleTPAFilm {
      */
     private static final int CAPTION_LEAD_TICKS = 4;
 
-    /** The stage on screen, for {@link #endStage}. */
-    private static String stage;
+    /**
+     * The stage on screen, for {@link #endStage}. Volatile because the frame check reads it on the
+     * render thread while the test thread writes it.
+     */
+    private static volatile String stage;
 
     private static final Vec3 LOOKOUT_POSITION = new Vec3(-11.5D, STAGE_Y, 0.5D);
     private static final Vec3 HIGH_POSITION = new Vec3(2.5D, 78.0D, -5.5D);
@@ -314,6 +317,7 @@ public final class SimpleTPAFilm {
                         }
                         FriendFrameCheck check = FriendFrameCheck.stop();
                         server.runOnServer(minecraftServer -> friend[0].close());
+                        check.report();
                         check.assertWithinLimit();
                     }
                 });
