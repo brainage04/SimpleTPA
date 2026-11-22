@@ -756,10 +756,12 @@ public final class SimpleTPAFilm {
         // repeat is typed whole, as everywhere else, at the moment the first command's typed line
         // expires: the overlay keeps a typed line for two seconds after its last character
         // (InputOverlayState.java:24), and the clear and the retype both run before the next tick,
-        // so the panel never blanks while the warning is read.
+        // so the panel never blanks while the warning is read. The repeat is sent four ticks after
+        // it is typed rather than twenty, so its line is still up when the stage ends: the arrival
+        // and the crane after it take 1.65 s, and the line lasts two.
         context.waitTicks(20);
         context.runOnClient(client -> InputOverlay.clear());
-        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
+        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME, 4);
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
@@ -1222,9 +1224,15 @@ public final class SimpleTPAFilm {
 
     /** Types the command into the chat box and leaves it there, unsent. */
     private static void typeCommandWithoutEnter(ClientGameTestContext context, String command) {
+        typeCommandWithoutEnter(context, command, COMMAND_VISIBLE_TICKS);
+    }
+
+    /** Types the command and leaves it in the chat box for {@code visibleTicks} before returning. */
+    private static void typeCommandWithoutEnter(
+            ClientGameTestContext context, String command, int visibleTicks) {
         context.setScreen(() -> new ChatScreen("", false));
         context.getInput().typeChars("/" + command);
-        context.waitTicks(COMMAND_VISIBLE_TICKS);
+        context.waitTicks(visibleTicks);
     }
 
     /**
