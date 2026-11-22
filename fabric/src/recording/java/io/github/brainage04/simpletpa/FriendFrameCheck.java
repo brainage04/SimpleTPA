@@ -36,7 +36,7 @@ final class FriendFrameCheck implements HudElement {
     static final double MAX_FRACTION = 0.25D;
 
     private static final Identifier ID =
-            Identifier.fromNamespaceAndPath("simpletpa", "friend_frame_check");
+            Identifier.fromNamespaceAndPath(SimpleTPA.MOD_ID, "friend_frame_check");
     private static final float NEAR = 0.05F;
 
     private static FriendFrameCheck active;
@@ -81,6 +81,10 @@ final class FriendFrameCheck implements HudElement {
 
     /** Throws when any measured frame showed the friend over {@link #MAX_FRACTION}. */
     void assertWithinLimit() {
+        if (measured == 0) {
+            throw new AssertionError(
+                    "The friend frame check measured no frame, so it checked nothing.");
+        }
         if (worst > MAX_FRACTION) {
             throw new AssertionError(
                     "%s filled %.0f%% of a frame in %s, over the %.0f%% limit (%d frames measured)."

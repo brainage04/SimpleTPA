@@ -323,7 +323,9 @@ public final class SimpleTPAFilm {
                             ClientGameTestStages.endStage(context, stage, STAGE_HOLD_TICKS);
                             stage = null;
                         }
-                        FriendFrameCheck check = FriendFrameCheck.stop();
+                        FriendFrameCheck[] stopped = new FriendFrameCheck[1];
+                        context.runOnClient(client -> stopped[0] = FriendFrameCheck.stop());
+                        FriendFrameCheck check = stopped[0];
                         server.runOnServer(minecraftServer -> friend[0].close());
                         check.report();
                         check.assertWithinLimit();
@@ -615,9 +617,9 @@ public final class SimpleTPAFilm {
         typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
         context.waitTicks(25);
         // The friend is hidden a tick before the request, so the client has their invisibility
-        // before the arrival is drawn: the server sends the flag at the end of its own tick
-        // (ServerEntity.java:370-375, called from ChunkMap.java:1205), and hiding them in the
-        // request's own tick left one frame drawn from inside their model.
+        // before the arrival is drawn: the flag goes out in the next tick's entity-tracking pass
+        // (ServerEntity.java:370-375, from ChunkMap.java:1205 via ServerChunkCache.java:325), and
+        // hiding them in the request's own tick left one frame drawn from inside their model.
         server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
         context.waitTicks(1);
         server.runOnServer(
