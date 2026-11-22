@@ -1104,8 +1104,8 @@ public final class SimpleTPAFilm {
      *
      * <p>The friend is left as they are, hidden or not. Showing them here put their model in the
      * frame the arrival was drawn in: the invisibility flag is entity data sent at the end of the
-     * tick (ServerEntity.java:370-375), while the camera's own teleport goes out inside the call.
-     * A stage that wants the friend in shot shows them with {@link #showFriendAfterSlide}.
+     * tick (ServerEntity.java:370-375), while the camera's own teleport goes out inside the call. A
+     * stage that wants the friend in shot shows them with {@link #showFriendAfterSlide}.
      */
     private static void stepBackFrom(ServerPlayer player, ServerPlayer friend) {
         Vec3 facing =
@@ -1222,7 +1222,9 @@ public final class SimpleTPAFilm {
         typeCommandWithoutEnter(context, command, COMMAND_VISIBLE_TICKS);
     }
 
-    /** Types the command and leaves it in the chat box for {@code visibleTicks} before returning. */
+    /**
+     * Types the command and leaves it in the chat box for {@code visibleTicks} before returning.
+     */
     private static void typeCommandWithoutEnter(
             ClientGameTestContext context, String command, int visibleTicks) {
         context.setScreen(() -> new ChatScreen("", false));
