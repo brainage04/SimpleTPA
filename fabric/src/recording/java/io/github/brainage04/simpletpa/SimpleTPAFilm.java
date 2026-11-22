@@ -699,10 +699,10 @@ public final class SimpleTPAFilm {
                 });
         startStage(context, HAPPY_GHAST);
         typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
-        // The arrival lands on the friend's head, and the friend rides the ghast, so the game does
-        // not push the player off them: from the arrival spot the friend's back fills the middle
-        // of the frame. The step back goes out in the same server block as the request, so both
-        // teleports reach the client in one flush and no frame is drawn from inside the head.
+        // The arrival lands at the middle of the ghast's top (Landing.java:47-57), 1.7 blocks from
+        // the friend's seat, so from there the friend's back fills the middle of the frame. The
+        // step back goes out in the same server block as the request, so both teleports reach the
+        // client in one flush and no frame is drawn from the arrival spot.
         server.runOnServer(
                 minecraftServer -> {
                     ServerPlayer player = player(minecraftServer, playerName);
