@@ -36,7 +36,6 @@ import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.server.players.NameAndId;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -778,19 +777,34 @@ public final class SimpleTPAFilm {
         // The friend is shown again once the step back has played out, so the stage ends on them
         // rather than on empty sky.
         showFriendAfterSlide(context, server);
-        // The arrival is six blocks up, so the player falls to the floor. The camera then pans up
-        // to the friend, so the stage ends on them rather than on empty floor. A pan, not a turn:
-        // a turn is a cut, and a cut inside a stage shows a new shot under the old caption. The
-        // pan waits for the landing, because a teleport zeroes the player's velocity
-        // (Entity.java:3275) and the fall would stutter.
-        context.waitTicks(20);
-        panTo(
+        // The arrival is six blocks up, so the player falls to the floor. The camera then cranes up
+        // to the friend's head, so the stage ends on their head and shoulders from slightly above
+        // rather than on their boots from below. A crane, not a turn: a turn is a cut, and a cut
+        // inside a stage shows a new shot under the old caption. It waits for the landing, because
+        // a teleport zeroes the player's velocity (Entity.java:3275) and the fall would stutter.
+        // Sixteen ticks is the fall from six blocks, so the crane starts from the floor with the
+        // landing's damage already taken. The tail after the retype is 4 + 3 + 16 + 10 + 6 ticks,
+        // inside the 40 the overlay keeps a typed line for, so the repeat's line is up to the last
+        // frame of the stage.
+        context.waitTicks(16);
+        double[] head =
+                server.computeOnServer(
+                        minecraftServer -> {
+                            ServerPlayer target = friend(minecraftServer);
+                            return new double[] {
+                                target.getY() + target.getEyeHeight(),
+                                player(minecraftServer, playerName).getEyeHeight()
+                            };
+                        });
+        craneUpTo(
                 context,
                 server,
                 playerName,
-                server.computeOnServer(
-                        minecraftServer ->
-                                friend(minecraftServer).position().add(0.0D, 1.4D, 0.0D)),
+                head[0] + 0.2D - head[1],
+                new Vec3(
+                        server.computeOnServer(minecraftServer -> friend(minecraftServer).getX()),
+                        head[0] - 0.25D,
+                        server.computeOnServer(minecraftServer -> friend(minecraftServer).getZ())),
                 10);
 
         endStage(context);
@@ -1142,51 +1156,28 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Turns {@code player} to look at {@code target} over {@code ticks}, a step a tick, so the move
-     * reads as a pan rather than a cut. The player's position is unchanged: each step teleports
-     * them to where they stand with new look angles.
+     * Lifts {@code player} to {@code height} over {@code ticks}, a step a tick, looking at {@code
+     * target} the whole way, so the move reads as a crane up rather than a cut. Each step is a
+     * teleport, which the client applies at once and which zeroes the fall the player would
+     * otherwise gather (Entity.java:3275), so the camera sits exactly on the step's height. The
+     * player is left in the air at the end; the next stage's reset puts them back on the floor.
      */
-    private static void panTo(
+    private static void craneUpTo(
             ClientGameTestContext context,
             TestDedicatedServerContext server,
             String playerName,
+            double height,
             Vec3 target,
             int ticks) {
-        float[] from =
+        double from =
                 server.computeOnServer(
-                        minecraftServer -> {
-                            ServerPlayer player = player(minecraftServer, playerName);
-                            return new float[] {player.getYRot(), player.getXRot()};
-                        });
-        float[] to =
-                server.computeOnServer(
-                        minecraftServer -> {
-                            ServerPlayer player = player(minecraftServer, playerName);
-                            Vec3 towards =
-                                    target.subtract(
-                                            player.position()
-                                                    .add(0.0D, player.getEyeHeight(), 0.0D));
-                            float reach =
-                                    (float)
-                                            Math.sqrt(
-                                                    towards.x * towards.x + towards.z * towards.z);
-                            return new float[] {
-                                (float) Math.toDegrees(Math.atan2(towards.z, towards.x)) - 90.0F,
-                                (float) -Math.toDegrees(Math.atan2(towards.y, reach))
-                            };
-                        });
+                        minecraftServer -> player(minecraftServer, playerName).getY());
         for (int step = 1; step <= ticks; step++) {
-            float fraction = (float) step / ticks;
-            float yaw = from[0] + Mth.wrapDegrees(to[0] - from[0]) * fraction;
-            float pitch = from[1] + (to[1] - from[1]) * fraction;
-            // A teleport, not setYRot: a player is not sent to themselves as a tracked entity
-            // (ChunkMap.java:1384), so setting the angles alone never reaches their own client.
-            // The look arrives by teleport (ClientPacketListener.java:787) or by forceSetRotation
-            // (ServerPlayer.java:1199).
+            double y = from + (height - from) * step / ticks;
             server.runOnServer(
                     minecraftServer -> {
                         ServerPlayer player = player(minecraftServer, playerName);
-                        SimpleTPAFakePlayerScenario.place(player, player.position(), yaw, pitch);
+                        look(player, new Vec3(player.getX(), y, player.getZ()), target);
                     });
             context.waitTicks(1);
         }
