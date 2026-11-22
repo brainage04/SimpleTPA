@@ -213,6 +213,12 @@ public final class SimpleTPAFilm {
 
     private static final Vec3 MAGMA_POSITION = new Vec3(2.5D, STAGE_Y, 4.5D);
 
+    /** How far the long drop's crane puts the camera's eye above the friend's, so it looks down. */
+    private static final double CRANE_EYE_ABOVE = 0.2D;
+
+    /** How far below the friend's eye the crane looks, so the shot is their head, not their eyes. */
+    private static final double CRANE_LOOK_BELOW = 0.25D;
+
     /** A target in the air six blocks up: a drop that hurts, but a short one. */
     private static final Vec3 LOW_AIR_POSITION = new Vec3(2.5D, STAGE_Y + 6, 0.5D);
 
@@ -607,9 +613,9 @@ public final class SimpleTPAFilm {
         typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
         context.waitTicks(25);
         // The friend is hidden a tick before the request, so the client has their invisibility
-        // before the arrival is drawn: the flag is entity data sent at the end of the tick
-        // (ServerEntity.java:370-375), and hiding them in the request's own tick left one frame
-        // drawn from inside their model.
+        // before the arrival is drawn: the server sends the flag at the end of its own tick
+        // (ServerEntity.java:370-375, called from ChunkMap.java:1205), and hiding them in the
+        // request's own tick left one frame drawn from inside their model.
         server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
         context.waitTicks(1);
         server.runOnServer(
@@ -787,9 +793,10 @@ public final class SimpleTPAFilm {
         // inside a stage shows a new shot under the old caption. It waits for the landing, because
         // a teleport zeroes the player's velocity (Entity.java:3275) and the fall would stutter.
         // Sixteen ticks is the fall from six blocks, so the crane starts from the floor with the
-        // landing's damage already taken. The tail after the retype is 4 + 3 + 16 + 10 + 6 ticks,
-        // inside the 40 the overlay keeps a typed line for, so the repeat's line is up to the last
-        // frame of the stage.
+        // landing's damage already taken. The film's tail after the retype is 4 + 3 + 16 + 10 ticks,
+        // 1.65 s, inside the 2 s the overlay keeps a typed line for (InputOverlayState.java:24), so
+        // the repeat's line is up to the last frame of the stage. The stage's own six-tick hold
+        // comes after its end marker and is cut.
         context.waitTicks(16);
         double[] head =
                 server.computeOnServer(
@@ -804,10 +811,10 @@ public final class SimpleTPAFilm {
                 context,
                 server,
                 playerName,
-                head[0] + 0.2D - head[1],
+                head[0] + CRANE_EYE_ABOVE - head[1],
                 new Vec3(
                         server.computeOnServer(minecraftServer -> friend(minecraftServer).getX()),
-                        head[0] - 0.25D,
+                        head[0] - CRANE_LOOK_BELOW,
                         server.computeOnServer(minecraftServer -> friend(minecraftServer).getZ())),
                 10);
 
@@ -1137,7 +1144,7 @@ public final class SimpleTPAFilm {
         look(player, player.position(), away.add(0.0D, 1.4D, 0.0D));
     }
 
-    /** Shows the friend again once their slide has played out, three ticks after the arrival. */
+    /** Shows the friend again three ticks after the call, so a slide or a step back has played out. */
     private static void showFriendAfterSlide(
             ClientGameTestContext context, TestDedicatedServerContext server) {
         context.waitTicks(3);
