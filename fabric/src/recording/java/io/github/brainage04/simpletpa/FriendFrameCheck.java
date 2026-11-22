@@ -91,7 +91,9 @@ final class FriendFrameCheck implements HudElement {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         Minecraft client = Minecraft.getInstance();
-        if (client.level == null || client.player == null) {
+        // Only a filmed stage is measured. Between stages the reset puts the camera on the friend's
+        // own spot, which is off camera and never in the film.
+        if (client.level == null || client.player == null || stage.get() == null) {
             return;
         }
         AbstractClientPlayer friend = null;
@@ -147,9 +149,9 @@ final class FriendFrameCheck implements HudElement {
         if (inFront == 0) {
             return 0.0D;
         }
-        if (inFront < 8) {
-            return 1.0D;
-        }
+        // A corner behind the camera has no screen position, so the box is measured by the corners
+        // that do: the camera is inside or beside the friend, and the part in front of it is what
+        // the frame shows.
         double width = Math.min(maxX, 1.0D) - Math.max(minX, -1.0D);
         double height = Math.min(maxY, 1.0D) - Math.max(minY, -1.0D);
         if (width <= 0.0D || height <= 0.0D) {
