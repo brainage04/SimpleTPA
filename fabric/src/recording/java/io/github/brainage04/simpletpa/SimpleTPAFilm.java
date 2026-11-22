@@ -604,16 +604,18 @@ public final class SimpleTPAFilm {
         startStage(context, AUTO_ACCEPT);
         typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
         context.waitTicks(25);
+        // Take 6's arrival frame, drawn every time: the friend stays visible and the step back
+        // reaches the client a tick after the arrival, so one frame is drawn from the arrival spot
+        // with the friend's model around the camera.
         server.runOnServer(
-                minecraftServer -> {
-                    friend(minecraftServer).setInvisible(true);
-                    SimpleTPAFakePlayerScenario.executeCommand(
-                            friend(minecraftServer), "tpa " + playerName);
-                    // The whitelist answers the request inside the command, so the arrival has
-                    // already landed and the friend steps clear in the same tick.
-                    stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer));
-                });
-        context.waitTicks(16);
+                minecraftServer ->
+                        SimpleTPAFakePlayerScenario.executeCommand(
+                                friend(minecraftServer), "tpa " + playerName));
+        context.waitTicks(1);
+        server.runOnServer(
+                minecraftServer ->
+                        stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer)));
+        context.waitTicks(15);
     }
 
     /**
