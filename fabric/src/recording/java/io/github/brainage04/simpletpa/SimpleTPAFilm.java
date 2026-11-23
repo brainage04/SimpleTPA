@@ -1272,10 +1272,7 @@ public final class SimpleTPAFilm {
                 Math.hypot(
                         Mth.wrapDegrees(yawTowards(endEye, target) - fromYaw),
                         pitchTowards(endEye, target) - fromPitch);
-        int steps =
-                Math.max(
-                        ticks,
-                        (int) Math.ceil(turn / FriendFrameCheck.MAX_TURN_DEGREES));
+        int steps = Math.max(ticks, (int) Math.ceil(turn / FriendFrameCheck.MAX_TURN_DEGREES));
         int rise = (int) Math.ceil(steps * 0.7D);
         int close = steps - rise;
         float most = (float) FriendFrameCheck.MAX_TURN_DEGREES;
@@ -1339,8 +1336,7 @@ public final class SimpleTPAFilm {
                         float most = (float) (FriendFrameCheck.MAX_TURN_DEGREES - 0.5D);
                         float yawStep =
                                 Mth.clamp(Mth.wrapDegrees(wantYaw - player.getYRot()), -most, most);
-                        float pitchStep =
-                                Mth.clamp(wantPitch - player.getXRot(), -most, most);
+                        float pitchStep = Mth.clamp(wantPitch - player.getXRot(), -most, most);
                         // A rotation packet, not a look packet: the client interpolates a look
                         // packet's rotation over two ticks, so the drawn camera lagged the
                         // server's by several degrees and the crane's first step snapped it
@@ -1349,7 +1345,10 @@ public final class SimpleTPAFilm {
                         // teleport would zero the fall (Entity.java:3275) and the drop would stop
                         // hurting.
                         player.forceSetRotation(
-                                player.getYRot() + yawStep, false, player.getXRot() + pitchStep, false);
+                                player.getYRot() + yawStep,
+                                false,
+                                player.getXRot() + pitchStep,
+                                false);
                     });
             context.waitTicks(1);
         }
