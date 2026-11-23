@@ -627,11 +627,11 @@ public final class SimpleTPAFilm {
         context.waitTicks(25);
         // The friend steps four blocks aside in the request's own tick, so the arrival lands on the
         // spot they have left and the camera looks at them from there. Hiding them instead made
-        // them vanish a tick before the arrival: the flag goes out in the next tick's
+        // them vanish a tick after the arrival: the flag goes out in the next tick's
         // entity-tracking pass (ServerEntity.java:370-375, from ChunkMap.java:1205 via
-        // ServerChunkCache.java:325), so the client still drew them visible until that pass.
-        // Leaving them in place drew the arrival frame from inside their model, which the frame
-        // check caught at 1.0.
+        // ServerChunkCache.java:325), so the arrival frame still drew them and then they popped
+        // out. Leaving them in place drew the arrival frame from inside their model, which the
+        // frame check caught at 1.0.
         server.runOnServer(
                 minecraftServer -> {
                     SimpleTPAFakePlayerScenario.executeCommand(
@@ -1145,9 +1145,10 @@ public final class SimpleTPAFilm {
      * Moves the friend four blocks along their own facing, away from the player who has just
      * arrived on them, turns them to face the player, and turns the player to follow. The player
      * stays where the arrival put them: a player's own teleport is applied by the client at once
-     * and reads as a jump, while another player's move is interpolated over three ticks, so the
-     * friend slides out of the shot instead. A caller that wants no frame of the slide hides the
-     * friend first; the auto-accept stage does not, so the slide is watched.
+     * and reads as a jump, while another player's move is interpolated over two ticks
+     * (EntityTypes.java:1182, three frames at 30 fps), so the friend slides out of the shot
+     * instead. A caller that wants no frame of the slide hides the friend first; the auto-accept
+     * stage does not, so the slide is watched.
      */
     private static void stepAside(ServerPlayer player, ServerPlayer friend) {
         Vec3 facing =
