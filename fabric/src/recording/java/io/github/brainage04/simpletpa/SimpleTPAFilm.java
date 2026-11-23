@@ -1352,7 +1352,10 @@ public final class SimpleTPAFilm {
                         // below it, which is the shot the fall wants.
                         Vec3 aim =
                                 target.position()
-                                        .add(0.0D, target.getBoundingBox().maxY - target.getY(), 0.0D);
+                                        .add(
+                                                0.0D,
+                                                target.getBoundingBox().maxY - target.getY(),
+                                                0.0D);
                         Vec3 eye = player.position().add(0.0D, player.getEyeHeight(), 0.0D);
                         // Aimed at the friend every tick, so they never drift out of the top of
                         // the frame as the camera falls away from them, but no more than the
