@@ -225,8 +225,8 @@ public final class SimpleTPAFilm {
      * How far from the friend the long drop's crane ends. At 2 blocks a 1.8-block player fills
      * about half the frame's height, which is a head-and-shoulders shot with room around it; at the
      * four blocks the step back leaves, they fill a third and the shot is their whole body. The
-     * frame check measures 0.22 at 1.5 blocks, too close to its 0.25 limit for a shot that is not
-     * a defect.
+     * frame check measures 0.22 at 1.5 blocks, too close to its 0.25 limit for a shot that is not a
+     * defect.
      */
     private static final double CRANE_END_DISTANCE = 2.0D;
 
