@@ -623,21 +623,20 @@ public final class SimpleTPAFilm {
         startStage(context, AUTO_ACCEPT);
         typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
         context.waitTicks(25);
-        // The step back goes out in the same server block as the request, so both teleports reach
-        // the client in one flush and no frame is drawn from the arrival spot. The friend is not
-        // hidden here: hiding them makes them vanish for the frames between the camera's teleport
-        // and the invisibility flag's next-tick entity-tracking pass (ServerEntity.java:370-375,
-        // from ChunkMap.java:1205 via ServerChunkCache.java:325), and the frame check measures
-        // whether the step back alone is enough.
+        // The friend steps four blocks aside in the request's own tick, so the arrival lands on the
+        // spot they have left and the camera looks at them from there. Hiding them instead made
+        // them vanish for the frames between the hide and the invisibility flag's next-tick
+        // entity-tracking pass (ServerEntity.java:370-375, from ChunkMap.java:1205 via
+        // ServerChunkCache.java:325); leaving them in place drew the arrival frame from inside
+        // their model, which the frame check caught at 1.0.
         server.runOnServer(
                 minecraftServer -> {
                     SimpleTPAFakePlayerScenario.executeCommand(
                             friend(minecraftServer), "tpa " + playerName);
                     // The whitelist answers the request inside the command, so the arrival has
-                    // already landed and the camera steps clear in the same tick.
-                    stepBackFrom(player(minecraftServer, playerName), friend(minecraftServer));
+                    // already landed and the friend steps clear in the same tick.
+                    stepAside(player(minecraftServer, playerName), friend(minecraftServer));
                 });
-        showFriendAfterSlide(context, server);
         context.waitTicks(13);
     }
 
