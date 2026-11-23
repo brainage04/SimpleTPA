@@ -1140,10 +1140,11 @@ public final class SimpleTPAFilm {
 
     /**
      * Moves the friend four blocks along their own facing, away from the player who has just
-     * arrived on them, and turns the player to follow. The player stays where the arrival put them:
-     * a player's own teleport is applied by the client at once and reads as a jump, while another
-     * player's move is interpolated over three ticks, so the friend slides out of the shot instead.
-     * The friend stays hidden until the slide has played out, so no frame shows them at the camera.
+     * arrived on them, turns them to face the player, and turns the player to follow. The player
+     * stays where the arrival put them: a player's own teleport is applied by the client at once
+     * and reads as a jump, while another player's move is interpolated over three ticks, so the
+     * friend slides out of the shot instead. The friend stays hidden until the slide has played
+     * out, so no frame shows them at the camera.
      */
     private static void stepAside(ServerPlayer player, ServerPlayer friend) {
         Vec3 facing =
@@ -1152,7 +1153,10 @@ public final class SimpleTPAFilm {
                         0.0D,
                         Math.cos(Math.toRadians(friend.getYRot())));
         Vec3 away = friend.position().add(facing.scale(4.0D));
-        SimpleTPAFakePlayerScenario.place(friend, away, friend.getYRot(), friend.getXRot());
+        // Facing the player, not their own way: a friend who keeps their yaw shows their back for
+        // the rest of the stage, which is the take 5 defect.
+        float towardsPlayer = yawTowards(away, player.position());
+        SimpleTPAFakePlayerScenario.place(friend, away, towardsPlayer, friend.getXRot());
         look(player, player.position(), away.add(0.0D, 1.4D, 0.0D));
     }
 
