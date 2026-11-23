@@ -9,6 +9,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
@@ -36,10 +37,32 @@ import org.joml.Vector4f;
  * step back reaching the client in one flush or two, and three runs of that code with the check
  * added passed. The red evidence is take 6's arrival ordering with the step back removed, which
  * draws the arrival frame every run and fails at 1.0.
+ *
+ * <p>Two more rules, both about a camera move inside a stage. A frame-to-frame camera turn above
+ * {@link #MAX_TURN_DEGREES} reads as a cut, so the check fails one: the rest of the film turns at
+ * most 1.6 degrees a frame, and take 7's long-drop crane snapped 55. A stage that keeps the friend
+ * in shot must not lose them either, so a frame with no part of the friend's box on screen fails
+ * when the stage is one of {@link #FRIEND_IN_SHOT_STAGES}.
  */
 final class FriendFrameCheck implements HudElement {
     /** The most of a frame the friend's box may cover. */
     static final double MAX_FRACTION = 0.25D;
+
+    /**
+     * The most the camera may turn between two frames, in degrees. The rest of the film turns at
+     * most 1.6 a frame; take 7's long-drop crane snapped 55 in one frame, which reads as a cut.
+     */
+    static final double MAX_TURN_DEGREES = 4.0D;
+
+    /**
+     * How far the camera may move in one frame before the frame counts as a teleport rather than a
+     * camera move. The crane's fastest step is 0.45 blocks; an arrival moves six or more.
+     */
+    private static final double TELEPORT_BLOCKS = 1.0D;
+
+    /** The stages whose shot is the friend, so a frame without them on screen is a defect. */
+    private static final java.util.Set<String> FRIEND_IN_SHOT_STAGES =
+            java.util.Set.of("simpletpa.longdrop");
 
     private static final Identifier ID =
             Identifier.fromNamespaceAndPath(SimpleTPA.MOD_ID, "friend_frame_check");
@@ -54,6 +77,17 @@ final class FriendFrameCheck implements HudElement {
     private double worst;
     private String worstStage = "none";
     private int measured;
+    private double worstTurn;
+    private String worstTurnStage = "none";
+    private int worstTurnFrame = -1;
+    private int frame;
+    private String lastStage;
+    private float lastYaw;
+    private float lastPitch;
+    private Vec3 lastEye;
+    private boolean lastTeleported;
+    private int missing;
+    private String missingStage = "none";
 
     private FriendFrameCheck(String friendName, Supplier<String> stage) {
         this.friendName = friendName;
@@ -85,6 +119,11 @@ final class FriendFrameCheck implements HudElement {
         System.out.println(
                 "FRIEND_FRAME_CHECK worst=%.3f stage=%s measured=%d limit=%.2f"
                         .formatted(worst, worstStage, measured, MAX_FRACTION));
+        System.out.println(
+                "CAMERA_TURN_CHECK worst=%.2f stage=%s frame=%d limit=%.2f"
+                        .formatted(worstTurn, worstTurnStage, worstTurnFrame, MAX_TURN_DEGREES));
+        System.out.println(
+                "FRIEND_IN_SHOT_CHECK missing=%d stage=%s".formatted(missing, missingStage));
     }
 
     /** Throws when any measured frame showed the friend over {@link #MAX_FRACTION}. */
@@ -103,6 +142,16 @@ final class FriendFrameCheck implements HudElement {
                                     MAX_FRACTION * 100.0D,
                                     measured));
         }
+        if (worstTurn > MAX_TURN_DEGREES) {
+            throw new AssertionError(
+                    "The camera turned %.1f degrees in one frame in %s, over the %.1f limit."
+                            .formatted(worstTurn, worstTurnStage, MAX_TURN_DEGREES));
+        }
+        if (missing > 0) {
+            throw new AssertionError(
+                    "%s was off screen for %d frames of %s, which is their shot."
+                            .formatted(friendName, missing, missingStage));
+        }
     }
 
     @Override
@@ -119,14 +168,54 @@ final class FriendFrameCheck implements HudElement {
                 break;
             }
         }
+        String current = stage.get();
+        Camera camera = client.gameRenderer.mainCamera();
+        Vec3 eye = camera.position();
+        // The turn is measured on every filmed frame, friend or not: a snap is a snap. A frame the
+        // camera teleported in is skipped: the mod's own arrival moves the player, and a teleport
+        // is not a camera move the film can smooth.
+        boolean teleported = lastEye != null && eye.distanceTo(lastEye) > TELEPORT_BLOCKS;
+        // A teleport's rotation is drawn over the frames after it, so the frame it lands in and
+        // the one after are both skipped: the mod's own arrival moves the player, and a teleport
+        // is not a camera move the film can smooth.
+        if (current.equals(lastStage) && !teleported && !lastTeleported) {
+            double dYaw = Math.abs(Mth.wrapDegrees(camera.yRot() - lastYaw));
+            double dPitch = Math.abs(camera.xRot() - lastPitch);
+            double turn = Math.hypot(dYaw, dPitch);
+            if (turn > worstTurn) {
+                worstTurn = turn;
+                worstTurnStage = current;
+                worstTurnFrame = frame;
+                System.out.println(
+                        "CAMERA_TURN_FRAME frame=%d yaw=%.2f pitch=%.2f at %.2f/%.2f"
+                                .formatted(frame, dYaw, dPitch, camera.yRot(), camera.xRot()));
+            }
+        }
+        frame++;
+        lastTeleported = teleported;
+        lastStage = current;
+        lastYaw = camera.yRot();
+        lastPitch = camera.xRot();
+        lastEye = eye;
+        // A hidden friend fills nothing, so a frame they are hidden in is not measured. In a stage
+        // whose shot is the friend, a hidden friend is a missing one: the frame shows the sky where
+        // they should be, which is the defect the in-shot rule exists for.
         if (friend == null || friend.isInvisible()) {
+            if (FRIEND_IN_SHOT_STAGES.contains(current)) {
+                missing++;
+                missingStage = current;
+            }
             return;
         }
         measured++;
         double fraction = fraction(client, friend, deltaTracker.getGameTimeDeltaPartialTick(true));
         if (fraction > worst) {
             worst = fraction;
-            worstStage = stage.get();
+            worstStage = current;
+        }
+        if (fraction <= 0.0D && FRIEND_IN_SHOT_STAGES.contains(current)) {
+            missing++;
+            missingStage = current;
         }
     }
 
