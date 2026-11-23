@@ -627,10 +627,11 @@ public final class SimpleTPAFilm {
         context.waitTicks(25);
         // The friend steps four blocks aside in the request's own tick, so the arrival lands on the
         // spot they have left and the camera looks at them from there. Hiding them instead made
-        // them vanish for the frames between the hide and the invisibility flag's next-tick
+        // them vanish a tick before the arrival: the flag goes out in the next tick's
         // entity-tracking pass (ServerEntity.java:370-375, from ChunkMap.java:1205 via
-        // ServerChunkCache.java:325); leaving them in place drew the arrival frame from inside
-        // their model, which the frame check caught at 1.0.
+        // ServerChunkCache.java:325), so the client still drew them visible until that pass.
+        // Leaving them in place drew the arrival frame from inside their model, which the frame
+        // check caught at 1.0.
         server.runOnServer(
                 minecraftServer -> {
                     SimpleTPAFakePlayerScenario.executeCommand(
@@ -776,8 +777,8 @@ public final class SimpleTPAFilm {
         // The warning and the run-again line stay up long enough to read before the repeat. The
         // repeat is typed whole, as everywhere else, at the moment the first command's typed line
         // expires: the overlay keeps a typed line for two seconds after its last character
-        // (InputOverlayState.java:24). The clear and the retype are two client tasks, so one frame
-        // is drawn between them with the panel empty; that is 33 ms, against the 0.93 s the stage
+        // (InputOverlayState.java:24). The clear and the retype are two client tasks, so two frames
+        // are drawn between them with the panel empty; that is 67 ms, against the 0.93 s the stage
         // had before. The repeat is sent four ticks after it is typed rather than twenty, so its
         // line is still up when the stage ends: the arrival and the crane after it take 1.65 s, and
         // the line lasts two.
@@ -809,7 +810,7 @@ public final class SimpleTPAFilm {
         // landing's damage already taken. The film's tail after the retype is 33 ticks, 1.65 s,
         // inside the 2 s the overlay keeps a typed line for (InputOverlayState.java:24), so the
         // repeat's line is up to the last frame of the stage. The stage's own six-tick hold comes
-        // after its end marker, and the cut keeps only 0.12 s of it (trim_stages.py:33).
+        // after its end marker, and the cut keeps only 0.12 s of it (trim_stages.py:34).
         context.waitTicks(16);
         double[] head =
                 server.computeOnServer(
@@ -1145,8 +1146,8 @@ public final class SimpleTPAFilm {
      * arrived on them, turns them to face the player, and turns the player to follow. The player
      * stays where the arrival put them: a player's own teleport is applied by the client at once
      * and reads as a jump, while another player's move is interpolated over three ticks, so the
-     * friend slides out of the shot instead. The friend stays hidden until the slide has played
-     * out, so no frame shows them at the camera.
+     * friend slides out of the shot instead. A caller that wants no frame of the slide hides the
+     * friend first; the auto-accept stage does not, so the slide is watched.
      */
     private static void stepAside(ServerPlayer player, ServerPlayer friend) {
         Vec3 facing =
