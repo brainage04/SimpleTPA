@@ -219,6 +219,15 @@ public final class SimpleTPAFilm {
     private static final double CRANE_EYE_ABOVE = 0.2D;
 
     /**
+     * How far the long drop's step back puts the camera from the friend. Wider than the usual four
+     * blocks: the camera falls six blocks while the friend stays put, and the angle to them
+     * steepens fastest as the player lands, so from four blocks back the last frames of the fall
+     * would need a turn of about 12 degrees to keep them in shot. From eight the same fall needs
+     * about 4.5.
+     */
+    private static final double LONG_DROP_STEP_BACK = 8.0D;
+
+    /**
      * How far below the friend's eye the crane looks, so the shot is their head, not their eyes.
      */
     private static final double CRANE_LOOK_BELOW = 0.25D;
@@ -805,7 +814,7 @@ public final class SimpleTPAFilm {
                             .getCommands()
                             .performPrefixedCommand(
                                     player.createCommandSourceStack(), "tpa " + FRIEND_NAME);
-                    stepBackFrom(player, target);
+                    stepBackFrom(player, target, LONG_DROP_STEP_BACK);
                 });
         closeChat(context);
         // The arrival is six blocks up, so the player falls to the floor. The camera turns to the
@@ -1139,6 +1148,17 @@ public final class SimpleTPAFilm {
      * stage that wants the friend in shot shows them with {@link #showFriendAfterSlide}.
      */
     private static void stepBackFrom(ServerPlayer player, ServerPlayer friend) {
+        stepBackFrom(player, friend, 4.0D);
+    }
+
+    /**
+     * Steps the player {@code distance} blocks back along the friend's facing and turns them to the
+     * friend. The long drop uses a wider step back: the camera falls six blocks while the friend
+     * stays put, and the angle to them steepens fastest as the player lands, so from four blocks
+     * back the last frames of the fall would need a turn of about 12 degrees to keep them in shot.
+     * From eight the same fall needs about 4.5.
+     */
+    private static void stepBackFrom(ServerPlayer player, ServerPlayer friend, double distance) {
         Vec3 facing =
                 new Vec3(
                         -Math.sin(Math.toRadians(friend.getYRot())),
@@ -1146,7 +1166,7 @@ public final class SimpleTPAFilm {
                         Math.cos(Math.toRadians(friend.getYRot())));
         look(
                 player,
-                friend.position().add(facing.scale(4.0D)),
+                friend.position().add(facing.scale(distance)),
                 friend.position().add(0.0D, 1.4D, 0.0D));
     }
 
@@ -1261,12 +1281,12 @@ public final class SimpleTPAFilm {
         double endZ = fromZ + (target.z - fromZ) * (1.0D - distance / reach);
         // The rise comes first, at the distance the step back left, and the closing in after it:
         // a camera that closed in as it rose passed under the friend and showed their boots from
-        // below, which is the shot this crane exists to replace. The aim is taken from where each
-        // step puts the camera, so the friend stays centred the whole way up. The steps are sized
-        // from the turn the crane has to make, at the check's limit a step: a step is a teleport,
-        // and the client applies a teleport's rotation at once, so a step's turn is a frame's
-        // turn. The camera starts on the floor with the friend six blocks up, so the turn is about
-        // 60 degrees and the crane takes about 16 ticks.
+        // below, which is the shot this crane exists to replace. The aim is eased from where the
+        // camera already points to the target, a step at a time, rather than aimed at the target
+        // from the first step: aiming at once turned the camera 55 degrees in one frame, which
+        // reads as a cut inside the stage. The steps are sized from the turn the crane has to make,
+        // at the check's limit a step, because a step is a teleport and the client applies a
+        // teleport's rotation at once.
         Vec3 endEye = new Vec3(endX, height + start[3], endZ);
         double turn =
                 Math.hypot(
@@ -1275,37 +1295,40 @@ public final class SimpleTPAFilm {
         int steps = Math.max(ticks, (int) Math.ceil(turn / FriendFrameCheck.MAX_TURN_DEGREES));
         int rise = (int) Math.ceil(steps * 0.7D);
         int close = steps - rise;
-        float most = (float) FriendFrameCheck.MAX_TURN_DEGREES;
-        float yaw = fromYaw;
-        float pitch = fromPitch;
-        for (int step = 1; step <= rise + close; step++) {
-            double t;
-            double x;
-            double z;
-            if (step <= rise) {
-                t = (double) step / rise;
-                x = fromX;
-                z = fromZ;
-            } else {
-                t = 1.0D;
-                double in = (double) (step - rise) / close;
-                x = fromX + (endX - fromX) * in;
-                z = fromZ + (endZ - fromZ) * in;
-            }
-            double y = fromY + (height - fromY) * t;
-            Vec3 eye = new Vec3(x, y + start[3], z);
-            yaw += Mth.clamp(Mth.wrapDegrees(yawTowards(eye, target) - yaw), -most, most);
-            pitch += Mth.clamp(pitchTowards(eye, target) - pitch, -most, most);
-            float stepYaw = yaw;
-            float stepPitch = pitch;
+        float yawStep = Mth.wrapDegrees(yawTowards(endEye, target) - fromYaw);
+        float pitchStep = pitchTowards(endEye, target) - fromPitch;
+        for (int step = 1; step <= steps; step++) {
+            double t = (double) step / steps;
+            double[] at = craneStep(step, rise, close, fromX, fromY, fromZ, endX, endZ, height);
+            float yaw = fromYaw + yawStep * (float) t;
+            float pitch = fromPitch + pitchStep * (float) t;
             server.runOnServer(
                     minecraftServer -> {
                         ServerPlayer player = player(minecraftServer, playerName);
                         SimpleTPAFakePlayerScenario.place(
-                                player, new Vec3(x, y, z), stepYaw, stepPitch);
+                                player, new Vec3(at[0], at[1], at[2]), yaw, pitch);
                     });
             context.waitTicks(1);
         }
+    }
+
+    /** Where the long drop's crane puts the camera's feet at {@code step} of its path. */
+    private static double[] craneStep(
+            int step,
+            int rise,
+            int close,
+            double fromX,
+            double fromY,
+            double fromZ,
+            double endX,
+            double endZ,
+            double height) {
+        if (step <= rise) {
+            double t = (double) step / rise;
+            return new double[] {fromX, fromY + (height - fromY) * t, fromZ};
+        }
+        double in = (double) (step - rise) / close;
+        return new double[] {fromX + (endX - fromX) * in, height, fromZ + (endZ - fromZ) * in};
     }
 
     /**
@@ -1323,7 +1346,13 @@ public final class SimpleTPAFilm {
                     minecraftServer -> {
                         ServerPlayer player = player(minecraftServer, playerName);
                         ServerPlayer target = friend(minecraftServer);
-                        Vec3 aim = target.position().add(0.0D, target.getEyeHeight(), 0.0D);
+                        // The top of the friend's head, not their eyes: the camera falls away
+                        // from a friend six blocks up, and aiming at the eyes put their head over
+                        // the top edge. With the head at the centre of the frame the body hangs
+                        // below it, which is the shot the fall wants.
+                        Vec3 aim =
+                                target.position()
+                                        .add(0.0D, target.getBoundingBox().maxY - target.getY(), 0.0D);
                         Vec3 eye = player.position().add(0.0D, player.getEyeHeight(), 0.0D);
                         // Aimed at the friend every tick, so they never drift out of the top of
                         // the frame as the camera falls away from them, but no more than the

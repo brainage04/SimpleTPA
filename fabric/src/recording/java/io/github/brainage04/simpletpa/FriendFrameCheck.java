@@ -39,10 +39,10 @@ import org.joml.Vector4f;
  * draws the arrival frame every run and fails at 1.0.
  *
  * <p>Two more rules, both about a camera move inside a stage. A frame-to-frame camera turn above
- * {@link #MAX_TURN_DEGREES} reads as a cut, so the check fails one: the rest of the film turns at
- * most 1.6 degrees a frame, and take 7's long-drop crane snapped 55. A stage that keeps the friend
- * in shot must not lose them either, so a frame with no part of the friend's box on screen fails
- * when the stage is one of {@link #FRIEND_IN_SHOT_STAGES}.
+ * {@link #MAX_TURN_DEGREES} reads as a cut, so the check fails one: take 7's long-drop crane
+ * snapped 55 in one frame. A stage that keeps the friend in shot must not lose them either, so a
+ * frame with no part of the friend's box on screen fails when the stage is one of
+ * {@link #FRIEND_IN_SHOT_STAGES}.
  */
 final class FriendFrameCheck implements HudElement {
     /** The most of a frame the friend's box may cover. */
@@ -50,9 +50,12 @@ final class FriendFrameCheck implements HudElement {
 
     /**
      * The most the camera may turn between two frames, in degrees. The rest of the film turns at
-     * most 1.6 a frame; take 7's long-drop crane snapped 55 in one frame, which reads as a cut.
+     * most 2.9 a frame. The long drop's follow needs up to 4.6: the camera falls six blocks while
+     * the friend stays put, so the angle to them steepens fastest as the player lands, and a
+     * slower turn lets their head leave the top of the frame. A cut is 55, which take 7's crane
+     * snapped in one frame, so 6 still fails a cut with a wide margin.
      */
-    static final double MAX_TURN_DEGREES = 4.0D;
+    static final double MAX_TURN_DEGREES = 6.0D;
 
     /**
      * How far the camera may move in one frame before the frame counts as a teleport rather than a
