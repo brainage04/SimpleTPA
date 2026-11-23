@@ -27,9 +27,14 @@ import org.joml.Vector4f;
  * <p>A frame the friend is hidden in is not measured: an invisible friend fills nothing. A camera
  * inside the friend's box counts as the whole frame, which is the defect this check exists for.
  *
- * <p>The limit is a quarter of the frame. The largest legitimate frame measured across takes 6 and
- * 7 is 0.131, and the defect is 1.0, so a quarter leaves the real shots room and still fails a
- * friend filling a third of the frame.
+ * <p>The limit is a quarter of the frame. The largest legitimate frame measured is 0.131, in take
+ * 6's arrival-frame runs, and the defect is 1.0, so a quarter leaves the real shots room and still
+ * fails a friend filling a third of the frame. Take 7's own worst frame is 0.086.
+ *
+ * <p>Take 6's own code does not fail this check: its flash was a race between the arrival and the
+ * step back reaching the client in one flush or two, and three runs of that code with the check
+ * added passed. The red evidence is take 6's arrival ordering with the step back removed, which
+ * draws the arrival frame every run and fails at 1.0.
  */
 final class FriendFrameCheck implements HudElement {
     /** The most of a frame the friend's box may cover. */
@@ -37,6 +42,9 @@ final class FriendFrameCheck implements HudElement {
 
     private static final Identifier ID =
             Identifier.fromNamespaceAndPath(SimpleTPA.MOD_ID, "friend_frame_check");
+    // The camera's near plane, which Camera.setupPerspective sets to 0.05 (Camera.java:106). The
+    // projection is private and Projection.zNear is not reachable from here, so the value is
+    // copied; a corner nearer than this has no screen position.
     private static final float NEAR = 0.05F;
 
     private static FriendFrameCheck active;

@@ -221,6 +221,13 @@ public final class SimpleTPAFilm {
      */
     private static final double CRANE_LOOK_BELOW = 0.25D;
 
+    /**
+     * How far from the friend the long drop's crane ends. At 1.5 blocks a 1.8-block player fills
+     * about two thirds of the frame's height, which is a head-and-shoulders shot; at the four
+     * blocks the step back leaves, they fill a third and the shot is their whole body.
+     */
+    private static final double CRANE_END_DISTANCE = 1.5D;
+
     /** A target in the air six blocks up: a drop that hurts, but a short one. */
     private static final Vec3 LOW_AIR_POSITION = new Vec3(2.5D, STAGE_Y + 6, 0.5D);
 
@@ -616,14 +623,15 @@ public final class SimpleTPAFilm {
         startStage(context, AUTO_ACCEPT);
         typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
         context.waitTicks(25);
-        // The friend is hidden a tick before the request, so the client has their invisibility
-        // before the arrival is drawn: the flag goes out in the next tick's entity-tracking pass
-        // (ServerEntity.java:370-375, from ChunkMap.java:1205 via ServerChunkCache.java:325), and
-        // hiding them in the request's own tick left one frame drawn from inside their model.
-        server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(true));
-        context.waitTicks(1);
+        // The friend is hidden in the request's own tick, as every other stage does, so they do not
+        // pop out of the shot a frame before the arrival. The step back goes out in the same server
+        // block as the request, so both teleports reach the client in one flush and no frame is
+        // drawn from the arrival spot; the invisibility flag goes out in the next tick's
+        // entity-tracking pass (ServerEntity.java:370-375, from ChunkMap.java:1205 via
+        // ServerChunkCache.java:325), by which time the camera is already four blocks back.
         server.runOnServer(
                 minecraftServer -> {
+                    friend(minecraftServer).setInvisible(true);
                     SimpleTPAFakePlayerScenario.executeCommand(
                             friend(minecraftServer), "tpa " + playerName);
                     // The whitelist answers the request inside the command, so the arrival has
@@ -801,7 +809,7 @@ public final class SimpleTPAFilm {
         // landing's damage already taken. The film's tail after the retype is 33 ticks, 1.65 s,
         // inside the 2 s the overlay keeps a typed line for (InputOverlayState.java:24), so the
         // repeat's line is up to the last frame of the stage. The stage's own six-tick hold comes
-        // after its end marker and is cut.
+        // after its end marker, and the cut keeps only 0.12 s of it (trim_stages.py:33).
         context.waitTicks(16);
         double[] head =
                 server.computeOnServer(
@@ -821,6 +829,7 @@ public final class SimpleTPAFilm {
                         server.computeOnServer(minecraftServer -> friend(minecraftServer).getX()),
                         head[0] - CRANE_LOOK_BELOW,
                         server.computeOnServer(minecraftServer -> friend(minecraftServer).getZ())),
+                CRANE_END_DISTANCE,
                 10);
 
         endStage(context);
@@ -1174,11 +1183,13 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Lifts {@code player} to {@code height} over {@code ticks}, a step a tick, looking at {@code
-     * target} the whole way, so the move reads as a crane up rather than a cut. Each step is a
-     * teleport, which the client applies at once and which zeroes the fall the player would
-     * otherwise gather (Entity.java:3275), so the camera sits exactly on the step's height. The
-     * player is left in the air at the end; the next stage's reset puts them back on the floor.
+     * Lifts {@code player} to {@code height} over {@code ticks}, a step a tick, closing in to
+     * {@code distance} blocks from {@code target} on the way, so the move reads as a crane up
+     * rather than a cut and the stage ends on the friend's head and shoulders rather than on a
+     * full-body shot. Each step is a teleport, which the client applies at once and which zeroes
+     * the fall the player would otherwise gather (Entity.java:3275), so the camera sits within a
+     * tick's fall of the step's height. The player is left in the air at the end; the next stage's
+     * reset puts them back on the floor.
      */
     private static void craneUpTo(
             ClientGameTestContext context,
@@ -1186,16 +1197,27 @@ public final class SimpleTPAFilm {
             String playerName,
             double height,
             Vec3 target,
+            double distance,
             int ticks) {
-        double from =
+        double[] start =
                 server.computeOnServer(
-                        minecraftServer -> player(minecraftServer, playerName).getY());
+                        minecraftServer -> {
+                            ServerPlayer player = player(minecraftServer, playerName);
+                            return new double[] {player.getY(), player.getX(), player.getZ()};
+                        });
+        double fromY = start[0];
+        double fromX = start[1];
+        double fromZ = start[2];
+        double reach = Math.sqrt(Math.pow(target.x - fromX, 2) + Math.pow(target.z - fromZ, 2));
         for (int step = 1; step <= ticks; step++) {
-            double y = from + (height - from) * step / ticks;
+            double t = (double) step / ticks;
+            double y = fromY + (height - fromY) * t;
+            double x = fromX + (target.x - fromX) * (1.0D - distance / reach) * t;
+            double z = fromZ + (target.z - fromZ) * (1.0D - distance / reach) * t;
             server.runOnServer(
                     minecraftServer -> {
                         ServerPlayer player = player(minecraftServer, playerName);
-                        look(player, new Vec3(player.getX(), y, player.getZ()), target);
+                        look(player, new Vec3(x, y, z), target);
                     });
             context.waitTicks(1);
         }
