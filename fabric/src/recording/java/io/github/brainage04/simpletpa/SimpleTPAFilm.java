@@ -1156,7 +1156,7 @@ public final class SimpleTPAFilm {
                         Math.cos(Math.toRadians(friend.getYRot())));
         Vec3 away = friend.position().add(facing.scale(4.0D));
         // Facing the player, not their own way: a friend who keeps their yaw shows their back for
-        // the rest of the stage, which is the take 5 defect.
+        // the rest of the stage, and the shot is meant to show who the player teleported to.
         float towardsPlayer = yawTowards(away, player.position());
         SimpleTPAFakePlayerScenario.place(friend, away, towardsPlayer, friend.getXRot());
         look(player, player.position(), away.add(0.0D, 1.4D, 0.0D));
