@@ -30,7 +30,7 @@ import org.joml.Vector4f;
  *
  * <p>The limit is a quarter of the frame. The largest legitimate frame measured is 0.131, in take
  * 6's arrival-frame runs, and the defect is 1.0, so a quarter leaves the real shots room and still
- * fails a friend filling a third of the frame. The delivered film's own worst frame is 0.118, in
+ * fails a friend filling a third of the frame. The delivered film's own worst frame is 0.119, in
  * {@code simpletpa.longdrop}.
  *
  * <p>Take 6's own code does not fail this check: its flash was a race between the arrival and the
@@ -50,10 +50,12 @@ final class FriendFrameCheck implements HudElement {
 
     /**
      * The most the camera may turn between two frames, in degrees. The rest of the film turns at
-     * most 2.9 a frame. The long drop's follow needs up to 4.6: the camera falls six blocks while
-     * the friend stays put, so the angle to them steepens fastest as the player lands, and a slower
-     * turn lets their head leave the top of the frame. A cut is 55, which take 7's crane snapped in
-     * one frame, so 6 still fails a cut with a wide margin.
+     * most 2.9 a frame. The long drop's follow needs more: the camera falls six blocks while the
+     * friend stays put, so the angle to them steepens fastest as the player lands. From the eight
+     * blocks the step back leaves, the angle changes by at most 4.6 degrees a tick, and the client
+     * draws a tick's turn across two frames, so the follow's own worst frame is about 2.3. The
+     * limit is 6, which leaves the follow room for the landing's snap and still fails a cut: take
+     * 7's crane snapped 55 in one frame.
      */
     static final double MAX_TURN_DEGREES = 6.0D;
 
@@ -88,7 +90,6 @@ final class FriendFrameCheck implements HudElement {
     private float lastYaw;
     private float lastPitch;
     private Vec3 lastEye;
-    private boolean lastTeleported;
     private int missing;
     private String missingStage = "none";
 
@@ -174,14 +175,13 @@ final class FriendFrameCheck implements HudElement {
         String current = stage.get();
         Camera camera = client.gameRenderer.mainCamera();
         Vec3 eye = camera.position();
-        // The turn is measured on every filmed frame, friend or not: a snap is a snap. A frame the
-        // camera teleported in is skipped: the mod's own arrival moves the player, and a teleport
-        // is not a camera move the film can smooth.
+        // The turn is measured on every filmed frame, friend or not: a snap is a snap. Only the
+        // frame the camera teleported in is skipped, because the mod's own arrival moves the
+        // player and a teleport is not a camera move the film can smooth. The frame after it is
+        // measured: a teleport's rotation is applied at once (ClientPacketListener.java:825-837),
+        // so a turn that follows one is a turn the film made.
         boolean teleported = lastEye != null && eye.distanceTo(lastEye) > TELEPORT_BLOCKS;
-        // A teleport's rotation is drawn over the frames after it, so the frame it lands in and
-        // the one after are both skipped: the mod's own arrival moves the player, and a teleport
-        // is not a camera move the film can smooth.
-        if (current.equals(lastStage) && !teleported && !lastTeleported) {
+        if (current.equals(lastStage) && !teleported) {
             double dYaw = Math.abs(Mth.wrapDegrees(camera.yRot() - lastYaw));
             double dPitch = Math.abs(camera.xRot() - lastPitch);
             double turn = Math.hypot(dYaw, dPitch);
@@ -195,7 +195,6 @@ final class FriendFrameCheck implements HudElement {
             }
         }
         frame++;
-        lastTeleported = teleported;
         lastStage = current;
         lastYaw = camera.yRot();
         lastPitch = camera.xRot();

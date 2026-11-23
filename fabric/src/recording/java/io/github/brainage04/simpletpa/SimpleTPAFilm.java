@@ -805,10 +805,11 @@ public final class SimpleTPAFilm {
                     ServerPlayer player = player(minecraftServer, playerName);
                     ServerPlayer target = friend(minecraftServer);
                     // The friend stays visible: the arrival and the step back are two teleports
-                    // of the player in one server tick, so the client applies both before it
-                    // draws and no frame is drawn from inside the friend's model. Hiding them
-                    // instead left the first frames of the fall with an empty sky, because the
-                    // visibility flag reaches the client a tick after the teleport does.
+                    // of the player in one server tick, sent in that order, so the client applies
+                    // both before it draws and no frame is drawn from inside the friend's model.
+                    // Hiding them instead left the first frames of the fall with an empty sky,
+                    // because the visibility flag reaches the client a tick after the teleport
+                    // does.
                     player.level()
                             .getServer()
                             .getCommands()
@@ -1151,13 +1152,7 @@ public final class SimpleTPAFilm {
         stepBackFrom(player, friend, 4.0D);
     }
 
-    /**
-     * Steps the player {@code distance} blocks back along the friend's facing and turns them to the
-     * friend. The long drop uses a wider step back: the camera falls six blocks while the friend
-     * stays put, and the angle to them steepens fastest as the player lands, so from four blocks
-     * back the last frames of the fall would need a turn of about 12 degrees to keep them in shot.
-     * From eight the same fall needs about 4.5.
-     */
+    /** Steps the player {@code distance} blocks back along the friend's facing, looking at them. */
     private static void stepBackFrom(ServerPlayer player, ServerPlayer friend, double distance) {
         Vec3 facing =
                 new Vec3(
@@ -1245,9 +1240,9 @@ public final class SimpleTPAFilm {
      * tick's fall of the step's height. The player is left in the air at the end; the next stage's
      * reset puts them back on the floor.
      *
-     * <p>The look direction is aimed at the target from where each step puts the camera, and the
-     * steps are added until no step turns more than a quarter of the check's limit, so the friend
-     * stays centred and the turn never reads as a cut inside the stage.
+     * <p>The look direction is eased from where the camera already points to the target, a step at
+     * a time, and the steps are sized from the turn the crane has to make at the check's limit a
+     * step, so the turn never reads as a cut inside the stage.
      */
     private static void craneUpTo(
             ClientGameTestContext context,
@@ -1288,15 +1283,16 @@ public final class SimpleTPAFilm {
         // at the check's limit a step, because a step is a teleport and the client applies a
         // teleport's rotation at once.
         Vec3 endEye = new Vec3(endX, height + start[3], endZ);
-        double turn =
-                Math.hypot(
-                        Mth.wrapDegrees(yawTowards(endEye, target) - fromYaw),
-                        pitchTowards(endEye, target) - fromPitch);
+        float yawStep = Mth.wrapDegrees(yawTowards(endEye, target) - fromYaw);
+        float pitchStep = pitchTowards(endEye, target) - fromPitch;
+        // The aim is linear in the step, so every step turns the same amount and the count is the
+        // total turn divided by the limit. The path is not linear, so the friend drifts a little
+        // within the frame as the camera rises and closes in; the frame check measures that drift
+        // as the friend's fraction, and the crane's own end is the shot the stage wants.
+        double turn = Math.hypot(yawStep, pitchStep);
         int steps = Math.max(ticks, (int) Math.ceil(turn / FriendFrameCheck.MAX_TURN_DEGREES));
         int rise = (int) Math.ceil(steps * 0.7D);
         int close = steps - rise;
-        float yawStep = Mth.wrapDegrees(yawTowards(endEye, target) - fromYaw);
-        float pitchStep = pitchTowards(endEye, target) - fromPitch;
         for (int step = 1; step <= steps; step++) {
             double t = (double) step / steps;
             double[] at = craneStep(step, rise, close, fromX, fromY, fromZ, endX, endZ, height);
@@ -1369,13 +1365,10 @@ public final class SimpleTPAFilm {
                         float yawStep =
                                 Mth.clamp(Mth.wrapDegrees(wantYaw - player.getYRot()), -most, most);
                         float pitchStep = Mth.clamp(wantPitch - player.getXRot(), -most, most);
-                        // A rotation packet, not a look packet: the client interpolates a look
-                        // packet's rotation over two ticks, so the drawn camera lagged the
-                        // server's by several degrees and the crane's first step snapped it
-                        // forward. This packet sets the drawn rotation at once and leaves the
-                        // position and the fall alone (ClientPacketListener.java:825-836), where a
-                        // teleport would zero the fall (Entity.java:3275) and the drop would stop
-                        // hurting.
+                        // A rotation packet, not a teleport: the client sets the drawn rotation
+                        // at once (ClientPacketListener.java:825-837) and leaves the position and
+                        // the fall alone, where a teleport would zero the fall
+                        // (Entity.java:3275-3276) and the drop would stop hurting.
                         player.forceSetRotation(
                                 player.getYRot() + yawStep,
                                 false,
@@ -1384,9 +1377,8 @@ public final class SimpleTPAFilm {
                     });
             context.waitTicks(1);
         }
-        // The client draws the player's rotation two ticks behind the server's, so the crane that
-        // follows reads the camera only once it has caught up; otherwise its first step snaps the
-        // drawn camera forward by the lag.
+        // The last rotation packet needs a tick to reach the client before the crane reads the
+        // camera, so the crane starts from where the follow left it rather than a step behind.
         context.waitTicks(2);
     }
 
