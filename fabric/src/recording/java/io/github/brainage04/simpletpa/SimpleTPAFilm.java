@@ -768,10 +768,11 @@ public final class SimpleTPAFilm {
         // The warning and the run-again line stay up long enough to read before the repeat. The
         // repeat is typed whole, as everywhere else, at the moment the first command's typed line
         // expires: the overlay keeps a typed line for two seconds after its last character
-        // (InputOverlayState.java:24), and the clear and the retype both run before the next tick,
-        // so the panel never blanks while the warning is read. The repeat is sent four ticks after
-        // it is typed rather than twenty, so its line is still up when the stage ends: the arrival
-        // and the crane after it take 1.65 s, and the line lasts two.
+        // (InputOverlayState.java:24). The clear and the retype are two client tasks, so one frame
+        // is drawn between them with the panel empty; that is 33 ms, against the 0.93 s the stage
+        // had before. The repeat is sent four ticks after it is typed rather than twenty, so its
+        // line is still up when the stage ends: the arrival and the crane after it take 1.65 s, and
+        // the line lasts two.
         context.waitTicks(20);
         context.runOnClient(client -> InputOverlay.clear());
         typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME, 4);
