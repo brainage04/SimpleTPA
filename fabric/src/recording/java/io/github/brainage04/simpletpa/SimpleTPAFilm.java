@@ -222,11 +222,13 @@ public final class SimpleTPAFilm {
     private static final double CRANE_LOOK_BELOW = 0.25D;
 
     /**
-     * How far from the friend the long drop's crane ends. At 1.5 blocks a 1.8-block player fills
-     * about two thirds of the frame's height, which is a head-and-shoulders shot; at the four
-     * blocks the step back leaves, they fill a third and the shot is their whole body.
+     * How far from the friend the long drop's crane ends. At 2 blocks a 1.8-block player fills
+     * about half the frame's height, which is a head-and-shoulders shot with room around it; at the
+     * four blocks the step back leaves, they fill a third and the shot is their whole body. The
+     * frame check measures 0.22 at 1.5 blocks, too close to its 0.25 limit for a shot that is not
+     * a defect.
      */
-    private static final double CRANE_END_DISTANCE = 1.5D;
+    private static final double CRANE_END_DISTANCE = 2.0D;
 
     /** A target in the air six blocks up: a drop that hurts, but a short one. */
     private static final Vec3 LOW_AIR_POSITION = new Vec3(2.5D, STAGE_Y + 6, 0.5D);
