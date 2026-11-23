@@ -623,15 +623,14 @@ public final class SimpleTPAFilm {
         startStage(context, AUTO_ACCEPT);
         typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
         context.waitTicks(25);
-        // The friend is hidden in the request's own tick, as every other stage does, so they do not
-        // pop out of the shot a frame before the arrival. The step back goes out in the same server
-        // block as the request, so both teleports reach the client in one flush and no frame is
-        // drawn from the arrival spot; the invisibility flag goes out in the next tick's
-        // entity-tracking pass (ServerEntity.java:370-375, from ChunkMap.java:1205 via
-        // ServerChunkCache.java:325), by which time the camera is already four blocks back.
+        // The step back goes out in the same server block as the request, so both teleports reach
+        // the client in one flush and no frame is drawn from the arrival spot. The friend is not
+        // hidden here: hiding them makes them vanish for the frames between the camera's teleport
+        // and the invisibility flag's next-tick entity-tracking pass (ServerEntity.java:370-375,
+        // from ChunkMap.java:1205 via ServerChunkCache.java:325), and the frame check measures
+        // whether the step back alone is enough.
         server.runOnServer(
                 minecraftServer -> {
-                    friend(minecraftServer).setInvisible(true);
                     SimpleTPAFakePlayerScenario.executeCommand(
                             friend(minecraftServer), "tpa " + playerName);
                     // The whitelist answers the request inside the command, so the arrival has
