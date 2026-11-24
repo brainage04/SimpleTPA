@@ -11,6 +11,7 @@ import io.github.brainage04.minecraftmodconventions.PerformanceOverlayPlacement;
 import io.github.brainage04.simpletpa.command.TPRequestCommand;
 import io.github.brainage04.simpletpa.data.InstantTpaWhitelist;
 import io.github.brainage04.simpletpa.data.SafetyPreference;
+import java.lang.reflect.Method;
 import java.util.Properties;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -41,6 +42,7 @@ import net.minecraft.server.players.NameAndId;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
+import net.minecraft.util.Util;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -163,7 +165,7 @@ public final class SimpleTPAFilm {
 
     /**
      * Ticks the title card is held. A card is a still, and the cut adds 0.22 s of lead and hold
-     * around the stage (trim_stages.py:34-35), so 14 ticks put it on screen for about 0.92 s, under
+     * around the stage (trim_stages.py:33-34), so 14 ticks put it on screen for about 0.9 s, under
      * the film's 1.2 s limit for a still.
      */
     private static final int TITLE_CARD_TICKS = 14;
@@ -236,11 +238,11 @@ public final class SimpleTPAFilm {
 
     /**
      * The field of view the long drop is filmed at, the narrowest the game's own option allows
-     * (Options.java:804-818, range 30 to 110). After the landing the friend is at least 5.8 blocks
-     * from the camera, six blocks up, and the camera can only stand on the floor: at the default 70
-     * they fill about a seventh of the frame's height there (0.137 in take 8), at 30 two fifths
-     * (0.41). The option is a player's own setting, so the shot stays one a player can see; the
-     * first-person hand keeps its fixed 70 (Camera.java:45, 229-232), so it does not grow with the
+     * (Options.java:804-818, range 30 to 110). After the landing the friend's middle is 5.3 blocks
+     * above the camera's eye, and the camera can only stand on the floor: at the default 70 they
+     * fill about a seventh of the frame's height there (0.137 in take 8), at 30 two fifths (0.41).
+     * The option is a player's own setting, so the shot stays one a player can see; the
+     * first-person hand keeps its fixed 70 (Camera.java:45, 231-232), so it does not grow with the
      * zoom.
      */
     private static final int LONG_DROP_FOV = 30;
@@ -559,7 +561,46 @@ public final class SimpleTPAFilm {
         // 3.80 s) 20 ticks here made a 1.27 s still.
         context.waitTicks(14);
         context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+        assertClickShown(context);
         context.waitTicks(5);
+    }
+
+    /**
+     * Fails unless the keystrokes overlay lights LMB for the click just made. The click runs the
+     * link's command inside the press, and the command opens the chat screen again
+     * (ClientPacketListener.java:2686-2690), which releases every key; an overlay that gives no
+     * afterglow to a key released that way shows the click on no frame at all. {@code pressMouse}
+     * releases the button straight after the press and then waits one tick, so this reads the
+     * overlay 50 ms into its 400 ms afterglow.
+     *
+     * <p>The overlay answers through its package-private {@code keyLit}, its only record of a press
+     * that has ended; MinecraftModConventions has no public query for it. An overlay without that
+     * method (before the keystrokes panel) cannot show the click either, so that fails too.
+     */
+    private static void assertClickShown(ClientGameTestContext context) {
+        String key =
+                InputConstants.Type.MOUSE.getOrCreate(InputConstants.MOUSE_BUTTON_LEFT).getName();
+        boolean lit =
+                context.computeOnClient(
+                        client -> {
+                            try {
+                                Method keyLit =
+                                        InputOverlay.class.getDeclaredMethod(
+                                                "keyLit", String.class, long.class);
+                                keyLit.setAccessible(true);
+                                return (boolean) keyLit.invoke(null, key, Util.getMillis());
+                            } catch (ReflectiveOperationException e) {
+                                throw new AssertionError(
+                                        "The keystrokes overlay has no keyLit(String, long), so it"
+                                                + " cannot show the chat click.",
+                                        e);
+                            }
+                        });
+        if (!lit) {
+            throw new AssertionError(
+                    "The keystrokes overlay did not light LMB for the chat click: it needs"
+                            + " MinecraftModConventions 7473501 or later.");
+        }
     }
 
     private static void showWaitingRequest(
@@ -886,8 +927,10 @@ public final class SimpleTPAFilm {
                                     player.createCommandSourceStack(), "tpa " + FRIEND_NAME);
                     stepBackFrom(player, target, LONG_DROP_STEP_BACK, LONG_DROP_AIM_HEIGHT);
                 });
-        followingFriend = true;
+        // The follow starts once the chat is closed: with the chat open the mouse moves the
+        // cursor, not the view.
         closeChat(context);
+        followingFriend = true;
         // The arrival is six blocks up, so the player falls to the floor. The camera follows the
         // friend the whole way down and through the landing, as a player turning their mouse
         // would: each client tick turns it to the friend from where the tick left it, and the

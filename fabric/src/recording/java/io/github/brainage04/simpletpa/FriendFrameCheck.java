@@ -45,7 +45,7 @@ import org.joml.Vector4f;
  * #FRIEND_IN_SHOT_STAGES}.
  *
  * <p>A stage whose shot is the friend must also keep them large from the arrival on: take 8 showed
- * them at about a sixth of the frame's height through the fall and the landing, so a frame from the
+ * them at about a seventh of the frame's height through the fall and the landing, so a frame from the
  * stage's first teleport to its end with the friend under {@link #MIN_HEIGHT_FRACTION} of the
  * frame's height fails. And the camera may only do what the player can, so a camera that rises more
  * than {@link #MAX_RISE_BLOCKS} above its lowest point since the stage began or the last teleport
@@ -115,6 +115,8 @@ final class FriendFrameCheck implements HudElement {
     private double smallestHeight = 1.0D;
     private String smallestHeightStage = "none";
     private int smallFrames;
+    private int heightMeasured;
+    private boolean inShotStageSeen;
     private double lowestEyeY;
     private double worstRise;
     private String worstRiseStage = "none";
@@ -156,11 +158,12 @@ final class FriendFrameCheck implements HudElement {
         System.out.println(
                 "FRIEND_IN_SHOT_CHECK missing=%d stage=%s".formatted(missing, missingStage));
         System.out.println(
-                "FRIEND_HEIGHT_CHECK smallest=%.3f stage=%s small=%d limit=%.2f"
+                "FRIEND_HEIGHT_CHECK smallest=%.3f stage=%s small=%d measured=%d limit=%.2f"
                         .formatted(
                                 smallestHeight,
                                 smallestHeightStage,
                                 smallFrames,
+                                heightMeasured,
                                 MIN_HEIGHT_FRACTION));
         System.out.println(
                 "CAMERA_RISE_CHECK worst=%.2f stage=%s frame=%d limit=%.2f"
@@ -192,6 +195,13 @@ final class FriendFrameCheck implements HudElement {
             throw new AssertionError(
                     "%s was off screen for %d frames of %s, which is their shot."
                             .formatted(friendName, missing, missingStage));
+        }
+        // A stage whose shot is the friend ran, but no frame of it was measured after an arrival:
+        // the arrival was never seen, so the height rule checked nothing.
+        if (inShotStageSeen && heightMeasured == 0) {
+            throw new AssertionError(
+                    "No arrival was seen in a stage whose shot is %s, so the height rule measured no frame."
+                            .formatted(friendName));
         }
         if (smallFrames > 0) {
             throw new AssertionError(
@@ -266,6 +276,9 @@ final class FriendFrameCheck implements HudElement {
         } else if (teleported && FRIEND_IN_SHOT_STAGES.contains(current)) {
             arrived = true;
         }
+        if (FRIEND_IN_SHOT_STAGES.contains(current)) {
+            inShotStageSeen = true;
+        }
         frame++;
         lastStage = current;
         lastYaw = camera.yRot();
@@ -293,6 +306,7 @@ final class FriendFrameCheck implements HudElement {
             missingStage = current;
         }
         if (arrived && fraction > 0.0D) {
+            heightMeasured++;
             if (shot[1] < smallestHeight) {
                 smallestHeight = shot[1];
                 smallestHeightStage = current;
