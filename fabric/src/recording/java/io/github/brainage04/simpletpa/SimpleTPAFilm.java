@@ -443,7 +443,7 @@ public final class SimpleTPAFilm {
                 minecraftServer ->
                         SimpleTPAFakePlayerScenario.executeCommand(
                                 friend(minecraftServer), "tpa " + playerName));
-        context.waitTicks(25);
+        context.waitTicks(18);
         clickChatButton(context, server, "tpdeny");
         closeChat(context);
         context.waitTicks(16);
@@ -461,7 +461,9 @@ public final class SimpleTPAFilm {
                 minecraftServer ->
                         SimpleTPAFakePlayerScenario.executeCommand(
                                 friend(minecraftServer), "tpa " + playerName));
-        context.waitTicks(25);
+        // The request line is read again while the cursor moves to the button, so 0.9 s alone on
+        // it is enough; 25 ticks made a 1.2 s still.
+        context.waitTicks(18);
         // The click's command is handled during the server tick, before its end-of-tick event, so
         // the step back runs in the same tick as the arrival. The friend is hidden for that tick
         // as the accept stage hides them: the client interpolates the slide over the next few
