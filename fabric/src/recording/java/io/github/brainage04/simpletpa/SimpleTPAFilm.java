@@ -1246,10 +1246,10 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Turns the client's player towards the friend's shoulders at the end of each client tick
-     * while {@link #followingFriend} is set and the friend is within {@link #FOLLOW_RANGE}, by at
-     * most {@link #FOLLOW_MAX_TURN}. The tick has already moved the player and stored the rotation
-     * it started with (Entity.java:517-522), and the camera draws the rotation interpolated between
+     * Turns the client's player towards the friend's shoulders at the end of each client tick while
+     * {@link #followingFriend} is set and the friend is within {@link #FOLLOW_RANGE}, by at most
+     * {@link #FOLLOW_MAX_TURN}. The tick has already moved the player and stored the rotation it
+     * started with (Entity.java:517-522), and the camera draws the rotation interpolated between
      * the two (Entity.java:1992-1998), so the turn is spread across the tick's frames the way the
      * fall is.
      */
@@ -1270,8 +1270,7 @@ public final class SimpleTPAFilm {
                 player.setYRot(
                         player.getYRot() + Mth.clamp(yawTurn, -FOLLOW_MAX_TURN, FOLLOW_MAX_TURN));
                 player.setXRot(
-                        player.getXRot()
-                                + Mth.clamp(pitchTurn, -FOLLOW_MAX_TURN, FOLLOW_MAX_TURN));
+                        player.getXRot() + Mth.clamp(pitchTurn, -FOLLOW_MAX_TURN, FOLLOW_MAX_TURN));
                 return;
             }
         }
