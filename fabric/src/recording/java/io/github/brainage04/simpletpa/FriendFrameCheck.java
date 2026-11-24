@@ -43,6 +43,13 @@ import org.joml.Vector4f;
  * snapped 55 in one frame. A stage that keeps the friend in shot must not lose them either, so a
  * frame with no part of the friend's box on screen fails when the stage is one of {@link
  * #FRIEND_IN_SHOT_STAGES}.
+ *
+ * <p>A stage whose shot is the friend must also keep them large from the arrival on: take 8 showed
+ * them at about a sixth of the frame's height through the fall and the landing, so a frame from
+ * the stage's first teleport to its end with the friend under {@link #MIN_HEIGHT_FRACTION} of the
+ * frame's height fails. And the camera may only do what the player can, so a camera that rises
+ * more than {@link #MAX_RISE_BLOCKS} above its lowest point since the stage began or the last
+ * teleport fails: take 8's crane lifted the player's own view six blocks off the floor.
  */
 final class FriendFrameCheck implements HudElement {
     /** The most of a frame the friend's box may cover. */
@@ -64,6 +71,19 @@ final class FriendFrameCheck implements HudElement {
      * camera move. The crane's fastest step is 0.45 blocks; an arrival moves six or more.
      */
     private static final double TELEPORT_BLOCKS = 1.0D;
+
+    /**
+     * The least of the frame's height the friend's box may cover after the arrival, in a stage whose
+     * shot is the friend. Take 8's fall and landing measured about 0.14.
+     */
+    static final double MIN_HEIGHT_FRACTION = 0.35D;
+
+    /**
+     * The most the camera may rise without a teleport, in blocks: a jump at the default jump
+     * strength, 0.42 (Attributes.java:58-60), with the default gravity, 0.08 (Attributes.java:55-57),
+     * and vertical drag, 0.98 (LivingEntity.java:203), peaks 1.25 blocks up.
+     */
+    static final double MAX_RISE_BLOCKS = 1.3D;
 
     /** The stages whose shot is the friend, so a frame without them on screen is a defect. */
     private static final java.util.Set<String> FRIEND_IN_SHOT_STAGES =
@@ -92,6 +112,14 @@ final class FriendFrameCheck implements HudElement {
     private Vec3 lastEye;
     private int missing;
     private String missingStage = "none";
+    private boolean arrived;
+    private double smallestHeight = 1.0D;
+    private String smallestHeightStage = "none";
+    private int smallFrames;
+    private double lowestEyeY;
+    private double worstRise;
+    private String worstRiseStage = "none";
+    private int worstRiseFrame = -1;
 
     private FriendFrameCheck(String friendName, Supplier<String> stage) {
         this.friendName = friendName;
@@ -128,6 +156,16 @@ final class FriendFrameCheck implements HudElement {
                         .formatted(worstTurn, worstTurnStage, worstTurnFrame, MAX_TURN_DEGREES));
         System.out.println(
                 "FRIEND_IN_SHOT_CHECK missing=%d stage=%s".formatted(missing, missingStage));
+        System.out.println(
+                "FRIEND_HEIGHT_CHECK smallest=%.3f stage=%s small=%d limit=%.2f"
+                        .formatted(
+                                smallestHeight,
+                                smallestHeightStage,
+                                smallFrames,
+                                MIN_HEIGHT_FRACTION));
+        System.out.println(
+                "CAMERA_RISE_CHECK worst=%.2f stage=%s frame=%d limit=%.2f"
+                        .formatted(worstRise, worstRiseStage, worstRiseFrame, MAX_RISE_BLOCKS));
     }
 
     /** Throws when any measured frame showed the friend over {@link #MAX_FRACTION}. */
@@ -155,6 +193,21 @@ final class FriendFrameCheck implements HudElement {
             throw new AssertionError(
                     "%s was off screen for %d frames of %s, which is their shot."
                             .formatted(friendName, missing, missingStage));
+        }
+        if (smallFrames > 0) {
+            throw new AssertionError(
+                    "%s covered as little as %.0f%% of the frame's height in %s after the arrival, under the %.0f%% limit (%d frames)."
+                            .formatted(
+                                    friendName,
+                                    smallestHeight * 100.0D,
+                                    smallestHeightStage,
+                                    MIN_HEIGHT_FRACTION * 100.0D,
+                                    smallFrames));
+        }
+        if (worstRise > MAX_RISE_BLOCKS) {
+            throw new AssertionError(
+                    "The camera rose %.2f blocks without a teleport in %s, over the %.2f a jump reaches."
+                            .formatted(worstRise, worstRiseStage, MAX_RISE_BLOCKS));
         }
     }
 
@@ -194,6 +247,26 @@ final class FriendFrameCheck implements HudElement {
                                 .formatted(frame, dYaw, dPitch, camera.yRot(), camera.xRot()));
             }
         }
+        boolean newStage = !current.equals(lastStage);
+        if (newStage || teleported) {
+            lowestEyeY = eye.y;
+        } else {
+            lowestEyeY = Math.min(lowestEyeY, eye.y);
+            double rise = eye.y - lowestEyeY;
+            if (rise > worstRise) {
+                worstRise = rise;
+                worstRiseStage = current;
+                worstRiseFrame = frame;
+            }
+        }
+        if (newStage) {
+            arrived = false;
+        }
+        // The stage's first teleport is the arrival: the camera starts the stage where the reset
+        // put it, and only the request moves it before the stage ends.
+        if (teleported && FRIEND_IN_SHOT_STAGES.contains(current)) {
+            arrived = true;
+        }
         frame++;
         lastStage = current;
         lastYaw = camera.yRot();
@@ -210,7 +283,8 @@ final class FriendFrameCheck implements HudElement {
             return;
         }
         measured++;
-        double fraction = fraction(client, friend, deltaTracker.getGameTimeDeltaPartialTick(true));
+        double[] shot = shot(client, friend, deltaTracker.getGameTimeDeltaPartialTick(true));
+        double fraction = shot[0];
         if (fraction > worst) {
             worst = fraction;
             worstStage = current;
@@ -219,15 +293,28 @@ final class FriendFrameCheck implements HudElement {
             missing++;
             missingStage = current;
         }
+        if (arrived && fraction > 0.0D) {
+            if (shot[1] < smallestHeight) {
+                smallestHeight = shot[1];
+                smallestHeightStage = current;
+            }
+            if (shot[1] < MIN_HEIGHT_FRACTION) {
+                smallFrames++;
+            }
+        }
     }
 
-    private static double fraction(
+    /**
+     * What of the frame the friend's box covers: the fraction of its area, then the fraction of its
+     * height.
+     */
+    private static double[] shot(
             Minecraft client, AbstractClientPlayer friend, float partialTicks) {
         Camera camera = client.gameRenderer.mainCamera();
         Vec3 eye = camera.position();
         AABB box = friend.getInterpolatedBoundingBox(partialTicks);
         if (box.contains(eye)) {
-            return 1.0D;
+            return new double[] {1.0D, 1.0D};
         }
         Matrix4f matrix = camera.getViewRotationProjectionMatrix(new Matrix4f());
         double minX = 1.0D;
@@ -255,7 +342,7 @@ final class FriendFrameCheck implements HudElement {
             maxY = Math.max(maxY, ndcY);
         }
         if (inFront == 0) {
-            return 0.0D;
+            return new double[] {0.0D, 0.0D};
         }
         // A corner behind the camera has no screen position, so the box is measured by the corners
         // that do: the camera is inside or beside the friend, and the part in front of it is what
@@ -263,8 +350,8 @@ final class FriendFrameCheck implements HudElement {
         double width = Math.min(maxX, 1.0D) - Math.max(minX, -1.0D);
         double height = Math.min(maxY, 1.0D) - Math.max(minY, -1.0D);
         if (width <= 0.0D || height <= 0.0D) {
-            return 0.0D;
+            return new double[] {0.0D, 0.0D};
         }
-        return width * height / 4.0D;
+        return new double[] {width * height / 4.0D, height / 2.0D};
     }
 }
