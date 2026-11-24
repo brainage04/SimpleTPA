@@ -45,8 +45,8 @@ import org.joml.Vector4f;
  * #FRIEND_IN_SHOT_STAGES}.
  *
  * <p>A stage whose shot is the friend must also keep them large from the arrival on: take 8 showed
- * them at about a seventh of the frame's height through the fall and the landing, so a frame from the
- * stage's first teleport to its end with the friend under {@link #MIN_HEIGHT_FRACTION} of the
+ * them at about a seventh of the frame's height through the fall and the landing, so a frame from
+ * the stage's first teleport to its end with the friend under {@link #MIN_HEIGHT_FRACTION} of the
  * frame's height fails. And the camera may only do what the player can, so a camera that rises more
  * than {@link #MAX_RISE_BLOCKS} above its lowest point since the stage began or the last teleport
  * fails: take 8's crane lifted the player's own view six blocks off the floor.
