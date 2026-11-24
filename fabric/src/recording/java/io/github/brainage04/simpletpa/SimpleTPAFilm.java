@@ -176,6 +176,12 @@ public final class SimpleTPAFilm {
     private static final float PLAYER_PITCH = 6.0F;
     private static final int COMMAND_VISIBLE_TICKS = 20;
 
+    /**
+     * Ticks the fall stages show their command while the player hangs in the air before the fall.
+     * Nothing else moves then, so the shot is a still, and 20 ticks made a 1.13 s one.
+     */
+    private static final int HANGING_COMMAND_TICKS = 14;
+
     /** Frames a stage keeps after its end marker, so a cut never lands on the next scene. */
     private static final int STAGE_HOLD_TICKS = 6;
 
@@ -232,7 +238,8 @@ public final class SimpleTPAFilm {
      * The field of view the long drop is filmed at, the narrowest the game's own option allows
      * (Options.java:804-818, range 30 to 110). After the landing the friend is at least 5.8 blocks
      * from the camera, six blocks up, and the camera can only stand on the floor: at the default 70
-     * they fill about a sixth of the frame's height there, at 30 almost half. The option is a
+     * they fill about a seventh of the frame's height there (0.137 in take 8), at 30 two fifths
+     * (0.41). The option is a
      * player's own setting, so the shot stays one a player can see; the first-person hand keeps its
      * fixed 70 (Camera.java:45, 229-232), so it does not grow with the zoom.
      */
@@ -321,9 +328,7 @@ public final class SimpleTPAFilm {
             BiConsumer<ServerPlayer, ServerPlayer> afterClickedAccept) {
         String playerName = context.computeOnClient(client -> client.getUser().getName());
         // Command suggestions would cover the chat while a command sits in the chat box. Clouds are
-        // off so none crosses the sky in the stages that look up at a target in the air. The sun
-        // still shows as a white square clipped by the top edge in the long-drop and short-drop
-        // stages, which look up at noon; it is the sun, not a cloud.
+        // off so none crosses the sky in the stages that look up at a target in the air.
         filmFov =
                 context.computeOnClient(
                         client -> {
@@ -550,7 +555,9 @@ public final class SimpleTPAFilm {
         context.waitTicks(10);
         double[] button = context.computeOnClient(client -> findRunCommand(client, full));
         context.getInput().setCursorPos(button[0], button[1]);
-        context.waitTicks(20);
+        // 0.7 s on the button: in a run whose client ran slow (this stage took 4.67 s against
+        // 3.80 s) 20 ticks here made a 1.27 s still.
+        context.waitTicks(14);
         context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
         context.waitTicks(5);
     }
@@ -1022,7 +1029,7 @@ public final class SimpleTPAFilm {
                     look(player, FALLING_POSITION, FRIEND_POSITION);
                 });
         startStage(context, RESET_FALL_OFF);
-        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
+        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME, HANGING_COMMAND_TICKS);
         server.runOnServer(
                 minecraftServer -> player(minecraftServer, playerName).setNoGravity(false));
         waitForFall(context, server, playerName);
@@ -1049,7 +1056,7 @@ public final class SimpleTPAFilm {
                     look(player, FALLING_POSITION, FRIEND_POSITION);
                 });
         startStage(context, RESET_FALL_ON);
-        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME);
+        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME, HANGING_COMMAND_TICKS);
         server.runOnServer(
                 minecraftServer -> player(minecraftServer, playerName).setNoGravity(false));
         waitForFall(context, server, playerName);

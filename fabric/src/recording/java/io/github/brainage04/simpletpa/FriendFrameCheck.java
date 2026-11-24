@@ -30,8 +30,8 @@ import org.joml.Vector4f;
  *
  * <p>The limit is a quarter of the frame. The largest legitimate frame measured is 0.131, in take
  * 6's arrival-frame runs, and the defect is 1.0, so a quarter leaves the real shots room and still
- * fails a friend filling a third of the frame. The delivered film's own worst frame is 0.119, in
- * {@code simpletpa.longdrop}.
+ * fails a friend filling a third of the frame. Take 9's own worst frame is 0.086, in {@code
+ * simpletpa.happyghast}.
  *
  * <p>Take 6's own code does not fail this check: its flash was a race between the arrival and the
  * step back reaching the client in one flush or two, and three runs of that code with the check
