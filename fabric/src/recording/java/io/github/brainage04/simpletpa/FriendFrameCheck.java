@@ -260,12 +260,12 @@ final class FriendFrameCheck implements HudElement {
                 worstRiseFrame = frame;
             }
         }
+        // The stage's first teleport after its first frame is the arrival. The first frame itself
+        // jumps from where the last stage left the camera to where this one's setup put it, which
+        // is not the arrival, so the setup's wide shot is not held to the close shot's limit.
         if (newStage) {
             arrived = false;
-        }
-        // The stage's first teleport is the arrival: the camera starts the stage where the reset
-        // put it, and only the request moves it before the stage ends.
-        if (teleported && FRIEND_IN_SHOT_STAGES.contains(current)) {
+        } else if (teleported && FRIEND_IN_SHOT_STAGES.contains(current)) {
             arrived = true;
         }
         frame++;
