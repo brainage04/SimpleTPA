@@ -58,23 +58,21 @@ final class FriendFrameCheck implements HudElement {
     /**
      * The most the camera may turn between two frames, in degrees. The rest of the film turns at
      * most 2.9 a frame. The long drop's follow needs more: the camera falls six blocks while the
-     * friend stays put, so the angle to them steepens fastest as the player lands. The client shows
-     * a rotation packet's whole turn in one frame (it sets the old rotation to the new one,
-     * ClientPacketListener.java:835), so the follow's worst frame is its own clamp, 0.5 under this
-     * limit (a run logged 5.50 mid-fall). The limit still fails a cut: take 7's crane snapped 55 in
-     * one frame.
+     * friend stays put, so the angle to them steepens as the player falls. The follow turns at most
+     * 5 a tick, which a client drawing one frame a tick shows in one frame. The limit still fails a
+     * cut: take 7's crane snapped 55 in one frame.
      */
     static final double MAX_TURN_DEGREES = 6.0D;
 
     /**
      * How far the camera may move in one frame before the frame counts as a teleport rather than a
-     * camera move. The crane's fastest step is 0.45 blocks; an arrival moves six or more.
+     * camera move. The long drop's fall reaches 0.85 blocks a tick; an arrival moves six or more.
      */
     private static final double TELEPORT_BLOCKS = 1.0D;
 
     /**
      * The least of the frame's height the friend's box may cover after the arrival, in a stage
-     * whose shot is the friend. Take 8's fall and landing measured about 0.14.
+     * whose shot is the friend. Take 8's fall and landing measured 0.137.
      */
     static final double MIN_HEIGHT_FRACTION = 0.35D;
 

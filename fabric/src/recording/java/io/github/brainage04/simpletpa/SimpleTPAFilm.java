@@ -243,9 +243,24 @@ public final class SimpleTPAFilm {
 
     /**
      * How close the camera has to be to the friend before the long drop's follow turns it. The
-     * setup view stands 18 blocks off, the step back four, and the landing 7.2.
+     * setup view stands 18 blocks off, the step back six, and the landing 8.5.
      */
     private static final double FOLLOW_RANGE = 10.0D;
+
+    /**
+     * How far the long drop's step back puts the camera from the friend. Six blocks rather than the
+     * usual four: the camera falls six blocks while the friend stays put, and from four back a run
+     * whose client drew a quarter fewer frames than usual (1,025 measured against 1,353) turned 7.7
+     * degrees between two frames. From six the fall needs under 5 a tick.
+     */
+    private static final double LONG_DROP_STEP_BACK = 6.0D;
+
+    /**
+     * The most the long drop's follow turns the camera in one tick, under the frame check's limit
+     * for one frame, so a client that draws only one frame a tick still shows a smooth turn. From
+     * {@link #LONG_DROP_STEP_BACK} the fall needs a little less than this.
+     */
+    private static final float FOLLOW_MAX_TURN = 5.0F;
 
     /**
      * Ticks the long drop runs after the repeat: about 13 for the fall, the rest on the landing.
@@ -857,7 +872,7 @@ public final class SimpleTPAFilm {
                             .getCommands()
                             .performPrefixedCommand(
                                     player.createCommandSourceStack(), "tpa " + FRIEND_NAME);
-                    stepBackFrom(player, target);
+                    stepBackFrom(player, target, LONG_DROP_STEP_BACK);
                 });
         followingFriend = true;
         closeChat(context);
@@ -1167,6 +1182,11 @@ public final class SimpleTPAFilm {
      * stage that wants the friend in shot shows them with {@link #showFriendAfterSlide}.
      */
     private static void stepBackFrom(ServerPlayer player, ServerPlayer friend) {
+        stepBackFrom(player, friend, 4.0D);
+    }
+
+    /** Steps the player {@code distance} blocks back along the friend's facing, looking at them. */
+    private static void stepBackFrom(ServerPlayer player, ServerPlayer friend, double distance) {
         Vec3 facing =
                 new Vec3(
                         -Math.sin(Math.toRadians(friend.getYRot())),
@@ -1174,7 +1194,7 @@ public final class SimpleTPAFilm {
                         Math.cos(Math.toRadians(friend.getYRot())));
         look(
                 player,
-                friend.position().add(facing.scale(4.0D)),
+                friend.position().add(facing.scale(distance)),
                 friend.position().add(0.0D, FRIEND_SHOULDERS, 0.0D));
     }
 
@@ -1226,11 +1246,12 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Turns the client's player to the friend's shoulders at the end of each client tick while
-     * {@link #followingFriend} is set and the friend is within {@link #FOLLOW_RANGE}. The tick has
-     * already moved the player and stored the rotation it started with (Entity.java:517-522), and
-     * the camera draws the rotation interpolated between the two (Entity.java:1992-1998), so the
-     * turn is spread across the tick's frames the way the fall is.
+     * Turns the client's player towards the friend's shoulders at the end of each client tick
+     * while {@link #followingFriend} is set and the friend is within {@link #FOLLOW_RANGE}, by at
+     * most {@link #FOLLOW_MAX_TURN}. The tick has already moved the player and stored the rotation
+     * it started with (Entity.java:517-522), and the camera draws the rotation interpolated between
+     * the two (Entity.java:1992-1998), so the turn is spread across the tick's frames the way the
+     * fall is.
      */
     private static void followFriend(Minecraft client) {
         LocalPlayer player = client.player;
@@ -1244,10 +1265,13 @@ public final class SimpleTPAFilm {
                 }
                 Vec3 eye = player.getEyePosition();
                 Vec3 aim = candidate.position().add(0.0D, FRIEND_SHOULDERS, 0.0D);
+                float yawTurn = Mth.wrapDegrees(yawTowards(eye, aim) - player.getYRot());
+                float pitchTurn = pitchTowards(eye, aim) - player.getXRot();
                 player.setYRot(
-                        player.getYRot()
-                                + Mth.wrapDegrees(yawTowards(eye, aim) - player.getYRot()));
-                player.setXRot(pitchTowards(eye, aim));
+                        player.getYRot() + Mth.clamp(yawTurn, -FOLLOW_MAX_TURN, FOLLOW_MAX_TURN));
+                player.setXRot(
+                        player.getXRot()
+                                + Mth.clamp(pitchTurn, -FOLLOW_MAX_TURN, FOLLOW_MAX_TURN));
                 return;
             }
         }
