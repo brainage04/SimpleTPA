@@ -239,9 +239,9 @@ public final class SimpleTPAFilm {
      * (Options.java:804-818, range 30 to 110). After the landing the friend is at least 5.8 blocks
      * from the camera, six blocks up, and the camera can only stand on the floor: at the default 70
      * they fill about a seventh of the frame's height there (0.137 in take 8), at 30 two fifths
-     * (0.41). The option is a
-     * player's own setting, so the shot stays one a player can see; the first-person hand keeps its
-     * fixed 70 (Camera.java:45, 229-232), so it does not grow with the zoom.
+     * (0.41). The option is a player's own setting, so the shot stays one a player can see; the
+     * first-person hand keeps its fixed 70 (Camera.java:45, 229-232), so it does not grow with the
+     * zoom.
      */
     private static final int LONG_DROP_FOV = 30;
 
