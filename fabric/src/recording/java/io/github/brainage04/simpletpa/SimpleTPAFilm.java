@@ -1357,8 +1357,8 @@ public final class SimpleTPAFilm {
                         // the frame as the camera falls away from them, but no more than the
                         // check's limit a tick: the angle to a friend six blocks up changes by
                         // more than that as the player lands, and a step that big reads as a cut.
-                        // The fall needs about 3.5 degrees a tick, so the clamp only bites on the
-                        // landing's snap.
+                        // The clamp can bind mid-fall as well as on the landing (a run logged
+                        // 5.50 at pitch -28.76); the check's limit sits 0.5 above it.
                         float wantYaw = yawTowards(eye, aim);
                         float wantPitch = pitchTowards(eye, aim);
                         float most = (float) (FriendFrameCheck.MAX_TURN_DEGREES - 0.5D);

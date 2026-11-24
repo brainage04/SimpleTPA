@@ -51,11 +51,11 @@ final class FriendFrameCheck implements HudElement {
     /**
      * The most the camera may turn between two frames, in degrees. The rest of the film turns at
      * most 2.9 a frame. The long drop's follow needs more: the camera falls six blocks while the
-     * friend stays put, so the angle to them steepens fastest as the player lands. From the eight
-     * blocks the step back leaves, the angle changes by at most 4.6 degrees a tick, and the client
-     * draws a tick's turn across two frames, so the follow's own worst frame is about 2.3. The
-     * limit is 6, which leaves the follow room for the landing's snap and still fails a cut: take
-     * 7's crane snapped 55 in one frame.
+     * friend stays put, so the angle to them steepens fastest as the player lands. The client
+     * shows a rotation packet's whole turn in one frame (it sets the old rotation to the new one,
+     * ClientPacketListener.java:835), so the follow's worst frame is its own clamp, 0.5 under this
+     * limit (a run logged 5.50 mid-fall). The limit still fails a cut: take 7's crane snapped 55
+     * in one frame.
      */
     static final double MAX_TURN_DEGREES = 6.0D;
 
@@ -178,8 +178,8 @@ final class FriendFrameCheck implements HudElement {
         // The turn is measured on every filmed frame, friend or not: a snap is a snap. Only the
         // frame the camera teleported in is skipped, because the mod's own arrival moves the
         // player and a teleport is not a camera move the film can smooth. The frame after it is
-        // measured: a teleport's rotation is applied at once (ClientPacketListener.java:825-837),
-        // so a turn that follows one is a turn the film made.
+        // measured: a teleport's rotation is applied at once (handleMovePlayer,
+        // ClientPacketListener.java:787-821), so a turn that follows one is a turn the film made.
         boolean teleported = lastEye != null && eye.distanceTo(lastEye) > TELEPORT_BLOCKS;
         if (current.equals(lastStage) && !teleported) {
             double dYaw = Math.abs(Mth.wrapDegrees(camera.yRot() - lastYaw));
