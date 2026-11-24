@@ -14,6 +14,7 @@ import io.github.brainage04.simpletpa.data.SafetyPreference;
 import java.util.Properties;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -25,6 +26,8 @@ import net.minecraft.client.gui.TextAlignment;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.state.gui.GuiTextRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.ClickEvent;
@@ -154,6 +157,16 @@ public final class SimpleTPAFilm {
                     "simpletpa.resetfallon",
                     "Fall reset",
                     "With reset_fall on you arrive with no fall and take no damage");
+    private static final Caption TITLE =
+            new Caption(
+                    "simpletpa.title", "SimpleTPA", "Teleport requests that check where you land");
+
+    /**
+     * Ticks the title card is held. A card is a still, and the cut adds 0.22 s of lead and hold
+     * around the stage (trim_stages.py:34-35), so 14 ticks put it on screen for about 0.92 s, under
+     * the film's 1.2 s limit for a still.
+     */
+    private static final int TITLE_CARD_TICKS = 14;
 
     private static final int STAGE_Y = 64;
     private static final Vec3 PLAYER_POSITION = new Vec3(-2.5D, STAGE_Y, 0.5D);
@@ -215,41 +228,52 @@ public final class SimpleTPAFilm {
 
     private static final Vec3 MAGMA_POSITION = new Vec3(2.5D, STAGE_Y, 4.5D);
 
-    /** How far the long drop's crane puts the camera's eye above the friend's, so it looks down. */
-    private static final double CRANE_EYE_ABOVE = 0.2D;
+    /**
+     * The field of view the long drop is filmed at, the narrowest the game's own option allows
+     * (Options.java:804-818, range 30 to 110). After the landing the friend is at least 5.8 blocks
+     * from the camera, six blocks up, and the camera can only stand on the floor: at the default 70
+     * they fill about a sixth of the frame's height there, at 30 almost half. The option is a
+     * player's own setting, so the shot stays one a player can see; the first-person hand keeps its
+     * fixed 70 (Camera.java:45, 229-232), so it does not grow with the zoom.
+     */
+    private static final int LONG_DROP_FOV = 30;
+
+    /** How high above the friend's feet the long drop's camera aims: their shoulders. */
+    private static final double FRIEND_SHOULDERS = 1.4D;
 
     /**
-     * How far the long drop's step back puts the camera from the friend. Wider than the usual four
-     * blocks: the camera falls six blocks while the friend stays put, and the angle to them
-     * steepens fastest as the player lands, so from four blocks back the last frames of the fall
-     * would need a turn of about 12 degrees to keep them in shot. From eight the same fall needs
-     * about 4.5.
+     * How close the camera has to be to the friend before the long drop's follow turns it. The
+     * setup view stands 18 blocks off, the step back four, and the landing 7.2.
      */
-    private static final double LONG_DROP_STEP_BACK = 8.0D;
+    private static final double FOLLOW_RANGE = 10.0D;
 
     /**
-     * How far below the friend's eye the crane looks, so the shot is their head, not their eyes.
+     * Ticks the long drop runs after the repeat: about 13 for the fall, the rest on the landing.
      */
-    private static final double CRANE_LOOK_BELOW = 0.25D;
-
-    /**
-     * How far from the friend the long drop's crane ends. At 2 blocks a 1.8-block player fills
-     * about half the frame's height, which is a head-and-shoulders shot with room around it; at the
-     * four blocks the step back leaves, they fill a third and the shot is their whole body. The
-     * frame check measures 0.22 at 1.5 blocks, too close to its 0.25 limit for a shot that is not a
-     * defect.
-     */
-    private static final double CRANE_END_DISTANCE = 2.0D;
+    private static final int LONG_DROP_TAIL_TICKS = 28;
 
     /** A target in the air six blocks up: a drop that hurts, but a short one. */
     private static final Vec3 LOW_AIR_POSITION = new Vec3(2.5D, STAGE_Y + 6, 0.5D);
 
     /**
-     * Where the long drop's camera stands: far enough back that the floor under the target is in
-     * shot, so the six-block drop reads. From the usual camera the target is close and high, and
-     * the shot is all sky. It stands south of the water pool, which fills the floor at x -10 to -7.
+     * Where the long drop's camera stands before the arrival: 18 blocks west of the target, on the
+     * line the step back puts the arrival on, so the arrival cuts in along the same axis. At the
+     * long drop's narrow field of view that is far enough back for the floor under the target to be
+     * in shot, so the six-block drop reads. The water pool, at x -10 to -7, is below the frame.
      */
-    private static final Vec3 LONG_DROP_VIEW = new Vec3(-2.5D, STAGE_Y, 8.5D);
+    private static final Vec3 LONG_DROP_VIEW = new Vec3(-15.5D, STAGE_Y, 0.5D);
+
+    /**
+     * Where the setup view aims: halfway, in angle, between the floor under the target and the top
+     * of their head, so both are in the frame with room at the edges.
+     */
+    private static final Vec3 LONG_DROP_AIM = new Vec3(2.5D, STAGE_Y + 3.8D, 0.5D);
+
+    /** Whether the long drop's camera follows the friend, a turn a tick on the client. */
+    private static volatile boolean followingFriend;
+
+    /** The client's own field of view, put back after the long drop. */
+    private static int filmFov;
 
     /**
      * A target in the air over a shaft cut through the stage floor to the bottom of the world, so
@@ -280,11 +304,14 @@ public final class SimpleTPAFilm {
         // off so none crosses the sky in the stages that look up at a target in the air. The sun
         // still shows as a white square clipped by the top edge in the long-drop and short-drop
         // stages, which look up at noon; it is the sun, not a cloud.
-        context.runOnClient(
-                client -> {
-                    client.options.autoSuggestions().set(false);
-                    client.options.cloudStatus().set(CloudStatus.OFF);
-                });
+        filmFov =
+                context.computeOnClient(
+                        client -> {
+                            client.options.autoSuggestions().set(false);
+                            client.options.cloudStatus().set(CloudStatus.OFF);
+                            return client.options.fov().get();
+                        });
+        ClientTickEvents.END_CLIENT_TICK.register(SimpleTPAFilm::followFriend);
         ServerTickEvents.END_SERVER_TICK.register(
                 minecraftServer -> {
                     Consumer<MinecraftServer> stepBack = pendingStepBack;
@@ -335,6 +362,7 @@ public final class SimpleTPAFilm {
                                                             player.getUUID(),
                                                             player.getScoreboardName()));
                                 });
+                        showTitleCard(context, server, playerName);
                         showDeniedRequest(context, server, playerName);
                         showAcceptedRequest(context, server, playerName);
                         showClickedDeny(context, server, playerName);
@@ -347,6 +375,8 @@ public final class SimpleTPAFilm {
                             ClientGameTestStages.endStage(context, stage, STAGE_HOLD_TICKS);
                             stage = null;
                         }
+                        followingFriend = false;
+                        context.runOnClient(client -> client.options.fov().set(filmFov));
                         FriendFrameCheck[] stopped = new FriendFrameCheck[1];
                         context.runOnClient(client -> stopped[0] = FriendFrameCheck.stop());
                         FriendFrameCheck check = stopped[0];
@@ -355,6 +385,14 @@ public final class SimpleTPAFilm {
                         check.assertWithinLimit();
                     }
                 });
+    }
+
+    /** Opens the film on the mod's name, over the first stage's scene. */
+    private static void showTitleCard(
+            ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
+        reset(context, server, playerName);
+        startStage(context, TITLE);
+        context.waitTicks(TITLE_CARD_TICKS);
     }
 
     private static void showDeniedRequest(
@@ -639,7 +677,8 @@ public final class SimpleTPAFilm {
         reset(context, server, playerName);
         startStage(context, AUTO_ACCEPT);
         typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
-        context.waitTicks(25);
+        // The answer to the command is read in 0.9 s; a longer wait was the film's longest still.
+        context.waitTicks(18);
         // The friend steps four blocks aside in the request's own tick, so the arrival lands on the
         // spot they have left and the camera looks at them from there. Hiding them instead made
         // them vanish a tick after the arrival: the flag goes out in the next tick's
@@ -772,7 +811,7 @@ public final class SimpleTPAFilm {
         closeChat(context);
         context.waitTicks(16);
         assertOnGhast(context, server, friend);
-        context.waitTicks(12);
+        context.waitTicks(6);
 
         endStage(context);
         reset(context, server, playerName);
@@ -785,8 +824,9 @@ public final class SimpleTPAFilm {
                     // would have fallen to.
                     target.setNoGravity(true);
                     placeTarget(target, LOW_AIR_POSITION, WEST, 0.0F);
-                    look(player, LONG_DROP_VIEW, LOW_AIR_POSITION);
+                    look(player, LONG_DROP_VIEW, LONG_DROP_AIM);
                 });
+        context.runOnClient(client -> client.options.fov().set(LONG_DROP_FOV));
         startStage(context, LONG_DROP);
         typeCommand(context, "tpa " + FRIEND_NAME);
         // The warning and the run-again line stay up long enough to read before the repeat. The
@@ -795,8 +835,8 @@ public final class SimpleTPAFilm {
         // (InputOverlayState.java:24). The clear and the retype are two client tasks, so two frames
         // are drawn between them with the panel empty; that is 67 ms, against the 0.93 s the stage
         // had before. The repeat is sent four ticks after it is typed rather than twenty, so its
-        // line is still up when the stage ends: the arrival and the crane after it take 1.65 s, and
-        // the line lasts two.
+        // line is still up when the stage ends: the arrival, the fall and the landing take 1.4 s,
+        // and the line lasts two.
         context.waitTicks(20);
         context.runOnClient(client -> InputOverlay.clear());
         typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME, 4);
@@ -815,43 +855,17 @@ public final class SimpleTPAFilm {
                             .getCommands()
                             .performPrefixedCommand(
                                     player.createCommandSourceStack(), "tpa " + FRIEND_NAME);
-                    stepBackFrom(player, target, LONG_DROP_STEP_BACK);
+                    stepBackFrom(player, target);
                 });
+        followingFriend = true;
         closeChat(context);
-        // The arrival is six blocks up, so the player falls to the floor. The camera turns to the
-        // friend in the tick the arrival lands in, so the first frame of the fall already has them
-        // in shot, and then follows them down a step a tick, so they stay framed while the drop
-        // reads and the landing's damage is taken. Each step is a rotation packet, which the client
-        // applies at once and which leaves the fall alone, so the drop still hurts.
-        aimAtFriend(context, server, playerName);
-        followFriendWhileFalling(context, server, playerName, 16);
-        // The camera then cranes up to the friend's head, so the stage ends on their head and
-        // shoulders from slightly above rather than on their boots from below. A crane, not a
-        // turn: a turn is a cut, and a cut inside a stage shows a new shot under the old caption.
-        // The film's tail after the retype is 33 ticks, 1.65 s, inside the 2 s the overlay keeps a
-        // typed line for (InputOverlayState.java:24), so the repeat's line is up to the last frame
-        // of the stage. The stage's own six-tick hold comes after its end marker, and the cut keeps
-        // only 0.12 s of it (trim_stages.py:34).
-        double[] head =
-                server.computeOnServer(
-                        minecraftServer -> {
-                            ServerPlayer target = friend(minecraftServer);
-                            return new double[] {
-                                target.getY() + target.getEyeHeight(),
-                                player(minecraftServer, playerName).getEyeHeight()
-                            };
-                        });
-        craneUpTo(
-                context,
-                server,
-                playerName,
-                head[0] + CRANE_EYE_ABOVE - head[1],
-                new Vec3(
-                        server.computeOnServer(minecraftServer -> friend(minecraftServer).getX()),
-                        head[0] - CRANE_LOOK_BELOW,
-                        server.computeOnServer(minecraftServer -> friend(minecraftServer).getZ())),
-                CRANE_END_DISTANCE,
-                14);
+        // The arrival is six blocks up, so the player falls to the floor. The camera follows the
+        // friend the whole way down and through the landing, as a player turning their mouse
+        // would: each client tick turns it to the friend from where the tick left it, and the
+        // client draws the turn across the tick's frames, so the friend stays framed while the
+        // drop reads and the landing's damage is taken.
+        context.waitTicks(LONG_DROP_TAIL_TICKS);
+        followingFriend = false;
 
         endStage(context);
         reset(context, server, playerName);
@@ -1066,10 +1080,12 @@ public final class SimpleTPAFilm {
         // The chat is cleared between stages: a button from an earlier stage would otherwise sit
         // beside this stage's, and a click would land between the two. The input overlay's typed
         // line is cleared with it, so a stage does not open with the last stage's command in it.
+        // The long drop's narrow field of view is put back too, so no other stage is zoomed.
         context.runOnClient(
                 client -> {
                     client.gui.hud.getChat().clearMessages(false);
                     InputOverlay.clear();
+                    client.options.fov().set(filmFov);
                 });
         context.waitTicks(6);
     }
@@ -1149,11 +1165,6 @@ public final class SimpleTPAFilm {
      * stage that wants the friend in shot shows them with {@link #showFriendAfterSlide}.
      */
     private static void stepBackFrom(ServerPlayer player, ServerPlayer friend) {
-        stepBackFrom(player, friend, 4.0D);
-    }
-
-    /** Steps the player {@code distance} blocks back along the friend's facing, looking at them. */
-    private static void stepBackFrom(ServerPlayer player, ServerPlayer friend, double distance) {
         Vec3 facing =
                 new Vec3(
                         -Math.sin(Math.toRadians(friend.getYRot())),
@@ -1161,8 +1172,8 @@ public final class SimpleTPAFilm {
                         Math.cos(Math.toRadians(friend.getYRot())));
         look(
                 player,
-                friend.position().add(facing.scale(distance)),
-                friend.position().add(0.0D, 1.4D, 0.0D));
+                friend.position().add(facing.scale(4.0D)),
+                friend.position().add(0.0D, FRIEND_SHOULDERS, 0.0D));
     }
 
     /**
@@ -1197,24 +1208,6 @@ public final class SimpleTPAFilm {
         server.runOnServer(minecraftServer -> friend(minecraftServer).setInvisible(false));
     }
 
-    /**
-     * Turns the player to the friend's eyes in the tick the arrival lands in, so the first frame
-     * drawn after it has the friend in shot rather than an empty sky.
-     */
-    private static void aimAtFriend(
-            ClientGameTestContext context, TestDedicatedServerContext server, String playerName) {
-        server.runOnServer(
-                minecraftServer -> {
-                    ServerPlayer player = player(minecraftServer, playerName);
-                    ServerPlayer target = friend(minecraftServer);
-                    Vec3 aim = target.position().add(0.0D, target.getEyeHeight(), 0.0D);
-                    Vec3 eye = player.position().add(0.0D, player.getEyeHeight(), 0.0D);
-                    player.forceSetRotation(
-                            yawTowards(eye, aim), false, pitchTowards(eye, aim), false);
-                });
-        context.waitTicks(1);
-    }
-
     /** Places {@code player} at {@code position} looking at {@code target}. */
     private static void look(ServerPlayer player, Vec3 position, Vec3 target) {
         Vec3 towards = target.subtract(position.add(0.0D, player.getEyeHeight(), 0.0D));
@@ -1231,155 +1224,31 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Lifts {@code player} to {@code height} over {@code ticks}, a step a tick, closing in to
-     * {@code distance} blocks from {@code target} on the way, so the move reads as a crane up
-     * rather than a cut and the stage ends on the friend's head and shoulders rather than on a
-     * full-body shot. The rise comes first and the closing in after it, so the camera never passes
-     * under the friend. Each step is a teleport, which the client applies at once and which zeroes
-     * the fall the player would otherwise gather (Entity.java:3275), so the camera sits within a
-     * tick's fall of the step's height. The player is left in the air at the end; the next stage's
-     * reset puts them back on the floor.
-     *
-     * <p>The look direction is eased from where the camera already points to the target, a step at
-     * a time, and the steps are sized from the turn the crane has to make at the check's limit a
-     * step, so the turn never reads as a cut inside the stage.
+     * Turns the client's player to the friend's shoulders at the end of each client tick while
+     * {@link #followingFriend} is set and the friend is within {@link #FOLLOW_RANGE}. The tick has
+     * already moved the player and stored the rotation it started with (Entity.java:517-522), and
+     * the camera draws the rotation interpolated between the two (Entity.java:1992-1998), so the
+     * turn is spread across the tick's frames the way the fall is.
      */
-    private static void craneUpTo(
-            ClientGameTestContext context,
-            TestDedicatedServerContext server,
-            String playerName,
-            double height,
-            Vec3 target,
-            double distance,
-            int ticks) {
-        double[] start =
-                server.computeOnServer(
-                        minecraftServer -> {
-                            ServerPlayer player = player(minecraftServer, playerName);
-                            return new double[] {
-                                player.getY(), player.getX(), player.getZ(), player.getEyeHeight()
-                            };
-                        });
-        double[] aim =
-                server.computeOnServer(
-                        minecraftServer -> {
-                            ServerPlayer player = player(minecraftServer, playerName);
-                            return new double[] {player.getYRot(), player.getXRot()};
-                        });
-        double fromY = start[0];
-        double fromX = start[1];
-        double fromZ = start[2];
-        float fromYaw = (float) aim[0];
-        float fromPitch = (float) aim[1];
-        double reach = Math.sqrt(Math.pow(target.x - fromX, 2) + Math.pow(target.z - fromZ, 2));
-        double endX = fromX + (target.x - fromX) * (1.0D - distance / reach);
-        double endZ = fromZ + (target.z - fromZ) * (1.0D - distance / reach);
-        // The rise comes first, at the distance the step back left, and the closing in after it:
-        // a camera that closed in as it rose passed under the friend and showed their boots from
-        // below, which is the shot this crane exists to replace. The aim is eased from where the
-        // camera already points to the target, a step at a time, rather than aimed at the target
-        // from the first step: aiming at once turned the camera 55 degrees in one frame, which
-        // reads as a cut inside the stage. The steps are sized from the turn the crane has to make,
-        // at the check's limit a step, because a step is a teleport and the client applies a
-        // teleport's rotation at once.
-        Vec3 endEye = new Vec3(endX, height + start[3], endZ);
-        float yawStep = Mth.wrapDegrees(yawTowards(endEye, target) - fromYaw);
-        float pitchStep = pitchTowards(endEye, target) - fromPitch;
-        // The aim is linear in the step, so every step turns the same amount and the count is the
-        // total turn divided by the limit. The path is not linear, so the friend drifts a little
-        // within the frame as the camera rises and closes in; the frame check measures that drift
-        // as the friend's fraction, and the crane's own end is the shot the stage wants.
-        double turn = Math.hypot(yawStep, pitchStep);
-        int steps = Math.max(ticks, (int) Math.ceil(turn / FriendFrameCheck.MAX_TURN_DEGREES));
-        int rise = (int) Math.ceil(steps * 0.7D);
-        int close = steps - rise;
-        for (int step = 1; step <= steps; step++) {
-            double t = (double) step / steps;
-            double[] at = craneStep(step, rise, close, fromX, fromY, fromZ, endX, endZ, height);
-            float yaw = fromYaw + yawStep * (float) t;
-            float pitch = fromPitch + pitchStep * (float) t;
-            server.runOnServer(
-                    minecraftServer -> {
-                        ServerPlayer player = player(minecraftServer, playerName);
-                        SimpleTPAFakePlayerScenario.place(
-                                player, new Vec3(at[0], at[1], at[2]), yaw, pitch);
-                    });
-            context.waitTicks(1);
+    private static void followFriend(Minecraft client) {
+        LocalPlayer player = client.player;
+        if (!followingFriend || player == null || client.level == null) {
+            return;
         }
-    }
-
-    /** Where the long drop's crane puts the camera's feet at {@code step} of its path. */
-    private static double[] craneStep(
-            int step,
-            int rise,
-            int close,
-            double fromX,
-            double fromY,
-            double fromZ,
-            double endX,
-            double endZ,
-            double height) {
-        if (step <= rise) {
-            double t = (double) step / rise;
-            return new double[] {fromX, fromY + (height - fromY) * t, fromZ};
+        for (AbstractClientPlayer candidate : client.level.players()) {
+            if (candidate.getScoreboardName().equals(FRIEND_NAME)) {
+                if (player.distanceTo(candidate) > FOLLOW_RANGE) {
+                    return;
+                }
+                Vec3 eye = player.getEyePosition();
+                Vec3 aim = candidate.position().add(0.0D, FRIEND_SHOULDERS, 0.0D);
+                player.setYRot(
+                        player.getYRot()
+                                + Mth.wrapDegrees(yawTowards(eye, aim) - player.getYRot()));
+                player.setXRot(pitchTowards(eye, aim));
+                return;
+            }
         }
-        double in = (double) (step - rise) / close;
-        return new double[] {fromX + (endX - fromX) * in, height, fromZ + (endZ - fromZ) * in};
-    }
-
-    /**
-     * Keeps the camera on the friend's head for {@code ticks} while the player falls, a step a
-     * tick, so the friend stays in shot the whole way down. Each step is a rotation packet, which
-     * the client applies at once and which leaves the fall alone, so the drop still hurts.
-     */
-    private static void followFriendWhileFalling(
-            ClientGameTestContext context,
-            TestDedicatedServerContext server,
-            String playerName,
-            int ticks) {
-        for (int step = 0; step < ticks; step++) {
-            server.runOnServer(
-                    minecraftServer -> {
-                        ServerPlayer player = player(minecraftServer, playerName);
-                        ServerPlayer target = friend(minecraftServer);
-                        // The top of the friend's head, not their eyes: the camera falls away
-                        // from a friend six blocks up, and aiming at the eyes put their head over
-                        // the top edge. With the head at the centre of the frame the body hangs
-                        // below it, which is the shot the fall wants.
-                        Vec3 aim =
-                                target.position()
-                                        .add(
-                                                0.0D,
-                                                target.getBoundingBox().maxY - target.getY(),
-                                                0.0D);
-                        Vec3 eye = player.position().add(0.0D, player.getEyeHeight(), 0.0D);
-                        // Aimed at the friend every tick, so they never drift out of the top of
-                        // the frame as the camera falls away from them, but no more than the
-                        // check's limit a tick: the angle to a friend six blocks up changes by
-                        // more than that as the player lands, and a step that big reads as a cut.
-                        // The clamp can bind mid-fall as well as on the landing (a run logged
-                        // 5.50 at pitch -28.76); the check's limit sits 0.5 above it.
-                        float wantYaw = yawTowards(eye, aim);
-                        float wantPitch = pitchTowards(eye, aim);
-                        float most = (float) (FriendFrameCheck.MAX_TURN_DEGREES - 0.5D);
-                        float yawStep =
-                                Mth.clamp(Mth.wrapDegrees(wantYaw - player.getYRot()), -most, most);
-                        float pitchStep = Mth.clamp(wantPitch - player.getXRot(), -most, most);
-                        // A rotation packet, not a teleport: the client sets the drawn rotation
-                        // at once (ClientPacketListener.java:825-837) and leaves the position and
-                        // the fall alone, where a teleport would zero the fall
-                        // (Entity.java:3275-3276) and the drop would stop hurting.
-                        player.forceSetRotation(
-                                player.getYRot() + yawStep,
-                                false,
-                                player.getXRot() + pitchStep,
-                                false);
-                    });
-            context.waitTicks(1);
-        }
-        // The last rotation packet needs a tick to reach the client before the crane reads the
-        // camera, so the crane starts from where the follow left it rather than a step behind.
-        context.waitTicks(2);
     }
 
     /** The pitch that faces {@code from} towards {@code to}, as {@link #look} computes it. */
