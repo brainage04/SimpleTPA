@@ -51,11 +51,11 @@ final class FriendFrameCheck implements HudElement {
     /**
      * The most the camera may turn between two frames, in degrees. The rest of the film turns at
      * most 2.9 a frame. The long drop's follow needs more: the camera falls six blocks while the
-     * friend stays put, so the angle to them steepens fastest as the player lands. The client
-     * shows a rotation packet's whole turn in one frame (it sets the old rotation to the new one,
+     * friend stays put, so the angle to them steepens fastest as the player lands. The client shows
+     * a rotation packet's whole turn in one frame (it sets the old rotation to the new one,
      * ClientPacketListener.java:835), so the follow's worst frame is its own clamp, 0.5 under this
-     * limit (a run logged 5.50 mid-fall). The limit still fails a cut: take 7's crane snapped 55
-     * in one frame.
+     * limit (a run logged 5.50 mid-fall). The limit still fails a cut: take 7's crane snapped 55 in
+     * one frame.
      */
     static final double MAX_TURN_DEGREES = 6.0D;
 
