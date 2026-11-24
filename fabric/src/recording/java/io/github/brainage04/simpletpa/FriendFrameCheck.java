@@ -45,11 +45,11 @@ import org.joml.Vector4f;
  * #FRIEND_IN_SHOT_STAGES}.
  *
  * <p>A stage whose shot is the friend must also keep them large from the arrival on: take 8 showed
- * them at about a sixth of the frame's height through the fall and the landing, so a frame from
- * the stage's first teleport to its end with the friend under {@link #MIN_HEIGHT_FRACTION} of the
- * frame's height fails. And the camera may only do what the player can, so a camera that rises
- * more than {@link #MAX_RISE_BLOCKS} above its lowest point since the stage began or the last
- * teleport fails: take 8's crane lifted the player's own view six blocks off the floor.
+ * them at about a sixth of the frame's height through the fall and the landing, so a frame from the
+ * stage's first teleport to its end with the friend under {@link #MIN_HEIGHT_FRACTION} of the
+ * frame's height fails. And the camera may only do what the player can, so a camera that rises more
+ * than {@link #MAX_RISE_BLOCKS} above its lowest point since the stage began or the last teleport
+ * fails: take 8's crane lifted the player's own view six blocks off the floor.
  */
 final class FriendFrameCheck implements HudElement {
     /** The most of a frame the friend's box may cover. */
@@ -73,15 +73,16 @@ final class FriendFrameCheck implements HudElement {
     private static final double TELEPORT_BLOCKS = 1.0D;
 
     /**
-     * The least of the frame's height the friend's box may cover after the arrival, in a stage whose
-     * shot is the friend. Take 8's fall and landing measured about 0.14.
+     * The least of the frame's height the friend's box may cover after the arrival, in a stage
+     * whose shot is the friend. Take 8's fall and landing measured about 0.14.
      */
     static final double MIN_HEIGHT_FRACTION = 0.35D;
 
     /**
      * The most the camera may rise without a teleport, in blocks: a jump at the default jump
-     * strength, 0.42 (Attributes.java:58-60), with the default gravity, 0.08 (Attributes.java:55-57),
-     * and vertical drag, 0.98 (LivingEntity.java:203), peaks 1.25 blocks up.
+     * strength, 0.42 (Attributes.java:58-60), with the default gravity, 0.08
+     * (Attributes.java:55-57), and vertical drag, 0.98 (LivingEntity.java:203), peaks 1.25 blocks
+     * up.
      */
     static final double MAX_RISE_BLOCKS = 1.3D;
 
