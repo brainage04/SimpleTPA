@@ -238,8 +238,13 @@ public final class SimpleTPAFilm {
      */
     private static final int LONG_DROP_FOV = 30;
 
-    /** How high above the friend's feet the long drop's camera aims: their shoulders. */
-    private static final double FRIEND_SHOULDERS = 1.4D;
+    /**
+     * How high above the friend's feet the long drop's camera aims: just above their middle. Seen
+     * from the floor the friend's legs are nearer the camera than their head and fill more of the
+     * frame, and at their shoulders (1.4) the landing put their feet behind the chat lines in the
+     * bottom left.
+     */
+    private static final double LONG_DROP_AIM_HEIGHT = 1.0D;
 
     /**
      * How close the camera has to be to the friend before the long drop's follow turns it. The
@@ -872,7 +877,7 @@ public final class SimpleTPAFilm {
                             .getCommands()
                             .performPrefixedCommand(
                                     player.createCommandSourceStack(), "tpa " + FRIEND_NAME);
-                    stepBackFrom(player, target, LONG_DROP_STEP_BACK);
+                    stepBackFrom(player, target, LONG_DROP_STEP_BACK, LONG_DROP_AIM_HEIGHT);
                 });
         followingFriend = true;
         closeChat(context);
@@ -1182,11 +1187,15 @@ public final class SimpleTPAFilm {
      * stage that wants the friend in shot shows them with {@link #showFriendAfterSlide}.
      */
     private static void stepBackFrom(ServerPlayer player, ServerPlayer friend) {
-        stepBackFrom(player, friend, 4.0D);
+        stepBackFrom(player, friend, 4.0D, 1.4D);
     }
 
-    /** Steps the player {@code distance} blocks back along the friend's facing, looking at them. */
-    private static void stepBackFrom(ServerPlayer player, ServerPlayer friend, double distance) {
+    /**
+     * Steps the player {@code distance} blocks back along the friend's facing, looking at the point
+     * {@code aimHeight} above their feet.
+     */
+    private static void stepBackFrom(
+            ServerPlayer player, ServerPlayer friend, double distance, double aimHeight) {
         Vec3 facing =
                 new Vec3(
                         -Math.sin(Math.toRadians(friend.getYRot())),
@@ -1195,7 +1204,7 @@ public final class SimpleTPAFilm {
         look(
                 player,
                 friend.position().add(facing.scale(distance)),
-                friend.position().add(0.0D, FRIEND_SHOULDERS, 0.0D));
+                friend.position().add(0.0D, aimHeight, 0.0D));
     }
 
     /**
@@ -1246,7 +1255,7 @@ public final class SimpleTPAFilm {
     }
 
     /**
-     * Turns the client's player towards the friend's shoulders at the end of each client tick while
+     * Turns the client's player towards the friend at the end of each client tick while
      * {@link #followingFriend} is set and the friend is within {@link #FOLLOW_RANGE}, by at most
      * {@link #FOLLOW_MAX_TURN}. The tick has already moved the player and stored the rotation it
      * started with (Entity.java:517-522), and the camera draws the rotation interpolated between
@@ -1264,7 +1273,7 @@ public final class SimpleTPAFilm {
                     return;
                 }
                 Vec3 eye = player.getEyePosition();
-                Vec3 aim = candidate.position().add(0.0D, FRIEND_SHOULDERS, 0.0D);
+                Vec3 aim = candidate.position().add(0.0D, LONG_DROP_AIM_HEIGHT, 0.0D);
                 float yawTurn = Mth.wrapDegrees(yawTowards(eye, aim) - player.getYRot());
                 float pitchTurn = pitchTowards(eye, aim) - player.getXRot();
                 player.setYRot(
