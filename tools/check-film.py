@@ -11,8 +11,14 @@ from pathlib import Path
 
 MIN_FPS = 29.7
 MAX_STILL_SECONDS = 1.2
+TARGET_FPS = 30.0
+MAX_PTS_GAP_FRAMES = 1.5
 FREEZE_NOISE = 0.001
 FREEZE_MIN_DURATION_SECONDS = 0.5
+REPEAT_PIXEL_WIDTH = 160
+REPEAT_PIXEL_HEIGHT = 90
+REPEAT_MAD = 0.1
+REPEAT_RUN_FRAMES = int(MAX_STILL_SECONDS * TARGET_FPS)
 
 
 def run(command):
@@ -54,6 +60,49 @@ def frame_hashes(video):
         for line in output.splitlines()
         if line and not line.startswith("#")
     ]
+
+
+
+def read_exact(stream, size):
+    chunk = b""
+    while len(chunk) < size:
+        part = stream.read(size - len(chunk))
+        if not part:
+            break
+        chunk += part
+    return chunk
+
+
+def decoded_repeat_runs(video, count):
+    size = REPEAT_PIXEL_WIDTH * REPEAT_PIXEL_HEIGHT
+    proc = subprocess.Popen([
+        "ffmpeg", "-v", "error", "-i", str(video), "-map", "0:v:0",
+        "-vf", f"scale={REPEAT_PIXEL_WIDTH}:{REPEAT_PIXEL_HEIGHT},format=gray",
+        "-fps_mode", "passthrough", "-an", "-f", "rawvideo", "-pix_fmt", "gray", "-",
+    ], stdout=subprocess.PIPE)
+    flags = [False] * count
+    previous = None
+    run = 0
+    index = 0
+    while index < count:
+        frame = read_exact(proc.stdout, size)
+        if len(frame) < size:
+            break
+        if previous is None:
+            difference = float("inf")
+        else:
+            difference = sum(abs(a - b) for a, b in zip(frame, previous)) / size
+        # x264 can encode two identical source frames to slightly different bytes, so a single
+        # low-difference pair is not evidence of a duplicate. A longer near-identical run is.
+        run = run + 1 if difference <= REPEAT_MAD else 0
+        flags[index] = run > REPEAT_RUN_FRAMES
+        previous = frame
+        index += 1
+    proc.stdout.close()
+    proc.wait()
+    if index != count:
+        raise ValueError(f"Decoded {index} pixels frames but {count} timestamps")
+    return flags
 
 
 def freeze_intervals(video, duration):
@@ -106,9 +155,19 @@ def check(video, stages_path, csv_path=None, json_path=None):
             raise ValueError("The stage list has a gap or overlap")
     duration = times[-1] - times[0]
     freezes = freeze_intervals(video, duration)
-    repeated = [False] + [current == previous for previous, current in zip(hashes, hashes[1:])]
+    exact_repeats = [current == previous for previous, current in zip(hashes, hashes[1:])]
+    pixel_repeats = decoded_repeat_runs(video, len(times))
+    repeated = [False] + [
+        exact or pixel for exact, pixel in zip(exact_repeats, pixel_repeats)
+    ]
+    gaps = [current - previous for previous, current in zip(times, times[1:])]
+    bad_gaps = [
+        frame for frame, gap in enumerate(gaps, start=1)
+        if gap > MAX_PTS_GAP_FRAMES / TARGET_FPS
+    ]
     near_still = [any(start <= time < end for start, end in freezes) for time in times]
     stage_names = [stage_for_frame(stages, frame) for frame in range(len(times))]
+
 
     summaries = []
 
@@ -146,13 +205,17 @@ def check(video, stages_path, csv_path=None, json_path=None):
         "minimumFps": MIN_FPS,
         "maximumStillSeconds": MAX_STILL_SECONDS,
         "freezeNoise": FREEZE_NOISE,
+        "maximumPtsGapSeconds": max(gaps, default=0.0),
+        "ptsGapFailures": bad_gaps,
+        "repeatedPixelRunFrames": sum(pixel_repeats),
         "stages": summaries,
-        "passed": all(stage["passed"] for stage in summaries),
+        "passed": all(stage["passed"] for stage in summaries) and not bad_gaps,
     }
     if csv_path is not None:
         with csv_path.open("w", newline="") as output:
             writer = csv.writer(output)
-            writer.writerow(["frame", "pts_seconds", "stage", "repeated", "near_still"])
+            writer.writerow(["frame", "pts_seconds", "stage", "repeated", "near_still",
+                             "pts_gap_seconds"])
             for frame, time in enumerate(times):
                 writer.writerow([
                     frame,
@@ -160,6 +223,7 @@ def check(video, stages_path, csv_path=None, json_path=None):
                     stage_names[frame],
                     str(repeated[frame]).lower(),
                     str(near_still[frame]).lower(),
+                    f"{gaps[frame - 1]:.6f}" if frame else "0.000000",
                 ])
     if json_path is not None:
         json_path.write_text(json.dumps(report, indent=2) + "\n")

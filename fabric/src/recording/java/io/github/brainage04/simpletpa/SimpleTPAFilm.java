@@ -176,9 +176,14 @@ public final class SimpleTPAFilm {
     private static final float EAST = -90.0F;
     private static final float WEST = 90.0F;
     private static final float PLAYER_PITCH = 6.0F;
-    private static final int COMMAND_VISIBLE_TICKS = 20;
-    private static final int REPLY_HOLD_TICKS = 6;
-    private static final int FLYING_REFUSAL_HOLD_TICKS = 1;
+    /** Ticks the typed command stays up before Enter: 0.40 s at 30 fps. */
+    private static final int COMMAND_VISIBLE_TICKS = 12;
+
+    /** Reply on screen: this hold plus the six-tick stage tail and the cut's 0.12 s trail. */
+    private static final int REPLY_HOLD_TICKS = 18;
+
+    /** The same reading time for the flying refusal, whose reply arrives in the command tick. */
+    private static final int FLYING_REFUSAL_HOLD_TICKS = 18;
 
     /** Frames a stage keeps after its end marker, so a cut never lands on the next scene. */
     private static final int STAGE_HOLD_TICKS = 6;
