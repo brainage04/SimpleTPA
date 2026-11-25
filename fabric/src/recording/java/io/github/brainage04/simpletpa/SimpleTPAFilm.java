@@ -176,6 +176,7 @@ public final class SimpleTPAFilm {
     private static final float EAST = -90.0F;
     private static final float WEST = 90.0F;
     private static final float PLAYER_PITCH = 6.0F;
+
     /** Ticks the typed command stays up before Enter: 0.40 s at 30 fps. */
     private static final int COMMAND_VISIBLE_TICKS = 12;
 
