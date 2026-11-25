@@ -177,7 +177,8 @@ public final class SimpleTPAFilm {
     private static final float WEST = 90.0F;
     private static final float PLAYER_PITCH = 6.0F;
     private static final int COMMAND_VISIBLE_TICKS = 20;
-    private static final int FLYING_REFUSAL_HOLD_TICKS = 5;
+    private static final int REPLY_HOLD_TICKS = 6;
+    private static final int FLYING_REFUSAL_HOLD_TICKS = 1;
 
     /** Frames a stage keeps after its end marker, so a cut never lands on the next scene. */
     private static final int STAGE_HOLD_TICKS = 6;
@@ -742,8 +743,8 @@ public final class SimpleTPAFilm {
         reset(context, server, playerName);
         startStage(context, AUTO_ACCEPT);
         typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
-        // The answer to the command is read in 0.9 s; a longer wait was the film's longest still.
-        context.waitTicks(18);
+        // The whitelist answers inside the command; this only leaves the reply on screen.
+        context.waitTicks(REPLY_HOLD_TICKS);
         // The friend steps four blocks aside in the request's own tick, so the arrival lands on the
         // spot they have left and the camera looks at them from there. Hiding them instead made
         // them vanish a tick after the arrival: the flag goes out in the next tick's
@@ -980,7 +981,7 @@ public final class SimpleTPAFilm {
                 });
         startStage(context, ON_MAGMA);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(16);
+        context.waitTicks(REPLY_HOLD_TICKS);
 
         endStage(context);
         reset(context, server, playerName);
