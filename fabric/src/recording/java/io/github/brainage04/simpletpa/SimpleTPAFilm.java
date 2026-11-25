@@ -177,12 +177,7 @@ public final class SimpleTPAFilm {
     private static final float WEST = 90.0F;
     private static final float PLAYER_PITCH = 6.0F;
     private static final int COMMAND_VISIBLE_TICKS = 20;
-
-    /**
-     * Ticks the fall stages show their command while the player hangs in the air before the fall.
-     * Nothing else moves then, so the shot is a still, and 20 ticks made a 1.13 s one.
-     */
-    private static final int HANGING_COMMAND_TICKS = 14;
+    private static final int FLYING_REFUSAL_HOLD_TICKS = 5;
 
     /** Frames a stage keeps after its end marker, so a cut never lands on the next scene. */
     private static final int STAGE_HOLD_TICKS = 6;
@@ -833,7 +828,7 @@ public final class SimpleTPAFilm {
                 });
         startStage(context, FLYING_TARGET);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(16);
+        context.waitTicks(FLYING_REFUSAL_HOLD_TICKS);
 
         endStage(context);
         reset(context, server, playerName);
@@ -1072,9 +1067,9 @@ public final class SimpleTPAFilm {
                     look(player, FALLING_POSITION, FRIEND_POSITION);
                 });
         startStage(context, RESET_FALL_OFF);
-        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME, HANGING_COMMAND_TICKS);
         server.runOnServer(
                 minecraftServer -> player(minecraftServer, playerName).setNoGravity(false));
+        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME, 0);
         waitForFall(context, server, playerName);
         // The request is answered inside the command, so the arrival lands in this tick and the
         // step back runs in it too.
@@ -1099,9 +1094,9 @@ public final class SimpleTPAFilm {
                     look(player, FALLING_POSITION, FRIEND_POSITION);
                 });
         startStage(context, RESET_FALL_ON);
-        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME, HANGING_COMMAND_TICKS);
         server.runOnServer(
                 minecraftServer -> player(minecraftServer, playerName).setNoGravity(false));
+        typeCommandWithoutEnter(context, "tpa " + FRIEND_NAME, 0);
         waitForFall(context, server, playerName);
         pendingStepBack =
                 minecraftServer -> {
