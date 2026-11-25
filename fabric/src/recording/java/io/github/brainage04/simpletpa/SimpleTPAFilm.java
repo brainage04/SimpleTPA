@@ -180,11 +180,17 @@ public final class SimpleTPAFilm {
     /** Ticks the typed command stays up before Enter: 0.40 s at 30 fps. */
     private static final int COMMAND_VISIBLE_TICKS = 12;
 
-    /** Reply on screen: this hold plus the six-tick stage tail and the cut's 0.12 s trail. */
-    private static final int REPLY_HOLD_TICKS = 18;
+    /**
+     * Auto-accept reply: the hold, the six-tick stage tail, the 0.12 s cut trail and the arrival
+     * wait; measured 1.07 s on take 11.
+     */
+    private static final int AUTO_ACCEPT_HOLD_TICKS = 6;
 
-    /** The same reading time for the flying refusal, whose reply arrives in the command tick. */
+    /** Flying refusal: hold, stage tail and 0.12 s cut trail; measured 1.033 s on the last cut. */
     private static final int FLYING_REFUSAL_HOLD_TICKS = 18;
+
+    /** Magma refusal: hold, stage tail and 0.12 s cut trail; measured 1.000 s on the last cut. */
+    private static final int MAGMA_REFUSAL_HOLD_TICKS = 18;
 
     /** Frames a stage keeps after its end marker, so a cut never lands on the next scene. */
     private static final int STAGE_HOLD_TICKS = 6;
@@ -750,7 +756,7 @@ public final class SimpleTPAFilm {
         startStage(context, AUTO_ACCEPT);
         typeCommand(context, "tpautoaccept add " + FRIEND_NAME);
         // The whitelist answers inside the command; this only leaves the reply on screen.
-        context.waitTicks(REPLY_HOLD_TICKS);
+        context.waitTicks(AUTO_ACCEPT_HOLD_TICKS);
         // The friend steps four blocks aside in the request's own tick, so the arrival lands on the
         // spot they have left and the camera looks at them from there. Hiding them instead made
         // them vanish a tick after the arrival: the flag goes out in the next tick's
@@ -987,7 +993,7 @@ public final class SimpleTPAFilm {
                 });
         startStage(context, ON_MAGMA);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(REPLY_HOLD_TICKS);
+        context.waitTicks(MAGMA_REFUSAL_HOLD_TICKS);
 
         endStage(context);
         reset(context, server, playerName);
