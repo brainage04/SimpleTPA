@@ -177,20 +177,23 @@ public final class SimpleTPAFilm {
     private static final float WEST = 90.0F;
     private static final float PLAYER_PITCH = 6.0F;
 
-    /** Ticks the typed command stays up before Enter: 0.40 s at 30 fps. */
+    /** Ticks the typed command stays up before Enter: 12 ticks at 20 TPS is 0.6 s. */
     private static final int COMMAND_VISIBLE_TICKS = 12;
 
-    /**
-     * Auto-accept reply: the hold, the six-tick stage tail, the 0.12 s cut trail and the arrival
-     * wait; measured 1.07 s on take 11.
-     */
+    /** Film-added wait after the auto-accept command, long enough to read the reply. */
     private static final int AUTO_ACCEPT_HOLD_TICKS = 6;
 
-    /** Flying refusal: hold, stage tail and 0.12 s cut trail; measured 1.033 s on the last cut. */
+    /** Film-added wait after the flying refusal command, long enough to read the reply. */
     private static final int FLYING_REFUSAL_HOLD_TICKS = 18;
 
-    /** Magma refusal: hold, stage tail and 0.12 s cut trail; measured 1.000 s on the last cut. */
+    /** Film-added wait after the magma refusal command, long enough to read the reply. */
     private static final int MAGMA_REFUSAL_HOLD_TICKS = 18;
+
+    /**
+     * Film-added wait after the TPA command, before the friend denies or accepts. It outlasts the
+     * typed command and is short enough that the unchanged chat stays under the 1.2 s still bar.
+     */
+    private static final int REPLY_WAIT_TICKS = 15;
 
     /** Frames a stage keeps after its end marker, so a cut never lands on the next scene. */
     private static final int STAGE_HOLD_TICKS = 6;
@@ -436,7 +439,7 @@ public final class SimpleTPAFilm {
         reset(context, server, playerName);
         startStage(context, DENY);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(25);
+        context.waitTicks(REPLY_WAIT_TICKS);
         server.runOnServer(
                 minecraftServer ->
                         SimpleTPAFakePlayerScenario.executeCommand(
@@ -450,7 +453,7 @@ public final class SimpleTPAFilm {
         reset(context, server, playerName);
         startStage(context, ACCEPT);
         typeCommand(context, "tpa " + FRIEND_NAME);
-        context.waitTicks(25);
+        context.waitTicks(REPLY_WAIT_TICKS);
         server.runOnServer(
                 minecraftServer -> {
                     // The arrival takes the target's facing, so the friend turns to the open stage

@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Check a filmed clip's frame rate, repeated frames and longest near-still per stage."""
+"""Check a filmed clip's frame rate, repeated frames and longest near-still per stage.
+
+All three checks read the encoded film. Exact hashes catch bit-identical frames; decoded luma
+distances catch isolated repeats and runs of up to SHORT_REPEAT_RUN_FRAMES near-identical pairs
+bounded by motion. A 13 to 36 pair run inside motion cannot be told apart from a scripted reply
+hold, so the still bar judges it instead. The still bar combines ffmpeg's freezedetect with
+decoded low-difference runs.
+"""
 
 import argparse
 import csv
@@ -18,7 +25,9 @@ FREEZE_MIN_DURATION_SECONDS = 0.5
 REPEAT_PIXEL_WIDTH = 160
 REPEAT_PIXEL_HEIGHT = 90
 REPEAT_MAD = 0.1
-REPEAT_RUN_FRAMES = int(MAX_STILL_SECONDS * TARGET_FPS)
+MOTION_MAD = 1.0
+SHORT_REPEAT_RUN_FRAMES = 12
+STILL_MAD = 0.3
 
 
 def run(command):
@@ -62,7 +71,6 @@ def frame_hashes(video):
     ]
 
 
-
 def read_exact(stream, size):
     chunk = b""
     while len(chunk) < size:
@@ -73,35 +81,54 @@ def read_exact(stream, size):
     return chunk
 
 
-def decoded_repeat_runs(video, count):
+def decoded_differences(video, count):
     size = REPEAT_PIXEL_WIDTH * REPEAT_PIXEL_HEIGHT
     proc = subprocess.Popen([
         "ffmpeg", "-v", "error", "-i", str(video), "-map", "0:v:0",
         "-vf", f"scale={REPEAT_PIXEL_WIDTH}:{REPEAT_PIXEL_HEIGHT},format=gray",
         "-fps_mode", "passthrough", "-an", "-f", "rawvideo", "-pix_fmt", "gray", "-",
     ], stdout=subprocess.PIPE)
-    flags = [False] * count
+    differences = [float("inf")] * count
     previous = None
-    run = 0
     index = 0
     while index < count:
         frame = read_exact(proc.stdout, size)
         if len(frame) < size:
             break
-        if previous is None:
-            difference = float("inf")
-        else:
-            difference = sum(abs(a - b) for a, b in zip(frame, previous)) / size
-        # x264 can encode two identical source frames to slightly different bytes, so a single
-        # low-difference pair is not evidence of a duplicate. A longer near-identical run is.
-        run = run + 1 if difference <= REPEAT_MAD else 0
-        flags[index] = run > REPEAT_RUN_FRAMES
+        if previous is not None:
+            differences[index] = sum(abs(a - b) for a, b in zip(frame, previous)) / size
         previous = frame
         index += 1
     proc.stdout.close()
     proc.wait()
     if index != count:
-        raise ValueError(f"Decoded {index} pixels frames but {count} timestamps")
+        raise ValueError(f"Decoded {index} pixel frames but {count} timestamps")
+    return differences
+
+
+def near_identical_runs(differences, threshold):
+    runs = []
+    index = 1
+    while index < len(differences):
+        if differences[index] <= threshold:
+            first = index
+            while index + 1 < len(differences) and differences[index + 1] <= threshold:
+                index += 1
+            runs.append((first, index))
+        index += 1
+    return runs
+
+
+def short_repeat_flags(differences):
+    flags = [False] * len(differences)
+    for first, last in near_identical_runs(differences, REPEAT_MAD):
+        bounded_by_motion = (
+            (first == 1 or differences[first - 1] >= MOTION_MAD)
+            and (last + 1 == len(differences) or differences[last + 1] >= MOTION_MAD)
+        )
+        if bounded_by_motion and last - first + 1 <= SHORT_REPEAT_RUN_FRAMES:
+            for frame in range(first, last + 1):
+                flags[frame] = True
     return flags
 
 
@@ -156,10 +183,11 @@ def check(video, stages_path, csv_path=None, json_path=None):
     duration = times[-1] - times[0]
     freezes = freeze_intervals(video, duration)
     exact_repeats = [current == previous for previous, current in zip(hashes, hashes[1:])]
-    pixel_repeats = decoded_repeat_runs(video, len(times))
-    repeated = [False] + [
-        exact or pixel for exact, pixel in zip(exact_repeats, pixel_repeats)
-    ]
+    differences = decoded_differences(video, len(times))
+    exact_flags = [False] + exact_repeats
+    pixel_repeats = short_repeat_flags(differences)
+    repeated = [exact or pixel for exact, pixel in zip(exact_flags, pixel_repeats)]
+    still_runs = near_identical_runs(differences, STILL_MAD)
     gaps = [current - previous for previous, current in zip(times, times[1:])]
     bad_gaps = [
         frame for frame, gap in enumerate(gaps, start=1)
@@ -168,22 +196,29 @@ def check(video, stages_path, csv_path=None, json_path=None):
     near_still = [any(start <= time < end for start, end in freezes) for time in times]
     stage_names = [stage_for_frame(stages, frame) for frame in range(len(times))]
 
-
     summaries = []
-
     for stage in stages:
         start = stage["startFrame"]
         end = stage["endFrameExclusive"]
         stage_times = times[start:end]
         span = stage_times[-1] - stage_times[0]
         fps = (end - start - 1) / span if span > 0 else 0.0
-        longest_still = max(
+        freeze_still = max(
             (
                 min(freeze_end, stage_times[-1]) - max(freeze_start, stage_times[0])
                 for freeze_start, freeze_end in freezes
             ),
             default=0.0,
         )
+        pixel_still = max(
+            (
+                times[min(last, end - 1)] - times[max(first - 1, start)]
+                for first, last in still_runs
+                if min(last, end - 1) > max(first - 1, start)
+            ),
+            default=0.0,
+        )
+        longest_still = max(0.0, freeze_still, pixel_still)
         repeated_frames = sum(repeated[start:end])
         passed = fps >= MIN_FPS and repeated_frames == 0 and longest_still <= MAX_STILL_SECONDS
         summaries.append({
@@ -208,6 +243,7 @@ def check(video, stages_path, csv_path=None, json_path=None):
         "maximumPtsGapSeconds": max(gaps, default=0.0),
         "ptsGapFailures": bad_gaps,
         "repeatedPixelRunFrames": sum(pixel_repeats),
+        "shortRepeatRunLimitFrames": SHORT_REPEAT_RUN_FRAMES,
         "stages": summaries,
         "passed": all(stage["passed"] for stage in summaries) and not bad_gaps,
     }
