@@ -4,8 +4,8 @@
 usage: recut-repeats.py FILM.mp4 STAGES.json OUT.mp4 OUT.stages.json [--report-json REPORT.json]
 
 A repeated slot is a frame check-film.py flags in a moving scene: the recorder wrote the previous
-game frame again because the game had not presented a new one. The recut removes exactly those
-frames and the audio of the same slots, so picture and sound stay in step, and leaves every other
+game frame again because the game had not presented a new one. The recut removes those frames,
+and the audio of the same slots so picture and sound stay in step, and leaves every other
 frame alone, including those that gain a chat line, a key highlight or a counter digit and every
 frame of a still scene. The stage list is renumbered for the shorter film. The report gives each
 stage's frames before and after, the speed its world plays at, and the frames dropped.
@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 
 CHECK_FILM = Path(__file__).with_name("check-film.py")
+MAX_ENCODES = 5
 
 
 def load_check_film():
@@ -57,17 +58,47 @@ def encode(video, runs, times, frame_seconds, out_path):
     ], check=True)
 
 
+def drop_repeats(check_film, means, blocks):
+    """Frames to keep, found by running the checker's flags on the film as it will be cut.
+
+    Dropping a repeated slot changes the scene around its neighbours, so a pair the checker left
+    alone can become a repeat in the shorter film. Each round drops what the checker flags in the
+    frames still alive, until it flags none. A dropped frame's successor keeps its own pair
+    difference, which is the difference from the frame before the dropped one: the two were equal.
+    """
+    alive = list(range(len(means)))
+    rounds = []
+    while True:
+        repeats, _ = check_film.repeat_flags(
+            [means[frame] for frame in alive], [blocks[frame] for frame in alive]
+        )
+        gone = sum(repeats)
+        if not gone:
+            return alive, rounds
+        rounds.append(gone)
+        alive = [frame for frame, repeated in zip(alive, repeats) if not repeated]
+
+
 def recut(video, stages, out_path):
     check_film = load_check_film()
     times = check_film.frame_times(video)
     if stages[0]["startFrame"] != 0 or stages[-1]["endFrameExclusive"] != len(times):
         raise ValueError("The stage list does not cover every video frame")
     means, blocks = check_film.decoded_differences(video, len(times))
-    repeats, _ = check_film.repeat_flags(means, blocks)
-    dropped = [frame for frame, repeated in enumerate(repeats) if repeated]
-    kept = [frame for frame, repeated in enumerate(repeats) if not repeated]
+    kept, rounds = drop_repeats(check_film, means, blocks)
     frame_seconds = 1 / check_film.TARGET_FPS
-    encode(video, kept_runs(kept), times, frame_seconds, out_path)
+    for _ in range(MAX_ENCODES):
+        encode(video, kept_runs(kept), times, frame_seconds, out_path)
+        # The encoder re-codes every frame: measure the cut itself and drop what it still repeats.
+        cut_means, cut_blocks = check_film.decoded_differences(out_path, len(kept))
+        repeats, _ = check_film.repeat_flags(cut_means, cut_blocks)
+        if not any(repeats):
+            break
+        rounds.append(sum(repeats))
+        kept = [frame for frame, repeated in zip(kept, repeats) if not repeated]
+    else:
+        raise ValueError(f"The cut still has repeated frames after {MAX_ENCODES} encodes")
+    dropped = sorted(set(range(len(times))) - set(kept))
 
     new_stages = []
     rows = []
@@ -89,7 +120,7 @@ def recut(video, stages, out_path):
         })
         start += frames
     return new_stages, {"framesBefore": len(times), "framesAfter": len(kept),
-                        "framesDropped": len(dropped), "stages": rows}
+                        "framesDropped": len(dropped), "droppedPerRound": rounds, "stages": rows}
 
 
 def main():
@@ -108,7 +139,7 @@ def main():
     if args.report_json is not None:
         args.report_json.write_text(json.dumps(report, indent=2) + "\n")
     print(f"wrote {args.out}: {report['framesBefore']} -> {report['framesAfter']} frames, "
-          f"{report['framesDropped']} dropped")
+          f"{report['framesDropped']} dropped (per round {report['droppedPerRound']})")
     for row in report["stages"]:
         print(f"{row['stage']}: {row['framesBefore']} -> {row['framesAfter']} "
               f"(-{row['framesDropped']}), world speed {row['worldSpeed']:.3f}x")

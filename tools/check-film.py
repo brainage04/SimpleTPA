@@ -31,8 +31,8 @@ FREEZE_MIN_DURATION_SECONDS = 0.5
 REPEAT_PIXEL_WIDTH = 160
 REPEAT_PIXEL_HEIGHT = 90
 REPEAT_BLOCK_PIXELS = 10
-# In take 12's film the median pair difference of the still stages is 0.000-0.010 (encoder noise
-# between identical game frames) and of the moving stages 0.04-0.34.
+# Most pairs between identical game frames in take 12 differ by 0.000-0.020 over the frame (codec
+# noise; about one pair in five reaches 0.08-0.1), and its slowest moving scene steps by 0.02+.
 REPEAT_MAD = 0.02
 # Take 12's resetfalloff stage has one pair at 0.042 in a stage whose median pair is 2.0, and no
 # pair between 0.042 and 0.22: a repeated slot that the encoder coded with extra noise.
@@ -40,6 +40,8 @@ REPEAT_LEVEL_FRACTION = 0.1
 # The quietest repeated slots of take 12's moving stages move their busiest block by 0.01-0.19; a
 # 3x3-pixel change of 16 levels moves it by 1.0.
 REPEAT_BLOCK_MAD = 0.5
+# Half a second of pairs on either side judges whether the scene around a repeat moves. Take 12's
+# still stages have a median pair of 0.010 or less and its moving stages 0.04 or more.
 MOTION_WINDOW_PAIRS = 15
 MOTION_LEVEL_MAD = 0.03
 SHORT_REPEAT_RUN_FRAMES = 12
