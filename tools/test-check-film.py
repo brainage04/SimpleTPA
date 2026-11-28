@@ -26,6 +26,8 @@ STILL_JUMPING_BOX = ",".join(
     f":enable='between(n,{10 * jump},{10 * jump + 9})'"
     for jump in range(6)
 )
+# Six groups of ten frames with the box in one place: nine identical pairs in each, 54 in all.
+STILL_IDENTICAL_PAIRS = 54
 # Three by three pixels 16 levels off the slow scene: 0.01 over the frame, 1.0 in one block.
 FAINT_CAPTION = f"drawbox=x=40:y=40:w=3:h=3:color=0x909090:t=fill:enable='gte(n,{LOOP_START})'"
 # Lossless, so a repeated slot is bit-identical. At crf 12 to 18 the encoder re-codes a repeated
@@ -96,24 +98,22 @@ with tempfile.TemporaryDirectory() as folder:
                               f"hold{loop_frames}", loop_frames)
         stage = report["stages"][0]
         print(f"hold {loop_frames:2d}: exit {code}, decoded repeats "
-              f"{report['repeatedPixelRunFrames']}, stage repeats {stage['repeatedFrames']}, "
+              f"{report['repeatedPixelRunFrames']}, exact repeats {stage['exactRepeatedFrames']}, "
               f"still {stage['longestStillSeconds']:.3f}")
         assert report["repeatedPixelRunFrames"] == 0, (
-            "a scripted hold was counted as a short decoded repeat"
+            "a hold longer than the short-repeat limit was counted as a short decoded repeat"
         )
-        if loop_frames == HOLD_LOOPS[0]:
-            assert stage["longestStillSeconds"] <= MAX_STILL_SECONDS
-        else:
-            assert stage["longestStillSeconds"] > MAX_STILL_SECONDS
-            assert code != 0, "a hold over the still bar passed"
+        assert code != 0, f"a {loop_frames}-frame hold of bit-identical frames passed"
+        assert stage["exactRepeatedFrames"] >= loop_frames - 1, "the exact repeats were not found"
 
     code, report = mutant(work / "still.mp4", work, "still", 0, source=STILL_SOURCE,
                           after=(STILL_JUMPING_BOX,))
     stage = report["stages"][0]
-    print(f"still scene with a jumping box: exit {code}, repeats {stage['repeatedFrames']}, "
-          f"still-scene near-identical {stage['stillSceneNearIdenticalFrames']}")
-    assert code == 0, "repeated slots between the jumps of a still scene failed the film"
-    assert stage["stillSceneNearIdenticalFrames"] > 0, "the still scene's repeats were not reported"
+    print(f"still scene with a jumping box: exit {code}, exact repeats "
+          f"{stage['exactRepeatedFrames']}, still-scene near-identical "
+          f"{stage['stillSceneNearIdenticalFrames']}")
+    assert code != 0, "bit-identical frames between the jumps of a still scene passed"
+    assert stage["exactRepeatedFrames"] == STILL_IDENTICAL_PAIRS
 
     code, report = mutant(work / "plain.mp4", work, "plain", 1, contrast=SLOW_CONTRAST)
     plain = report["stages"][0]["repeatedFrames"]
