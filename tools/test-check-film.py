@@ -10,6 +10,7 @@ CHECK = Path(__file__).with_name("check-film.py")
 LOOP_START = 30
 SHORT_LOOPS = (1, 10, 12)
 HOLD_LOOPS = (30, 40)
+SLOW_CONTRASTS = (0.15, 0.05)
 GAP_AT_FRAME = 40
 GAP_SECONDS = 0.0667
 MAX_STILL_SECONDS = 1.2
@@ -26,14 +27,15 @@ def frame_count(video):
     ], check=True, capture_output=True, text=True).stdout.strip())
 
 
-def mutant(video, work, name, loop_frames, gap=False):
-    filters = f"loop=loop={loop_frames}:size=1:start={LOOP_START}" if loop_frames else ""
+def mutant(video, work, name, loop_frames, gap=False, contrast=None):
+    filters = [f"loop=loop={loop_frames}:size=1:start={LOOP_START}"] if loop_frames else []
+    if contrast is not None:
+        filters.append(f"eq=contrast={contrast}")
     if gap:
-        filters += ("," if filters else "")
-        filters += f"setpts=PTS+({GAP_SECONDS}/TB)*gte(N\\,{GAP_AT_FRAME})"
+        filters.append(f"setpts=PTS+({GAP_SECONDS}/TB)*gte(N\\,{GAP_AT_FRAME})")
     run([
         "ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-t", "2",
-        "-i", "testsrc2=size=160x90:rate=30", "-vf", filters,
+        "-i", "testsrc2=size=160x90:rate=30", "-vf", ",".join(filters),
         "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", str(video),
     ])
     stages = work / f"{name}.stages.json"
@@ -58,6 +60,18 @@ with tempfile.TemporaryDirectory() as folder:
               f"still {stage['longestStillSeconds']:.3f}")
         assert code != 0, f"the {loop_frames}-frame repeat passed"
         assert stage["repeatedFrames"] > 0, f"the {loop_frames}-frame repeat was not detected"
+
+    for contrast in SLOW_CONTRASTS:
+        for loop_frames in SHORT_LOOPS:
+            name = f"slow{contrast}-repeat{loop_frames}"
+            code, report = mutant(work / f"{name}.mp4", work, name, loop_frames, contrast=contrast)
+            stage = report["stages"][0]
+            print(f"slow scene (contrast {contrast}) loop {loop_frames:2d}: exit {code}, "
+                  f"repeats {stage['repeatedFrames']}")
+            assert code != 0, f"the {loop_frames}-frame repeat in a slow scene passed"
+            assert stage["repeatedFrames"] > 0, (
+                f"the {loop_frames}-frame repeat in a slow scene was not detected"
+            )
 
     for loop_frames in HOLD_LOOPS:
         code, report = mutant(work / f"hold{loop_frames}.mp4", work,
