@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """Check a filmed clip's frame rate, repeated frames and longest near-still per stage.
 
-All three checks read the encoded film. Exact hashes catch bit-identical frames; decoded luma
-distances catch isolated repeats and runs of up to SHORT_REPEAT_RUN_FRAMES near-identical pairs
-bounded by motion. A 13 to 36 pair run inside motion cannot be told apart from a scripted reply
-hold, so the still bar judges it instead. The still bar combines ffmpeg's freezedetect with
+All three checks read the encoded film. A repeated frame is a pair of neighbouring frames whose
+160x90 luma differs by no more than REPEAT_MAD (or REPEAT_LEVEL_FRACTION of the scene's median
+pair difference, if more) overall and by no more than REPEAT_BLOCK_MAD in every 10x10-pixel
+block, so a frame that gains a chat line, a key highlight or a counter digit is not a repeat.
+The scene is the pairs within MOTION_WINDOW_PAIRS on either side. Where its median pair
+difference is at least MOTION_LEVEL_MAD the scene moves and the repeat fails the stage; below
+it the scene is still, a repeat shows nothing, and the pair is only counted in
+stillSceneNearIdenticalFrames. A run of more than SHORT_REPEAT_RUN_FRAMES such pairs is
+a scripted hold, and the still bar judges it. The still bar combines ffmpeg's freezedetect with
 decoded low-difference runs.
 """
 
@@ -12,6 +17,7 @@ import argparse
 import csv
 import json
 import re
+import statistics
 import subprocess
 import sys
 from pathlib import Path
@@ -24,8 +30,18 @@ FREEZE_NOISE = 0.001
 FREEZE_MIN_DURATION_SECONDS = 0.5
 REPEAT_PIXEL_WIDTH = 160
 REPEAT_PIXEL_HEIGHT = 90
-REPEAT_MAD = 0.1
-MOTION_MAD = 1.0
+REPEAT_BLOCK_PIXELS = 10
+# In take 12's film the median pair difference of the still stages is 0.000-0.010 (encoder noise
+# between identical game frames) and of the moving stages 0.04-0.34.
+REPEAT_MAD = 0.02
+# Take 12's resetfalloff stage has one pair at 0.042 in a stage whose median pair is 2.0, and no
+# pair between 0.042 and 0.22: a repeated slot that the encoder coded with extra noise.
+REPEAT_LEVEL_FRACTION = 0.1
+# The quietest repeated slots of take 12's moving stages move their busiest block by 0.01-0.19; a
+# 3x3-pixel change of 16 levels moves it by 1.0.
+REPEAT_BLOCK_MAD = 0.5
+MOTION_WINDOW_PAIRS = 15
+MOTION_LEVEL_MAD = 0.03
 SHORT_REPEAT_RUN_FRAMES = 12
 STILL_MAD = 0.3
 
@@ -51,26 +67,6 @@ def frame_times(video):
     return [float(frame["best_effort_timestamp_time"]) for frame in json.loads(output)["frames"]]
 
 
-def frame_hashes(video):
-    output = run([
-        "ffmpeg",
-        "-v",
-        "error",
-        "-i",
-        str(video),
-        "-map",
-        "0:v:0",
-        "-f",
-        "framemd5",
-        "-",
-    ])
-    return [
-        line.rsplit(",", 1)[-1].strip()
-        for line in output.splitlines()
-        if line and not line.startswith("#")
-    ]
-
-
 def read_exact(stream, size):
     chunk = b""
     while len(chunk) < size:
@@ -82,13 +78,15 @@ def read_exact(stream, size):
 
 
 def decoded_differences(video, count):
+    """Mean and largest block mean of each frame's absolute luma difference from the one before."""
     size = REPEAT_PIXEL_WIDTH * REPEAT_PIXEL_HEIGHT
     proc = subprocess.Popen([
         "ffmpeg", "-v", "error", "-i", str(video), "-map", "0:v:0",
         "-vf", f"scale={REPEAT_PIXEL_WIDTH}:{REPEAT_PIXEL_HEIGHT},format=gray",
         "-fps_mode", "passthrough", "-an", "-f", "rawvideo", "-pix_fmt", "gray", "-",
     ], stdout=subprocess.PIPE)
-    differences = [float("inf")] * count
+    means = [float("inf")] * count
+    blocks = [float("inf")] * count
     previous = None
     index = 0
     while index < count:
@@ -96,40 +94,67 @@ def decoded_differences(video, count):
         if len(frame) < size:
             break
         if previous is not None:
-            differences[index] = sum(abs(a - b) for a, b in zip(frame, previous)) / size
+            difference = [abs(a - b) for a, b in zip(frame, previous)]
+            means[index] = sum(difference) / size
+            blocks[index] = largest_block_mean(difference)
         previous = frame
         index += 1
     proc.stdout.close()
     proc.wait()
     if index != count:
         raise ValueError(f"Decoded {index} pixel frames but {count} timestamps")
-    return differences
+    return means, blocks
 
 
-def near_identical_runs(differences, threshold):
+def largest_block_mean(difference):
+    block_area = REPEAT_BLOCK_PIXELS * REPEAT_BLOCK_PIXELS
+    largest = 0.0
+    for top in range(0, REPEAT_PIXEL_HEIGHT, REPEAT_BLOCK_PIXELS):
+        for left in range(0, REPEAT_PIXEL_WIDTH, REPEAT_BLOCK_PIXELS):
+            total = 0
+            for row in range(top, top + REPEAT_BLOCK_PIXELS):
+                start = row * REPEAT_PIXEL_WIDTH + left
+                total += sum(difference[start:start + REPEAT_BLOCK_PIXELS])
+            largest = max(largest, total / block_area)
+    return largest
+
+
+def flag_runs(flags):
     runs = []
     index = 1
-    while index < len(differences):
-        if differences[index] <= threshold:
+    while index < len(flags):
+        if flags[index]:
             first = index
-            while index + 1 < len(differences) and differences[index + 1] <= threshold:
+            while index + 1 < len(flags) and flags[index + 1]:
                 index += 1
             runs.append((first, index))
         index += 1
     return runs
 
 
-def short_repeat_flags(differences):
-    flags = [False] * len(differences)
-    for first, last in near_identical_runs(differences, REPEAT_MAD):
-        bounded_by_motion = (
-            (first == 1 or differences[first - 1] >= MOTION_MAD)
-            and (last + 1 == len(differences) or differences[last + 1] >= MOTION_MAD)
-        )
-        if bounded_by_motion and last - first + 1 <= SHORT_REPEAT_RUN_FRAMES:
-            for frame in range(first, last + 1):
-                flags[frame] = True
-    return flags
+def repeat_flags(means, blocks):
+    """Flags for repeats in moving scenes and for near-identical pairs in still scenes."""
+    count = len(means)
+    levels = [
+        statistics.median(means[max(1, pair - MOTION_WINDOW_PAIRS):pair + MOTION_WINDOW_PAIRS + 1])
+        if pair else 0.0
+        for pair in range(count)
+    ]
+    same_slot = [
+        mean <= max(REPEAT_MAD, REPEAT_LEVEL_FRACTION * level) and block <= REPEAT_BLOCK_MAD
+        for mean, block, level in zip(means, blocks, levels)
+    ]
+    repeats = [False] * count
+    still = [False] * count
+    for first, last in flag_runs(same_slot):
+        if last - first + 1 > SHORT_REPEAT_RUN_FRAMES:
+            continue
+        for frame in range(first, last + 1):
+            if levels[frame] >= MOTION_LEVEL_MAD:
+                repeats[frame] = True
+            else:
+                still[frame] = True
+    return repeats, still
 
 
 def freeze_intervals(video, duration):
@@ -170,9 +195,6 @@ def stage_for_frame(stages, frame):
 def check(video, stages_path, csv_path=None, json_path=None):
     stages = json.loads(stages_path.read_text())
     times = frame_times(video)
-    hashes = frame_hashes(video)
-    if len(times) != len(hashes):
-        raise ValueError(f"Decoded {len(times)} timestamps but {len(hashes)} frame hashes")
     if not times:
         raise ValueError("The video has no frames")
     if stages[0]["startFrame"] != 0 or stages[-1]["endFrameExclusive"] != len(times):
@@ -182,12 +204,9 @@ def check(video, stages_path, csv_path=None, json_path=None):
             raise ValueError("The stage list has a gap or overlap")
     duration = times[-1] - times[0]
     freezes = freeze_intervals(video, duration)
-    exact_repeats = [current == previous for previous, current in zip(hashes, hashes[1:])]
-    differences = decoded_differences(video, len(times))
-    exact_flags = [False] + exact_repeats
-    pixel_repeats = short_repeat_flags(differences)
-    repeated = [exact or pixel for exact, pixel in zip(exact_flags, pixel_repeats)]
-    still_runs = near_identical_runs(differences, STILL_MAD)
+    means, blocks = decoded_differences(video, len(times))
+    repeated, still_scene = repeat_flags(means, blocks)
+    still_runs = flag_runs([mean <= STILL_MAD for mean in means])
     gaps = [current - previous for previous, current in zip(times, times[1:])]
     bad_gaps = [
         frame for frame, gap in enumerate(gaps, start=1)
@@ -220,6 +239,7 @@ def check(video, stages_path, csv_path=None, json_path=None):
         )
         longest_still = max(0.0, freeze_still, pixel_still)
         repeated_frames = sum(repeated[start:end])
+        still_scene_frames = sum(still_scene[start:end])
         passed = fps >= MIN_FPS and repeated_frames == 0 and longest_still <= MAX_STILL_SECONDS
         summaries.append({
             "stage": stage["stage"],
@@ -229,6 +249,7 @@ def check(video, stages_path, csv_path=None, json_path=None):
             "durationSeconds": span,
             "fps": fps,
             "repeatedFrames": repeated_frames,
+            "stillSceneNearIdenticalFrames": still_scene_frames,
             "longestStillSeconds": longest_still,
             "passed": passed,
         })
@@ -242,7 +263,8 @@ def check(video, stages_path, csv_path=None, json_path=None):
         "freezeNoise": FREEZE_NOISE,
         "maximumPtsGapSeconds": max(gaps, default=0.0),
         "ptsGapFailures": bad_gaps,
-        "repeatedPixelRunFrames": sum(pixel_repeats),
+        "repeatedPixelRunFrames": sum(repeated),
+        "stillSceneNearIdenticalFrames": sum(still_scene),
         "shortRepeatRunLimitFrames": SHORT_REPEAT_RUN_FRAMES,
         "stages": summaries,
         "passed": all(stage["passed"] for stage in summaries) and not bad_gaps,
