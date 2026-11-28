@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """Check a filmed clip's frame rate, repeated frames and longest near-still per stage.
 
-All three checks read the encoded film. A repeated frame is a pair of neighbouring frames whose
-160x90 luma differs by no more than REPEAT_MAD (or REPEAT_LEVEL_FRACTION of the scene's median
-pair difference, if more) overall and by no more than REPEAT_BLOCK_MAD in every 10x10-pixel
-block, so a frame that gains a chat line, a key highlight or a counter digit is not a repeat.
-The scene is the pairs within MOTION_WINDOW_PAIRS on either side. Where its median pair
-difference is at least MOTION_LEVEL_MAD the scene moves and the repeat fails the stage; below
-it the scene is still, a repeat shows nothing, and the pair is only counted in
-stillSceneNearIdenticalFrames. A run of more than SHORT_REPEAT_RUN_FRAMES such pairs is
-a scripted hold, and the still bar judges it. The still bar combines ffmpeg's freezedetect with
-decoded low-difference runs.
+All three checks read the encoded film. A frame whose decoded picture, chroma included, is
+bit-identical to the one before is an exact repeat and fails its stage wherever it is: in motion,
+in a still scene or in a hold. A pair of neighbouring frames whose 160x90 luma differs by no more
+than REPEAT_MAD (or REPEAT_LEVEL_FRACTION of the scene's median pair difference, if more)
+overall and by no more than REPEAT_BLOCK_MAD in every 10x10-pixel block is a candidate repeat, so
+a frame that gains a chat line, a key highlight or a counter digit is not one. The scene is the
+pairs within MOTION_WINDOW_PAIRS on either side. Where its median pair difference is at least
+MOTION_LEVEL_MAD the scene moves and the candidate fails the stage; below it the scene is still
+and the pair is only counted in stillSceneNearIdenticalFrames. A run of more than
+SHORT_REPEAT_RUN_FRAMES such pairs is a scripted hold, and the still bar judges it. The still bar
+combines ffmpeg's freezedetect with decoded low-difference runs. The 160x90 score only flags
+candidates: recut-repeats.py deletes a frame only when a full-resolution comparison agrees.
 """
 
 import argparse
@@ -69,6 +71,17 @@ def frame_times(video):
     return [float(frame["best_effort_timestamp_time"]) for frame in json.loads(output)["frames"]]
 
 
+def frame_hashes(video):
+    output = run([
+        "ffmpeg", "-v", "error", "-i", str(video), "-map", "0:v:0", "-f", "framemd5", "-",
+    ])
+    return [
+        line.rsplit(",", 1)[-1].strip()
+        for line in output.splitlines()
+        if line and not line.startswith("#")
+    ]
+
+
 def read_exact(stream, size):
     chunk = b""
     while len(chunk) < size:
@@ -79,12 +92,32 @@ def read_exact(stream, size):
     return chunk
 
 
-def decoded_differences(video, count):
-    """Mean and largest block mean of each frame's absolute luma difference from the one before."""
+def frame_runs(frames):
+    """The [first, last] runs of consecutive frame indexes in an ascending list."""
+    runs = []
+    for frame in frames:
+        if runs and frame == runs[-1][1] + 1:
+            runs[-1][1] = frame
+        else:
+            runs.append([frame, frame])
+    return runs
+
+
+def select_expression(frames):
+    """An ffmpeg select expression that keeps the frames with these indexes, in order."""
+    return "+".join(f"between(n,{first},{last})" for first, last in frame_runs(frames))
+
+
+def decoded_differences(video, count, frames=None):
+    """Mean and largest block mean of each frame's absolute luma difference from the one before.
+
+    With frames, the film is first cut to those frame indexes and count is how many that leaves.
+    """
     size = REPEAT_PIXEL_WIDTH * REPEAT_PIXEL_HEIGHT
+    cut = f"select='{select_expression(frames)}'," if frames is not None else ""
     proc = subprocess.Popen([
         "ffmpeg", "-v", "error", "-i", str(video), "-map", "0:v:0",
-        "-vf", f"scale={REPEAT_PIXEL_WIDTH}:{REPEAT_PIXEL_HEIGHT},format=gray",
+        "-vf", f"{cut}scale={REPEAT_PIXEL_WIDTH}:{REPEAT_PIXEL_HEIGHT},format=gray",
         "-fps_mode", "passthrough", "-an", "-f", "rawvideo", "-pix_fmt", "gray", "-",
     ], stdout=subprocess.PIPE)
     means = [float("inf")] * count
@@ -197,6 +230,9 @@ def stage_for_frame(stages, frame):
 def check(video, stages_path, csv_path=None, json_path=None):
     stages = json.loads(stages_path.read_text())
     times = frame_times(video)
+    hashes = frame_hashes(video)
+    if len(times) != len(hashes):
+        raise ValueError(f"Decoded {len(times)} timestamps but {len(hashes)} frame hashes")
     if not times:
         raise ValueError("The video has no frames")
     if stages[0]["startFrame"] != 0 or stages[-1]["endFrameExclusive"] != len(times):
@@ -207,7 +243,9 @@ def check(video, stages_path, csv_path=None, json_path=None):
     duration = times[-1] - times[0]
     freezes = freeze_intervals(video, duration)
     means, blocks = decoded_differences(video, len(times))
-    repeated, still_scene = repeat_flags(means, blocks)
+    candidate_repeats, still_scene = repeat_flags(means, blocks)
+    exact_repeats = [False] + [current == previous for previous, current in zip(hashes, hashes[1:])]
+    repeated = [exact or candidate for exact, candidate in zip(exact_repeats, candidate_repeats)]
     still_runs = flag_runs([mean <= STILL_MAD for mean in means])
     gaps = [current - previous for previous, current in zip(times, times[1:])]
     bad_gaps = [
@@ -251,6 +289,7 @@ def check(video, stages_path, csv_path=None, json_path=None):
             "durationSeconds": span,
             "fps": fps,
             "repeatedFrames": repeated_frames,
+            "exactRepeatedFrames": sum(exact_repeats[start:end]),
             "stillSceneNearIdenticalFrames": still_scene_frames,
             "longestStillSeconds": longest_still,
             "passed": passed,
@@ -265,7 +304,8 @@ def check(video, stages_path, csv_path=None, json_path=None):
         "freezeNoise": FREEZE_NOISE,
         "maximumPtsGapSeconds": max(gaps, default=0.0),
         "ptsGapFailures": bad_gaps,
-        "repeatedPixelRunFrames": sum(repeated),
+        "repeatedPixelRunFrames": sum(candidate_repeats),
+        "exactRepeatedFrames": sum(exact_repeats),
         "stillSceneNearIdenticalFrames": sum(still_scene),
         "shortRepeatRunLimitFrames": SHORT_REPEAT_RUN_FRAMES,
         "stages": summaries,

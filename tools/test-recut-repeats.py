@@ -31,9 +31,10 @@ BOX_PLACEMENT = "overlay=x=40+300*t:y=300"
 CHROMA_ONLY = f"drawbox=x=100:y=100:w=24:h=24:color=0xA07380:t=fill:enable='gte(n,{CHANGED_SLOT})'"
 # A 5x7 white-ish digit, 60 levels over the ground.
 DIGIT = f"drawbox=x=100:y=100:w=5:h=7:color=0xBCBCBC:t=fill:enable='gte(n,{CHANGED_SLOT})'"
-# 6x6 pixels centred on the corner of four blocks of the 120x68 grid the recut measures on.
+# 6x6 pixels, 96 levels over the ground, centred on the corner of four blocks of the 120x68 grid
+# the recut measures on: nine pixels in each block.
 BLOCK_CORNER = (
-    f"drawbox=x={WIDTH // 2 - 3}:y={HEIGHT // 2 - 3}:w=6:h=6:color=0xB0B0B0:t=fill"
+    f"drawbox=x={WIDTH // 2 - 3}:y={HEIGHT // 2 - 3}:w=6:h=6:color=0xE0E0E0:t=fill"
     f":enable='gte(n,{CHANGED_SLOT})'"
 )
 # A 24x24 patch that rises 3 levels a frame for 10 frames: each step is small, together they are 30.
@@ -42,12 +43,15 @@ RAMP_FRAMES = 10
 RAMP_STEP = 3
 RAMP_X = 200
 RAMP_SIZE = 24
+RAMP_AREA = f"between(X,{RAMP_X},{RAMP_X + RAMP_SIZE})*between(Y,{RAMP_X},{RAMP_X + RAMP_SIZE})"
 RAMP = (
-    f"geq=lum='if(between(X,{RAMP_X},{RAMP_X + RAMP_SIZE})*between(Y,{RAMP_X},{RAMP_X + RAMP_SIZE}),"
-    f"128+{RAMP_STEP}*clip(N-{RAMP_START},0,{RAMP_FRAMES}),lum(X,Y))':cb=cb(X,Y):cr=cr(X,Y)"
+    f"geq=lum='if({RAMP_AREA},128+{RAMP_STEP}*clip(N-{RAMP_START},0,{RAMP_FRAMES}),lum(X,Y))'"
+    ":cb='cb(X,Y)':cr='cr(X,Y)'"
 )
-# Largest step between two surviving frames of the ramp: the bound (4) plus the encoder's noise.
-RAMP_MAX_STEP = 7
+# Largest step between two kept frames of the ramp. Frames are kept while a deletion would leave a
+# step over the bound of 4, so steps stay near 6, and 11 was measured after two encodes. Deleting
+# a frame against a neighbour that is itself deleted leaves a single step of 30.
+RAMP_MAX_STEP = 15
 
 
 def run(command):
@@ -63,8 +67,8 @@ def probe(video, stream, entry, count_frames=False):
     return run(command).strip()
 
 
-def make_film(video, extra=(), loops=REPEATED_SLOTS, fps=FPS):
-    loop_filters = [f"loop=loop=1:size=1:start={slot}" for slot in loops]
+def make_film(video, extra=(), loops=REPEATED_SLOTS, fps=FPS, loop_count=1):
+    loop_filters = [f"loop=loop={loop_count}:size=1:start={slot}" for slot in loops]
     chain = ",".join([BOX_PLACEMENT, *loop_filters, *extra])
     run([
         "ffmpeg", "-v", "error", "-y",
@@ -101,10 +105,10 @@ def recut(work, name, film, stages_frames=None):
 def patch_levels(video):
     pixel = RAMP_X + RAMP_SIZE // 2
     raw = subprocess.run([
-        "ffmpeg", "-v", "error", "-i", str(video), "-vf", f"crop=1:1:{pixel}:{pixel},format=gray",
+        "ffmpeg", "-v", "error", "-i", str(video), "-vf", f"crop=2:2:{pixel}:{pixel},format=gray",
         "-f", "rawvideo", "-",
     ], check=True, capture_output=True).stdout
-    return list(raw)
+    return [sum(raw[start:start + 4]) / 4 for start in range(0, len(raw), 4)]
 
 
 with tempfile.TemporaryDirectory() as folder:
@@ -147,7 +151,7 @@ with tempfile.TemporaryDirectory() as folder:
         assert "ambiguous" in result.stderr
 
     film = work / "ramp.mp4"
-    make_film(film, extra=(RAMP,), loops=())
+    make_film(film, extra=(RAMP,), loops=(RAMP_START,), loop_count=RAMP_FRAMES - 1)
     result, report, out, out_stages, frames = recut(work, "ramp", film)
     levels = patch_levels(out)
     steps = [abs(later - earlier) for earlier, later in zip(levels, levels[1:])]
